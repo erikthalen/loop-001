@@ -1,0 +1,27 @@
+/*
+ * Inputs.
+ *   <input class="input" type="text" />          (also number, search, ...)
+ *   <label class="field">BPM <input class="input" type="number" /></label>
+ */
+@layer ui {
+  .input {
+    padding: 0.33em 0.5em 0.2em;
+    font: inherit;
+    color: var(--color-neutral-1000);
+    background: var(--color-neutral-200);
+    border: 1px solid var(--color-neutral-500);
+    border-radius: 5px;
+    font-size: 13px;
+  }
+
+  .input:focus-visible {
+    outline: 2px solid var(--loop-primary);
+    outline-offset: -1px;
+  }
+
+  .field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}

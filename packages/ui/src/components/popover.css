@@ -1,0 +1,33 @@
+/*
+ * Popover: a floating box above the page. Use it with the native Popover API.
+ * The browser opens and closes it, and closes it on Escape or a click outside.
+ *   <button class="button" popovertarget="my-popover">Open</button>
+ *   <div id="my-popover" class="popover" popover>...</div>
+ *
+ * It opens under the button that opened it (`position-anchor: auto` uses that button as the
+ * anchor, no JS needed). When there is no room below, it opens above. In browsers without
+ * CSS anchor positioning, it opens in the middle of the screen.
+ *
+ * For a list of choices inside, add the menu classes: class="popover menu".
+ */
+@layer ui {
+  .popover {
+    margin: auto;
+    padding: 0.5rem;
+    color: var(--color-neutral-1000);
+    background: var(--color-neutral-100);
+    border: 1px solid var(--color-neutral-300);
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  }
+
+  @supports (position-anchor: auto) {
+    .popover {
+      position-anchor: auto;
+      inset: auto;
+      margin: 0.5rem 0;
+      position-area: block-end span-inline-end;
+      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
+  }
+}

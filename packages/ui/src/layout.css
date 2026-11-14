@@ -1,0 +1,23 @@
+/*
+ * Layout helpers.
+ *   .row   – items side by side, wraps on small screens
+ *   .stack – items on top of each other
+ * Need another gap? Set it directly: <div class="row" style="gap: 0.5rem">
+ */
+@layer ui {
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+
+    + .row {
+      margin-top: 0.5rem;
+    }
+  }
+
+  .stack {
+    display: grid;
+    gap: 1rem;
+  }
+}

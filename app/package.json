@@ -1,0 +1,22 @@
+{
+  "name": "app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && vite build --config vite.sw.config.ts",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/service-worker": "^1.0.1",
+    "@loop/core": "workspace:*",
+    "@loop/metronome": "workspace:*",
+    "@loop/ui": "workspace:*",
+    "hono": "^4.13.18"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

@@ -1,0 +1,260 @@
+/* Base styles for the page, and for headings and focus everywhere. */
+@layer ui {
+  :root {
+    color-scheme: light dark;
+
+    --color-neutral-light: #93949d;
+    --color-neutral-dark: #8b8c93;
+    --color-neutral: light-dark(var(--color-neutral-light), var(--color-neutral-dark));
+
+    /* SCALES */
+    --color-50-light-value: white 95%;
+    --color-100-light-value: white 87%;
+    --color-200-light-value: white 75%;
+    --color-300-light-value: white 60%;
+    --color-400-light-value: white 40%;
+    --color-600-light-value: black 13%;
+    --color-700-light-value: black 25%;
+    --color-800-light-value: black 43.5%;
+    --color-900-light-value: black 58.5%;
+    --color-950-light-value: black 73.75%;
+
+    --color-50-dark-value: black 77.5%;
+    --color-100-dark-value: black 70%;
+    --color-200-dark-value: black 65%;
+    --color-300-dark-value: black 55%;
+    --color-400-dark-value: black 35%;
+    --color-600-dark-value: white 15%;
+    --color-700-dark-value: white 47%;
+    --color-800-dark-value: white 70%;
+    --color-900-dark-value: white 87%;
+    --color-950-dark-value: white 95%;
+
+    --color-neutral-0-light: color-mix(in oklab, var(--color-neutral), white 100%);
+    --color-neutral-0-dark: color-mix(in oklab, var(--color-neutral), black 100%);
+    --color-neutral-0: light-dark(
+      var(--color-neutral-0-light),
+      var(--color-neutral-0-dark)
+    );
+
+    --color-neutral-50-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-50-light-value)
+    );
+    --color-neutral-50-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-50-dark-value)
+    );
+    --color-neutral-50: light-dark(
+      var(--color-neutral-50-light),
+      var(--color-neutral-50-dark)
+    );
+
+    --color-neutral-100-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-100-light-value)
+    );
+    --color-neutral-100-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-100-dark-value)
+    );
+    --color-neutral-100: light-dark(
+      var(--color-neutral-100-light),
+      var(--color-neutral-100-dark)
+    );
+
+    --color-neutral-200-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-200-light-value)
+    );
+    --color-neutral-200-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-200-dark-value)
+    );
+    --color-neutral-200: light-dark(
+      var(--color-neutral-200-light),
+      var(--color-neutral-200-dark)
+    );
+
+    --color-neutral-300-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-300-light-value)
+    );
+    --color-neutral-300-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-300-dark-value)
+    );
+    --color-neutral-300: light-dark(
+      var(--color-neutral-300-light),
+      var(--color-neutral-300-dark)
+    );
+
+    --color-neutral-400-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-400-light-value)
+    );
+    --color-neutral-400-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-400-dark-value)
+    );
+    --color-neutral-400: light-dark(
+      var(--color-neutral-400-light),
+      var(--color-neutral-400-dark)
+    );
+
+    --color-neutral-500: var(--color-neutral);
+
+    --color-neutral-600-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-600-light-value)
+    );
+    --color-neutral-600-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-600-dark-value)
+    );
+    --color-neutral-600: light-dark(
+      var(--color-neutral-600-light),
+      var(--color-neutral-600-dark)
+    );
+
+    --color-neutral-700-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-700-light-value)
+    );
+    --color-neutral-700-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-700-dark-value)
+    );
+    --color-neutral-700: light-dark(
+      var(--color-neutral-700-light),
+      var(--color-neutral-700-dark)
+    );
+
+    --color-neutral-800-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-800-light-value)
+    );
+    --color-neutral-800-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-800-dark-value)
+    );
+    --color-neutral-800: light-dark(
+      var(--color-neutral-800-light),
+      var(--color-neutral-800-dark)
+    );
+
+    --color-neutral-900-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-900-light-value)
+    );
+    --color-neutral-900-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-900-dark-value)
+    );
+    --color-neutral-900: light-dark(
+      var(--color-neutral-900-light),
+      var(--color-neutral-900-dark)
+    );
+
+    --color-neutral-950-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-950-light-value)
+    );
+    --color-neutral-950-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      var(--color-950-dark-value)
+    );
+    --color-neutral-950: light-dark(
+      var(--color-neutral-950-light),
+      var(--color-neutral-950-dark)
+    );
+
+    --color-neutral-1000-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      black 100%
+    );
+    --color-neutral-1000-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      white 100%
+    );
+    --color-neutral-1000: light-dark(
+      var(--color-neutral-1000-light),
+      var(--color-neutral-1000-dark)
+    );
+  }
+  body {
+    margin: 0;
+    font-family: var(--loop-font);
+    font-weight: 300;
+    font-size: 12px;
+    color: var(--color-neutral-1000);
+    background: var(--color-neutral-100);
+    /* Never fake a bold or italic the font does not have. */
+    font-synthesis: none;
+
+    user-select: none;
+  }
+
+  :where(*) {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  strong,
+  b {
+    font-weight: 500;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--loop-primary);
+    outline-offset: 2px;
+  }
+
+  .text-muted {
+    color: var(--color-neutral-600);
+  }
+
+  .text-small {
+    font-size: 0.875rem;
+  }
+
+  /* Hidden on screen, but screen readers still read it. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}

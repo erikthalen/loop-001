@@ -1,0 +1,55 @@
+/*
+ * Menu: a list of choices. Put it in a popover (see popover.css) for the box.
+ *   <button class="button" popovertarget="my-menu">Open</button>
+ *   <div id="my-menu" class="popover menu" popover>
+ *     <h2 class="menu-title">Pick one</h2>
+ *     <ul class="menu-list">
+ *       <li><button class="menu-item"><strong>Title</strong><small>Description</small></button></li>
+ *     </ul>
+ *   </div>
+ */
+@layer ui {
+  .menu {
+    min-width: 16rem;
+  }
+
+  .menu-title {
+    margin: 0.25rem 0.5rem 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-neutral-600);
+  }
+
+  .menu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .menu-item {
+    display: grid;
+    width: 100%;
+    padding: 0.5rem;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+
+  .menu-item:hover,
+  .menu-item:focus-visible {
+    background: var(--color-neutral-300);
+  }
+
+  .menu-item small {
+    color: var(--color-neutral-600);
+  }
+
+  .menu-divider {
+    margin: 0.5rem 0;
+    border: 0;
+    border-top: 1px solid var(--color-neutral-400);
+  }
+}

@@ -1,0 +1,61 @@
+/*
+ * Buttons.
+ *   <button class="button">Play</button>
+ *   <button class="button" data-variant="primary">Save</button>
+ *   <button class="button" data-variant="ghost">×</button>
+ *   <button class="button" data-size="small">New</button>
+ *   <button class="button" aria-pressed="true">Remove</button>   (a toggle that is on)
+ */
+@layer ui {
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+
+    padding: 0.33em 0.5em 0.2em;
+    font: inherit;
+    color: var(--color-neutral-1000);
+    background: var(--color-neutral-300);
+    border: 1px solid var(--color-neutral-500);
+    border-radius: 5px;
+    cursor: pointer;
+    line-height: 1;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .button:hover {
+    background: var(--color-neutral-400);
+  }
+
+  .button[data-variant="primary"],
+  .button[aria-pressed="true"] {
+    color: #ffffff;
+    background: var(--loop-primary);
+    border-color: transparent;
+  }
+
+  .button[data-variant="primary"]:hover,
+  .button[aria-pressed="true"]:hover {
+    background: color-mix(in srgb, var(--loop-primary), black 10%);
+  }
+
+  .button[data-variant="ghost"] {
+    background: none;
+    border-color: transparent;
+  }
+
+  .button[data-variant="ghost"]:hover {
+    background: var(--color-neutral-300);
+  }
+
+  .button[data-size="small"] {
+    font-size: 11px;
+  }
+
+  .button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}

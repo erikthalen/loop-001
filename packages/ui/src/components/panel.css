@@ -1,0 +1,17 @@
+/*
+ * Panel: a box for a group of things, for example a module.
+ *   <div class="panel">
+ *     <h2 class="panel-title">Metronome</h2>
+ *     ...
+ *   </div>
+ */
+@layer ui {
+  .panel {
+    display: block;
+    background: var(--color-neutral-200);
+  }
+
+  .panel-title {
+    margin: 0 0 0.75rem;
+  }
+}

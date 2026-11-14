@@ -1,0 +1,11 @@
+/*
+ * The only two variables. Everything else is written straight into the CSS.
+ * They are set on :root. CSS variables are inherited, so they also reach
+ * into every module's Shadow DOM.
+ */
+@layer ui {
+  :root {
+    --loop-primary: dodgerblue;
+    --loop-font: 'Italian Plate No1 Mono', ui-monospace, monospace;
+  }
+}

@@ -1,0 +1,26 @@
+/*
+ * Range (slider): the browser's own slider, in the primary color.
+ *   <input class="range" type="range" min="0" max="100" value="50" />
+ *
+ * Why the color is mixed:
+ * Chrome draws the empty track light in light mode and dark in dark mode. But if the
+ * accent color has too little contrast with that track, Chrome flips the track to the
+ * other color. Plain dodgerblue is too light for the light track, so the track turned dark.
+ * So in light mode we use the primary color 10% darker, and in dark mode 10% lighter.
+ * Then the track always follows the color scheme (needs `color-scheme` in base.css).
+ *
+ * Very light or very dark primary color? If the track flips again, raise the 10%.
+ */
+@layer ui {
+  .range {
+    accent-color: light-dark(
+      color-mix(in oklab, var(--loop-primary), black 10%),
+      color-mix(in oklab, var(--loop-primary), white 10%)
+    );
+    cursor: pointer;
+  }
+
+  .range:disabled {
+    cursor: not-allowed;
+  }
+}
