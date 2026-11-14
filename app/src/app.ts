@@ -269,7 +269,7 @@ app.get(base, (c) =>
               step="1"
               value="120"
             />
-            <output id="bpm-value" for="bpm">120</output>
+            <output class="sr-only" id="bpm-value" for="bpm">120</output>
           </label>
         </div>
         <div class="row">

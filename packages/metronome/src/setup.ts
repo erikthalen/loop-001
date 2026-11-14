@@ -1,10 +1,21 @@
 import { defineModuleSetup } from '@loop/core'
 
+/** The time signatures the metronome can play, in the order the button steps through them. */
+export const SIGNATURES = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8'] as const
+export type Signature = (typeof SIGNATURES)[number]
+
+const isSignature = (value: unknown): value is Signature => SIGNATURES.includes(value as Signature)
+
+/** Beats in one bar: the top number of the signature. Every beat of the core clock is one tick. */
+const beatsIn = (signature: Signature) => Number.parseInt(signature, 10)
+
 export interface MetronomeOptions {
   /** Volume from 0 to 1. Default: 0.5. */
   volume?: number
   /** Play a higher tick on the first beat of each bar. Default: true. */
   accent?: boolean
+  /** Time signature. Default: '4/4'. */
+  signature?: Signature
 }
 
 /** Audio: plays a short tick on every beat of the core clock. */
@@ -13,6 +24,7 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
   // Options can come from a saved project file, so check the types.
   let volume = typeof options.volume === 'number' ? Math.min(1, Math.max(0, options.volume)) : 0.5
   let accent = typeof options.accent === 'boolean' ? options.accent : true
+  let signature: Signature = isSignature(options.signature) ? options.signature : '4/4'
   const output = new GainNode(audio, { gain: volume })
 
   /** Schedule one tick at an exact audio time. */
@@ -31,7 +43,13 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
   }
 
   // Removed for us when the module is removed.
-  ctx.on('beat', ({ time, beatInBar }) => tick(time, accent && beatInBar === 0))
+  const setSignature = (value: Signature) => {
+    signature = value
+    ctx.changed()
+  }
+
+  // The metronome counts its own bars, so its signature does not change the core clock.
+  ctx.on('beat', ({ time, beat }) => tick(time, accent && beat % beatsIn(signature) === 0))
 
   return {
     output,
@@ -40,6 +58,12 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
     },
     get accent() {
       return accent
+    },
+    get signature() {
+      return signature
+    },
+    get beatsPerBar() {
+      return beatsIn(signature)
     },
     setVolume(value: number) {
       volume = value
@@ -50,7 +74,12 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
       accent = value
       ctx.changed()
     },
+    setSignature,
+    /** Step to the next signature in SIGNATURES (after the last one: the first one). */
+    nextSignature() {
+      setSignature(SIGNATURES[(SIGNATURES.indexOf(signature) + 1) % SIGNATURES.length]!)
+    },
     /** Saved with the project. Comes back as `options` when the project loads. */
-    save: (): MetronomeOptions => ({ volume, accent }),
+    save: (): MetronomeOptions => ({ volume, accent, signature }),
   }
 })
