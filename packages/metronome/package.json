@@ -11,5 +11,8 @@
   "dependencies": {
     "@loop/core": "workspace:*",
     "@loop/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
   }
 }
