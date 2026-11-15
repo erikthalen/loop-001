@@ -44,3 +44,12 @@ export function planChain<N>(start: N, slots: readonly ChainSlot<N>[], end: N): 
   connections.push([previous, end])
   return connections
 }
+
+/**
+ * The ids after `from` in the chain order: the modules that get `from`'s triggers.
+ * Empty if `from` is not in the chain.
+ */
+export function modulesAfter(order: readonly string[], from: string): string[] {
+  const index = order.indexOf(from)
+  return index < 0 ? [] : order.slice(index + 1)
+}

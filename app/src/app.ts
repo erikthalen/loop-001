@@ -68,6 +68,11 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
         <style>
           body {
             padding: 0.5rem;
+
+            > main {
+              width: 275px;
+              margin: auto;
+            }
           }
 
           /* Project bar */
@@ -76,16 +81,12 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
           }
 
           #project-name {
-            width: 8rem;
+            width: 100%;
           }
 
           #save-status[data-status="error"] {
             color: #cc0000;
             font-weight: 500;
-          }
-          /* Room for "300", so the layout does not jump while dragging. */
-          #bpm-value {
-            min-width: 3ch;
           }
 
           /* Popovers place themselves under their button (see popover.css in @loop/ui). */
@@ -143,6 +144,13 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             position: relative;
             display: flex;
             gap: 0.25rem;
+
+            &:not(:hover) {
+              .drag-handle {
+                opacity: 0;
+                pointer-events: none;
+              }
+            }
           }
 
           /* Drag a module by its handle to change the order (see rack.ts). */
@@ -241,9 +249,8 @@ app.get(base, (c) =>
   c.html(
     layout(
       "Loop 001",
-      html`<header class="project-bar row">
-          <h1>Loop 001</h1>
-        </header>
+      html`<main>
+        <h1 class="sr-only">Loop 001</h1>
 
         <div class="row">
           <button
@@ -302,7 +309,7 @@ app.get(base, (c) =>
           />
           <span
             id="save-status"
-            class="text-muted text-small"
+            class="text-muted text-small sr-only"
             role="status"
           ></span>
         </div>
@@ -352,7 +359,8 @@ app.get(base, (c) =>
         <div id="module-picker" class="popover menu" popover>
           <menu id="module-list"></menu>
         </div>
-        <div id="rack"></div>`,
+        <div id="rack"></div>
+      </main>`,
     ),
   ),
 );

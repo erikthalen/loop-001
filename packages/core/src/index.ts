@@ -1,5 +1,5 @@
 export { createCore, type Core, type CoreEventMap, type CoreOptions } from './core'
-export { planChain, type ChainConnection, type ChainSlot } from './chain'
+export { modulesAfter, planChain, type ChainConnection, type ChainSlot } from './chain'
 export {
   createClock,
   type BeatEvent,
@@ -20,6 +20,7 @@ export {
   type AudioModule,
   type AudioModuleDefinition,
   type ModuleContext,
+  type Trigger,
   type ModuleScript,
   type ModuleSetup,
   type ModuleSetupResult,

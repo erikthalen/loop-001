@@ -6,6 +6,8 @@ pnpm monorepo.
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter that shows the sound before and after it
+- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps), built only of checkboxes; it makes no sound, it only sends triggers to the modules after it
+- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, with start and end markers
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two needles, left and right); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
 
@@ -68,6 +70,7 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 | `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.range--vertical`: lowest value at the bottom, length with `height` |
 | `font.ts` | Display fonts for modules (files in `src/fonts/`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
 | `components/checkbox.css` | `.checkbox`: the native checkbox, drawn as a primary-color box with a white check |
+| `components/radio.css` | `.radio`: the native radio button, drawn as a primary-color circle with a white dot |
 | `components/panel.css`  | `.panel`, `.panel-title`                                                          |
 | `components/menu.css`   | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`               |
 
@@ -102,6 +105,11 @@ core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ core.output ─▶ 
 So a filter only changes the modules that come before it. `core.move(module, index)` changes the order
 (the rack calls it when you drag a module by its handle; dnd-kit, `@dnd-kit/dom`). `core.input` is the start of the chain
 (nothing is connected to it yet; later, for example, a microphone).
+
+**Triggers** flow down the chain too, like MIDI or CV cables. A trigger says "play channel X at time T".
+A module sends one with `ctx.send({ channel, time })`. Only the modules **after** it get it, with
+`ctx.onTrigger(listener)`. Example: the sequencer sends a trigger for each step that is on, and a sampler
+after it plays that channel. A sampler before the sequencer gets nothing.
 
 - **Commands go in as function calls:** `core.start()`, `core.stop()`, `core.setBpm(90)`, `core.add(module)`.
 - **News goes out as events:** `core.events.on('beat', ...)`. The event bus (`createEmitter` in `packages/core/src/events.ts`) is a typed wrapper around the browser's `EventTarget` + `CustomEvent`.

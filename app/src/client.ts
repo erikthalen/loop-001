@@ -1,7 +1,7 @@
 // Page script. All audio runs here, on the page (not in the service worker).
 import { createCore } from '@loop/core'
 import { createModulePicker } from './module-picker'
-import { availableModules } from './modules'
+import { availableModules, newProject } from './modules'
 import { connectProjectMenu } from './project-menu'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
@@ -88,6 +88,7 @@ const session = createProjectSession({
   core,
   store,
   definitions: availableModules,
+  newProject,
   onChange: () => menu?.update(),
 })
 menu = connectProjectMenu(session, {

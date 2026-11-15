@@ -1,7 +1,7 @@
-import { planChain, type ChainConnection } from './chain'
+import { modulesAfter, planChain, type ChainConnection } from './chain'
 import { createClock, type Clock, type ClockEventMap, type ClockOptions } from './clock'
 import { createEmitter, type Emitter } from './events'
-import type { AudioModule, AudioModuleDefinition, ModuleContext, ModuleSetupResult, OptionsArg, ScopedOn } from './module'
+import type { AudioModule, AudioModuleDefinition, ModuleContext, ModuleSetupResult, OptionsArg, ScopedOn, Trigger } from './module'
 import { render, toStyleSheet } from './ui'
 
 /**
@@ -98,6 +98,22 @@ export function createCore(options: CoreOptions = {}): Core {
   const jacks = new Map<string, GainNode>()
   let cables: ChainConnection<AudioNode>[] = []
 
+  // Triggers (see Trigger in module.ts) flow down the chain like sound: a module's triggers
+  // only reach the modules after it. Each module's trigger listeners, by module id.
+  const triggerListeners = new Map<string, ((trigger: Trigger) => void)[]>()
+  const sendTrigger = (from: string, trigger: Trigger) => {
+    for (const id of modulesAfter([...modules.keys()], from)) {
+      for (const listener of triggerListeners.get(id) ?? []) {
+        // Like the event bus: one broken listener does not stop the others.
+        try {
+          listener(trigger)
+        } catch (error) {
+          reportError(error)
+        }
+      }
+    }
+  }
+
   /** Unplug the old cables and plug in the new ones. Only touches cables that the core made. */
   const rewire = () => {
     for (const [from, to] of cables) {
@@ -167,6 +183,13 @@ export function createCore(options: CoreOptions = {}): Core {
         signal: controller.signal,
         on: scopedOn(controller.signal),
         onDispose: (fn) => disposers.push(fn),
+        send: (trigger) => sendTrigger(id, trigger),
+        onTrigger: (listener) => {
+          if (controller.signal.aborted) return
+          const listeners = triggerListeners.get(id) ?? []
+          listeners.push(listener)
+          triggerListeners.set(id, listeners)
+        },
         changed: () => {
           // Only after setup is done and while the module is still in the chain.
           if (modules.get(id) === module) events.emit('modulechange', { module })
@@ -215,6 +238,7 @@ export function createCore(options: CoreOptions = {}): Core {
       rewire()
       cleanups.set(id, () => {
         controller.abort()
+        triggerListeners.delete(id)
         for (const fn of disposers.reverse()) fn()
       })
       events.emit('moduleadd', { module })

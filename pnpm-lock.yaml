@@ -186,6 +186,12 @@ importers:
       '@loop/metronome':
         specifier: workspace:*
         version: link:../packages/metronome
+      '@loop/sampler':
+        specifier: workspace:*
+        version: link:../packages/sampler
+      '@loop/sequencer':
+        specifier: workspace:*
+        version: link:../packages/sequencer
       '@loop/ui':
         specifier: workspace:*
         version: link:../packages/ui
@@ -226,6 +232,32 @@ importers:
         version: 7.0.2
 
   packages/metronome:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/sampler:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/sequencer:
     dependencies:
       '@loop/core':
         specifier: workspace:*

@@ -10,6 +10,19 @@ export type ScopedOn = <K extends keyof CoreEventMap & string>(
 ) => () => void
 
 /**
+ * A signal between modules, like a MIDI note or a CV gate: "play channel X at this time".
+ * It flows down the chain like sound: only the modules AFTER the sender get it.
+ * For example, the sequencer sends one for each step that is on, and a sampler after it
+ * plays that channel.
+ */
+export interface Trigger {
+  /** Starts at 0 (0 is channel 1). */
+  channel: number
+  /** Exact audio time (AudioContext clock), so the sound can be scheduled to the sample. */
+  time: number
+}
+
+/**
  * What a module's `setup` gets from the core.
  * Listeners added with `on` are removed for you when the module is removed.
  */
@@ -23,6 +36,10 @@ export interface ModuleContext {
   readonly signal: AbortSignal
   /** Run a function when the module is removed. */
   onDispose(fn: () => void): void
+  /** Send a trigger down the chain. Only the modules after this one get it. */
+  send(trigger: Trigger): void
+  /** Get the triggers from the modules before this one. The listener is removed when the module is removed. */
+  onTrigger(listener: (trigger: Trigger) => void): void
   /** Tell the core that the module's saved state changed (for example, the volume). The app saves the project. */
   changed(): void
 }

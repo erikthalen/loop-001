@@ -31,6 +31,8 @@ export interface ProjectSessionOptions {
   store: ProjectStore
   /** The modules that saved projects may contain. */
   definitions: readonly AnyAudioModuleDefinition[]
+  /** The data of a new project. Default: no modules. */
+  newProject?: ProjectData
   /** Wait this long (ms) after the last change before saving. Default: 400. */
   saveDelay?: number
   /** Called when the open project, its name, or the save status changes. */
@@ -45,7 +47,7 @@ const DEFAULT_NAME = 'Untitled project'
  * Every change in the core is saved automatically, a moment later.
  */
 export function createProjectSession(options: ProjectSessionOptions): ProjectSession {
-  const { core, store, definitions, saveDelay = 400, onChange } = options
+  const { core, store, definitions, newProject = EMPTY_PROJECT, saveDelay = 400, onChange } = options
 
   let current = { id: '', name: DEFAULT_NAME }
   let status: SaveStatus = 'saved'
@@ -138,7 +140,7 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
       await session.flush()
       load(project)
     },
-    async create(name = DEFAULT_NAME, data = EMPTY_PROJECT) {
+    async create(name = DEFAULT_NAME, data = newProject) {
       await session.flush()
       const project: StoredProject = { id: crypto.randomUUID(), name, updatedAt: Date.now(), data }
       await store.put(project)

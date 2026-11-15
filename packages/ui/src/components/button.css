@@ -15,8 +15,9 @@
     justify-content: center;
     gap: 0.25rem;
 
-    padding: 0.33em 0.5em 0.2em;
+    padding: 0.33em 0.5em 0.05em;
     font: inherit;
+    font-family: var(--loop-font);
     color: var(--color-neutral-1000);
     background: var(--color-neutral-200);
     border: 1px solid var(--color-neutral-500);

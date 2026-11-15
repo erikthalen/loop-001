@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planChain } from './chain'
+import { modulesAfter, planChain } from './chain'
 
 // Nodes are plain strings here: the plan does not need real audio nodes.
 const names = (connections: readonly (readonly [string, string])[]) => connections.map(([from, to]) => `${from}>${to}`)
@@ -44,5 +44,19 @@ describe('planChain', () => {
       'filter.out>filter.jack',
       'filter.jack>out',
     ])
+  })
+})
+
+describe('modulesAfter', () => {
+  it('gives the modules after the sender, in chain order', () => {
+    expect(modulesAfter(['sampler-a', 'sequencer', 'sampler-b', 'meter'], 'sequencer')).toEqual(['sampler-b', 'meter'])
+  })
+
+  it('gives nothing to modules before the sender', () => {
+    expect(modulesAfter(['sampler', 'sequencer'], 'sequencer')).toEqual([])
+  })
+
+  it('gives nothing when the sender is not in the chain', () => {
+    expect(modulesAfter(['a', 'b'], 'gone')).toEqual([])
   })
 })

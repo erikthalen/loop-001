@@ -41,7 +41,7 @@ export const styles = css`
     flex: none;
     width: 34px;
     overflow: visible;
-    color: var(--color-neutral-900);
+    color: var(--color-neutral-300);
   }
 
   .arm,
