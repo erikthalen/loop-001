@@ -12,7 +12,9 @@ export const app = new Hono();
 const base = import.meta.env.BASE_URL;
 
 // Dev: Vite serves the TypeScript source. Build: vite.config.ts outputs a fixed client.js.
-const clientScript = import.meta.env.DEV ? `${base}src/client.ts` : `${base}client.js`;
+const clientScript = import.meta.env.DEV
+  ? `${base}src/client.ts`
+  : `${base}client.js`;
 
 const layout = (title: string, body: ReturnType<typeof html>) =>
   html`<!doctype html>
@@ -195,6 +197,9 @@ app.get(base, (c) =>
       "Loop 001",
       html`<header class="project-bar row">
           <h1>Loop 001</h1>
+        </header>
+
+        <div class="row">
           <button
             id="project-menu-button"
             class="button"
@@ -203,6 +208,37 @@ app.get(base, (c) =>
           >
             Projects
           </button>
+          <div id="project-menu" class="popover menu" popover>
+            <div class="menu-actions row" style="gap: 0.5rem">
+              <button
+                id="project-new"
+                class="button button--small"
+                type="button"
+              >
+                New
+              </button>
+              <button
+                id="project-import"
+                class="button button--small"
+                type="button"
+              >
+                Import…
+              </button>
+              <button
+                id="project-export"
+                class="button button--small"
+                type="button"
+              >
+                Export
+              </button>
+              <input id="project-file" type="file" hidden />
+            </div>
+            <hr class="menu-divider" />
+            <h2 class="menu-title">Projects</h2>
+            <ul id="project-list" class="menu-list"></ul>
+          </div>
+        </div>
+        <div class="row">
           <input
             id="project-name"
             class="input"
@@ -215,38 +251,6 @@ app.get(base, (c) =>
             class="text-muted text-small"
             role="status"
           ></span>
-        </header>
-        <div id="project-menu" class="popover menu" popover>
-          <div class="menu-actions row" style="gap: 0.5rem">
-            <button
-              id="project-new"
-              class="button"
-              data-size="small"
-              type="button"
-            >
-              New
-            </button>
-            <button
-              id="project-import"
-              class="button"
-              data-size="small"
-              type="button"
-            >
-              Import…
-            </button>
-            <button
-              id="project-export"
-              class="button"
-              data-size="small"
-              type="button"
-            >
-              Export
-            </button>
-            <input id="project-file" type="file" hidden />
-          </div>
-          <hr class="menu-divider" />
-          <h2 class="menu-title">Projects</h2>
-          <ul id="project-list" class="menu-list"></ul>
         </div>
         <div class="row">
           <label class="field">

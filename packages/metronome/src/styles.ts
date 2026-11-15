@@ -1,48 +1,39 @@
 import { css } from '@loop/core'
 import { DISPLAY_FONT } from './font'
 
-// CSS: only applies inside this module. Shared parts (sr-only, ...) come from @loop/ui.
+// CSS: only applies inside this module. The inputs (range, checkbox) and the button come from
+// @loop/ui and are not styled here. The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display copies the MT-01 design: a black dot-matrix screen, white text, one signal orange for "now".
 export const styles = css`
   :host {
-    display: block;
+    display: inline-block;
 
-    --screen: #0c0c0c;
-    --bezel: var(--color-neutral-300);
-    --white: #f2f2f2;
-    --dim: #8c8c8c;
-    --off: #242424;
-    --off-first: #3a3a3a;
-    --unlit-digit: #262626;
-    --signal: #ff5a00;
-  }
+    --orange: #ff5a00;
 
-  /* The whole module is 275px wide. All sizes below are the design's sizes x 0.7. */
-  article {
-    width: 275px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    border: 2px solid var(--color-neutral-200);
+    border-radius: 10px;
   }
 
   p {
     margin: 0;
   }
 
-  /* The screen */
+  /* The screen: 210 x 156px, a tight version of the design (320 x 272px). The small text stays 8px.
+     The inputs and the button come from @loop/ui, so they keep the library's size. */
   .display {
+    /* @loop/ui colors its inputs with --loop-primary. On this screen that is signal orange. */
+    --loop-primary: var(--orange);
+
     box-sizing: border-box;
-    padding: 14px 15px;
+    width: 210px;
+    padding: 11px 12px;
     display: flex;
     flex-direction: column;
-    background: var(--screen);
-    color: var(--white);
-    border-radius: 4px;
-    box-shadow:
-      inset 0 0 0 1px #000,
-      inset 0 1px 6px rgba(0, 0, 0, 0.8),
-      0 0 0 2px var(--bezel);
+    background: var(--color-neutral-50);
+    color: var(--color-neutral-1000);
+    border-radius: 10px;
     font-family: var(--loop-font);
+    color-scheme: dark;
   }
 
   .top {
@@ -52,13 +43,13 @@ export const styles = css`
     font-size: 8px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--dim);
+    color: var(--color-neutral-600);
   }
 
   .title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
 
   h2 {
@@ -66,274 +57,124 @@ export const styles = css`
     font: inherit;
   }
 
+  /* 11 x 13 icon pixels at 1.5px each: 3 screen pixels on a retina screen, so the pixel art stays sharp. */
   .icon {
     display: block;
-    width: 15px;
-    height: 15px;
+    width: 16.5px;
+    height: 19.5px;
     overflow: visible;
-    color: var(--white);
+    color: var(--color-neutral-900);
   }
 
-  .arm {
-    fill: var(--signal);
+  .arm,
+  .pivot {
+    fill: var(--orange);
   }
 
-  /* The time signature. Click it to change it. */
+  /* The time signature: a small @loop/ui button. Click it to change it. */
   .signature {
-    padding: 0;
-    font: inherit;
-    font-size: 9px;
     letter-spacing: 0.04em;
-    color: var(--white);
-    background: none;
-    border: 0;
-    cursor: pointer;
   }
 
-  .signature:hover {
-    color: var(--signal);
-  }
-
-  .signature:focus-visible {
-    outline: 1px solid var(--signal);
-    outline-offset: 2px;
-  }
-
-  /* The big number */
+  /* The big number, with "bpm" and the tempo name on the right */
   .tempo {
     display: flex;
     align-items: flex-end;
-    gap: 7px;
-    margin-top: 7px;
+    justify-content: space-between;
+    margin-top: 3px;
   }
 
   .digits {
     display: flex;
     font-family: '${DISPLAY_FONT}', var(--loop-font);
     font-weight: 900;
-    font-size: 90px;
+    font-size: 62px;
     line-height: 0.95;
   }
 
   .digit.unlit {
-    color: var(--unlit-digit);
+    color: var(--color-neutral-300);
+  }
+
+  .tempo-words {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    padding-bottom: 7px;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
 
   .unit {
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    color: var(--dim);
-    padding-bottom: 11px;
+    color: var(--color-neutral-600);
   }
 
   .marking {
-    margin-top: 3px;
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--signal);
-  }
-
-  /* The swinging ball. --side: 0 is left, 0.5 is centre, 1 is right. */
-  .track {
-    position: relative;
-    height: 10px;
-    margin-top: 14px;
-    border-bottom: 1px dashed #333;
-  }
-
-  .ball {
-    --side: 0.5;
-    position: absolute;
-    top: 0;
-    left: calc(var(--side) * (100% - 10px));
-    width: 10px;
-    height: 10px;
-    background: var(--signal);
-    transition: left 200ms ease;
+    color: var(--orange);
   }
 
   /* Beat cells */
   .beats {
     display: flex;
-    gap: 4px;
-    margin-top: 8px;
+    gap: 3px;
+    margin-top: 6px;
   }
 
   .beat {
     flex: 1;
-    height: 14px;
+    height: 9px;
     border-radius: 1px;
-    background: var(--off);
+    background: var(--color-neutral-300);
   }
 
   .beat:first-child {
-    background: var(--off-first);
+    background: var(--color-neutral-300);
   }
 
   .accent .beat:first-child {
-    box-shadow: inset 0 0 0 1px var(--signal);
+    box-shadow: inset 0 0 0 1px var(--orange);
   }
 
   .beat.on {
-    background: var(--white);
+    background: var(--color-neutral-950);
   }
 
   .accent .beat.on:first-child {
-    background: var(--signal);
+    background: var(--orange);
     box-shadow: none;
   }
 
-  /* Volume: a row of segments. The real slider lies on top, invisible. */
+  /* Volume and accent, at the bottom of the screen */
+  .controls {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .field {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* The label in a 20px column, the slider fills the rest. */
   .volume {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 14px;
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .volume-label {
-    width: 28px;
-    color: var(--dim);
-  }
-
-  .volume-bar {
-    position: relative;
-    flex: 1;
-    height: 14px;
-    display: flex;
-    align-items: center;
-  }
-
-  /* .volume-bar:focus-within {
-    outline: 1px solid var(--white);
-    outline-offset: 3px;
-  } */
-
-  .segments {
-    display: flex;
-    gap: 2px;
-    width: 100%;
-    height: 11px;
-  }
-
-  .segment {
-    flex: 1;
-    background: var(--off);
-  }
-
-  .segment.lit {
-    background: var(--white);
-  }
-
-  .volume-bar input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .volume > .volume-value {
-    width: 22px;
-    text-align: right;
-    color: var(--white);
-  }
-
-  /* Accent: a button with an on/off switch */
-  .accent-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 31px;
-    margin-top: 11px;
-    padding: 0 8px;
-    font: inherit;
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #b0b0b0;
-    background: transparent;
-    border: 1px solid var(--off-first);
-    border-radius: 1px;
-    cursor: pointer;
-    transition: transform 60ms;
-  }
-
-  /* .accent-toggle:active {
-    transform: translateY(1px);
-  } */
-
-  .accent-toggle:focus-visible {
-    outline: 1px solid var(--white);
-    outline-offset: 2px;
-  }
-
-  .accent-state {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-
-  .accent-label {
-    color: var(--dim);
-  }
-
-  .accent .accent-label {
-    color: var(--signal);
-  }
-
-  .switch {
-    position: relative;
-    display: block;
-    box-sizing: border-box;
-    width: 25px;
-    height: 13px;
-    border: 1px solid #555;
-  }
-
-  .knob {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    display: block;
-    width: 10px;
-    height: 7px;
-    background: #555;
-  }
-
-  .accent .knob {
-    left: 11px;
-    background: var(--signal);
-  }
-
-  /* Status line */
-  .status {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    margin-top: 11px;
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--dim);
-
-    > span:last-of-type {
-      justify-self: end;
-    }
+    grid-template-columns: 20px 1fr;
+    align-items: center;
   }
 
-  .running .state {
-    color: var(--signal);
+  .control-label {
+    color: var(--color-neutral-700);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .ball {
-      transition: none !important;
-    }
+  .accent-field {
+    color: var(--color-neutral-700);
+    cursor: pointer;
   }
 `

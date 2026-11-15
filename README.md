@@ -61,9 +61,9 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 | `tokens.css`  | The only 2 variables: `--loop-primary` (main color) and `--loop-font`. All other values are written straight into the CSS. |
 | `base.css`    | Page font and colors, heading weight, focus ring, `.text-muted`, `.text-small`    |
 | `layout.css`  | `.row`, `.stack` (other gap: `style="gap: 0.5rem"`)                              |
-| `components/button.css` | `.button` + `data-variant="primary" / "ghost"`, `data-size="small"`, `aria-pressed` |
+| `components/button.css` | `.button` + modifier classes `.button--primary`, `.button--ghost`, `.button--small`; `aria-pressed` |
 | `components/input.css`  | `.input`, `.field` (label + control)                       |
-| `components/range.css` | `.range`: Chrome's own slider in the primary color; the track follows light/dark mode |
+| `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode |
 | `components/checkbox.css` | `.checkbox`: the native checkbox, drawn as a primary-color box with a white check |
 | `components/panel.css`  | `.panel`, `.panel-title`                                                          |
 | `components/menu.css`   | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`               |

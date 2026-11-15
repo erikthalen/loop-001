@@ -1,10 +1,12 @@
 /*
- * Buttons.
+ * Buttons. Modifier classes change the look, and you can combine them.
  *   <button class="button">Play</button>
- *   <button class="button" data-variant="primary">Save</button>
- *   <button class="button" data-variant="ghost">×</button>
- *   <button class="button" data-size="small">New</button>
+ *   <button class="button button--primary">Save</button>
+ *   <button class="button button--ghost">×</button>
+ *   <button class="button button--small">New</button>
  *   <button class="button" aria-pressed="true">Remove</button>   (a toggle that is on)
+ *
+ * aria-pressed stays an attribute: it is the button's state, and screen readers read it.
  */
 @layer ui {
   .button {
@@ -29,28 +31,28 @@
     background: var(--color-neutral-400);
   }
 
-  .button[data-variant="primary"],
+  .button--primary,
   .button[aria-pressed="true"] {
     color: #ffffff;
     background: var(--loop-primary);
     border-color: transparent;
   }
 
-  .button[data-variant="primary"]:hover,
+  .button--primary:hover,
   .button[aria-pressed="true"]:hover {
     background: color-mix(in srgb, var(--loop-primary), black 10%);
   }
 
-  .button[data-variant="ghost"] {
+  .button--ghost {
     background: none;
     border-color: transparent;
   }
 
-  .button[data-variant="ghost"]:hover {
+  .button--ghost:hover {
     background: var(--color-neutral-300);
   }
 
-  .button[data-size="small"] {
+  .button--small {
     font-size: 11px;
   }
 

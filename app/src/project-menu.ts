@@ -32,7 +32,7 @@ export function connectProjectMenu(session: ProjectSession, elements: ProjectMen
               <strong>${project.name}</strong>
               <small>${dateFormat.format(project.updatedAt)}</small>
             </button>
-            <button type="button" class="button" data-variant="ghost" data-action="delete" data-id="${project.id}" aria-label="Delete ${project.name}">×</button>
+            <button type="button" class="button button--ghost" data-action="delete" data-id="${project.id}" aria-label="Delete ${project.name}">×</button>
           </li>
         `,
       )}`,

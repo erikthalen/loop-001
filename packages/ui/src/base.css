@@ -1,11 +1,15 @@
 /* Base styles for the page, and for headings and focus everywhere. */
 @layer ui {
-  :root {
+  :root,
+  :host {
     color-scheme: light dark;
 
     --color-neutral-light: #93949d;
     --color-neutral-dark: #8b8c93;
-    --color-neutral: light-dark(var(--color-neutral-light), var(--color-neutral-dark));
+    --color-neutral: light-dark(
+      var(--color-neutral-light),
+      var(--color-neutral-dark)
+    );
 
     /* SCALES */
     --color-50-light-value: white 95%;
@@ -30,8 +34,16 @@
     --color-900-dark-value: white 87%;
     --color-950-dark-value: white 95%;
 
-    --color-neutral-0-light: color-mix(in oklab, var(--color-neutral), white 100%);
-    --color-neutral-0-dark: color-mix(in oklab, var(--color-neutral), black 100%);
+    --color-neutral-0-light: color-mix(
+      in oklab,
+      var(--color-neutral),
+      white 100%
+    );
+    --color-neutral-0-dark: color-mix(
+      in oklab,
+      var(--color-neutral),
+      black 100%
+    );
     --color-neutral-0: light-dark(
       var(--color-neutral-0-light),
       var(--color-neutral-0-dark)

@@ -15,12 +15,23 @@ function marking(bpm: number): string {
   return 'prestissimo'
 }
 
-/** The pixel arm of the icon. `lean` goes from -4 (left) to 4 (right). */
+/** How far the arm tip swings to each side, in icon pixels. */
+const SWING = 4
+/** Where the arm rests when the metronome is stopped: leaning all the way left. */
+const REST = -SWING
+/** The arm is 11 pixels long: from the pivot (row 10) up to the top row (row 0). */
+const ARM_LENGTH = 10
+
+/**
+ * The pixel arm of the icon: one pixel per row, from the pivot up to the tip.
+ * `lean` is where the tip is, from -SWING (left) to SWING (right). Any number works:
+ * each pixel snaps to the grid, so the arm moves smoothly but stays pixel art.
+ */
 function armPath(lean: number): string {
   let d = ''
-  for (let t = 0; t <= 9; t++) {
-    const x = Math.round(5 + (lean * t) / 9)
-    d += `M${x} ${9 - t}h1v1h-1z `
+  for (let t = 0; t <= ARM_LENGTH; t++) {
+    const x = Math.round(5 + (lean * t) / ARM_LENGTH)
+    d += `M${x} ${ARM_LENGTH - t}h1v1h-1z `
   }
   return d
 }
@@ -31,21 +42,15 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
 
   const display = root.querySelector<HTMLElement>('.display')!
   const volume = root.querySelector<HTMLInputElement>('[name=volume]')!
-  const segments = [...root.querySelectorAll<HTMLElement>('.segment')]
-  const volumeValues = [...root.querySelectorAll<HTMLElement>('.volume-value')]
-  const accentToggle = root.querySelector<HTMLButtonElement>('.accent-toggle')!
+  const accent = root.querySelector<HTMLInputElement>('[name=accent]')!
   const digits = [...root.querySelectorAll<HTMLElement>('.digit')]
   const tempoValue = root.querySelector<HTMLElement>('.tempo-value')!
   const markingLabel = root.querySelector<HTMLElement>('.marking')!
   const signatureButton = root.querySelector<HTMLButtonElement>('.signature')!
-  const beatCount = root.querySelector<HTMLElement>('.beat-count')!
   const beatsRow = root.querySelector<HTMLElement>('.beats')!
   const arm = root.querySelector<SVGPathElement>('.arm')!
-  const ball = root.querySelector<HTMLElement>('.ball')!
   let cells = [...root.querySelectorAll<HTMLElement>('.beat')]
-  const state = root.querySelector<HTMLElement>('.state')!
-  const beatNumber = root.querySelector<HTMLElement>('.beat-number')!
-  const accentLabel = root.querySelector<HTMLElement>('.accent-label')!
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
   /** Three dot-matrix digits. Leading zeros stay dark, like an unlit display. */
   const showTempo = (bpm: number) => {
@@ -57,14 +62,13 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       digit.textContent = ch
       digit.classList.toggle('unlit', leading)
     })
-    tempoValue.textContent = `${Math.round(bpm)}`
+    tempoValue.textContent = `${Math.round(bpm)} bpm`
     markingLabel.textContent = marking(bpm)
   }
 
-  /** The signature in the top right corner, one cell per beat, and the beat count. */
+  /** The signature in the top right corner, and one cell per beat. */
   const showSignature = () => {
     signatureButton.textContent = module.signature
-    beatCount.textContent = String(module.beatsPerBar)
     signatureButton.setAttribute('aria-label', `Time signature ${module.signature}. Click to change.`)
     if (cells.length !== module.beatsPerBar) {
       render(html`${beatCells(module.beatsPerBar)}`, beatsRow)
@@ -72,82 +76,90 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     }
   }
 
-  const showAccent = () => {
-    display.classList.toggle('accent', module.accent)
-    accentToggle.setAttribute('aria-pressed', String(module.accent))
-    accentLabel.textContent = module.accent ? 'on' : 'off'
-  }
+  const showAccent = () => display.classList.toggle('accent', module.accent)
 
-  /** Lit segments and the volume as three digits, like "070". */
+  /** What screen readers say for the slider. */
   const showVolume = () => {
-    const percent = Math.round(module.volume * 100)
-    const lit = Math.round((percent / 100) * segments.length)
-    segments.forEach((segment, i) => segment.classList.toggle('lit', i < lit))
-    volumeValues.forEach((value) => (value.textContent = String(percent).padStart(3, '0')))
-    volume.setAttribute('aria-valuetext', `${percent} percent`)
+    volume.setAttribute('aria-valuetext', `${volume.valueAsNumber} percent`)
   }
 
-  /** The ball and the icon arm. `side` 0 is left, 0.5 is centre, 1 is right. */
-  const swing = (side: number, seconds: number) => {
-    ball.style.transition = `left ${seconds}s cubic-bezier(.45, 0, .55, 1)`
-    ball.style.setProperty('--side', String(side))
-    arm.setAttribute('d', armPath(side === 0.5 ? -3 : side === 0 ? -4 : 4))
+  const showBeat = (index: number) => cells.forEach((cell, i) => cell.classList.toggle('on', i === index))
+
+  // The arm. Only touch the DOM when a pixel really moves.
+  let shownPath = ''
+  const showArm = (lean: number) => {
+    const path = armPath(lean)
+    if (path === shownPath) return
+    shownPath = path
+    arm.setAttribute('d', path)
   }
 
-  const showRunning = (running: boolean) => {
-    display.classList.toggle('running', running)
-    state.textContent = running ? '● run' : '○ idle'
+  // The arm is in the middle on every beat. Between two beats it swings out to one side and
+  // back (a sine curve: fast in the middle, slow at the side). The next beat swings to the other side.
+  // Beat events arrive early (the clock schedules ahead), so keep them until their time comes.
+  const swings: { time: number; side: number }[] = []
+  let frame = 0
+
+  const animate = () => {
+    const now = core.context.currentTime
+    while (swings.length > 1 && swings[1]!.time <= now) swings.shift()
+    const current = swings[0]
+    if (current && current.time <= now) {
+      // Less motion: no swing, the arm only jumps to the side of each beat.
+      const progress = reducedMotion.matches ? 0.5 : Math.min(1, (now - current.time) / (60 / core.bpm))
+      showArm(current.side * SWING * Math.sin(Math.PI * progress))
+    }
+    frame = requestAnimationFrame(animate)
   }
 
-  const showBeat = (index: number) => {
-    cells.forEach((cell, i) => cell.classList.toggle('on', i === index))
-    beatNumber.textContent = index < 0 ? '-' : String(index + 1)
+  const startSwing = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(animate)
+  }
+
+  const stopSwing = () => {
+    cancelAnimationFrame(frame)
+    swings.length = 0
+    showArm(REST)
   }
 
   showTempo(core.bpm)
   showAccent()
   showVolume()
   showSignature()
-  showRunning(core.playing)
-  swing(0.5, 0)
+  showArm(REST)
+  if (core.playing) startSwing()
+  signal.addEventListener('abort', () => cancelAnimationFrame(frame))
 
   volume.addEventListener('input', () => {
     module.setVolume(volume.valueAsNumber / 100)
     showVolume()
   }, { signal })
-  accentToggle.addEventListener('click', () => {
-    module.setAccent(!module.accent)
+  accent.addEventListener('change', () => {
+    module.setAccent(accent.checked)
     showAccent()
   }, { signal })
-
   signatureButton.addEventListener('click', () => {
     module.nextSignature()
     showSignature()
   }, { signal })
 
   on('bpmchange', ({ bpm }) => showTempo(bpm))
-  on('start', () => showRunning(true))
+  on('start', startSwing)
 
-  // Beat events arrive a bit early (the clock schedules ahead).
-  // Wait until the beat really plays, then light the cell and swing the ball.
-  let side = 0
   on('beat', ({ beat, time }) => {
+    // After even beats the arm swings out to the left, after odd beats to the right.
+    swings.push({ time, side: beat % 2 === 0 ? -1 : 1 })
+
     // The metronome's own bar (see setup.ts), not the core clock's.
+    // Wait until the beat really plays, then light its cell.
     const beatInBar = beat % module.beatsPerBar
     const delay = Math.max(0, (time - core.context.currentTime) * 1000)
-    setTimeout(() => {
-      if (!core.playing || signal.aborted) return
-      showBeat(beatInBar)
-      // The ball reaches the other side on the next beat.
-      side = side === 0 ? 1 : 0
-      swing(side, 60 / core.bpm)
-    }, delay)
+    setTimeout(() => core.playing && !signal.aborted && showBeat(beatInBar), delay)
   })
 
   on('stop', () => {
-    showRunning(false)
     showBeat(-1)
-    side = 0
-    swing(0.5, 0.2)
+    stopSwing()
   })
 })
