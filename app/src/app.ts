@@ -98,19 +98,30 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
           #project-list {
             max-height: 50vh;
             overflow: auto;
-          }
-          #project-list li {
-            display: flex;
-            align-items: stretch;
-          }
-          #project-list [data-action="delete"] {
-            font-size: 1.25rem;
-            color: #667085;
-          }
-          #project-list .menu-item[aria-current="true"] strong::after {
-            content: " (open)";
-            font-weight: 300;
-            color: #667085;
+
+            ul {
+              display: contents;
+            }
+
+            li {
+              display: flex;
+              align-items: stretch;
+            }
+
+            small {
+              color: var(--color-neutral-500);
+            }
+
+            [data-action="delete"] {
+              font-size: 1.25rem;
+              color: #667085;
+            }
+
+            .button[aria-current="true"] strong::after {
+              content: " (open)";
+              font-weight: 300;
+              color: #667085;
+            }
           }
 
           /* The app places the modules. Each module styles its own inside. */
@@ -243,34 +254,42 @@ app.get(base, (c) =>
           >
             Projects
           </button>
-          <div id="project-menu" class="popover menu" popover>
-            <div class="menu-actions row" style="gap: 0.5rem">
-              <button
-                id="project-new"
-                class="button button--small"
-                type="button"
-              >
-                New
-              </button>
-              <button
-                id="project-import"
-                class="button button--small"
-                type="button"
-              >
-                Import…
-              </button>
-              <button
-                id="project-export"
-                class="button button--small"
-                type="button"
-              >
-                Export
-              </button>
-              <input id="project-file" type="file" hidden />
-            </div>
-            <hr class="menu-divider" />
-            <h2 class="menu-title">Projects</h2>
-            <ul id="project-list" class="menu-list"></ul>
+          <div id="project-menu" class="popover" popover>
+            <menu>
+              <li>
+                <button
+                  id="project-new"
+                  class="button button--small"
+                  type="button"
+                >
+                  New
+                </button>
+              </li>
+              <li>
+                <button
+                  id="project-import"
+                  class="button button--small"
+                  type="button"
+                >
+                  Import…
+                </button>
+              </li>
+              <li>
+                <button
+                  id="project-export"
+                  class="button button--small"
+                  type="button"
+                >
+                  Export
+                </button>
+                <input id="project-file" type="file" hidden />
+              </li>
+              <li><hr /></li>
+              <li><small>Projects</small></li>
+              <ul id="project-list"></ul>
+            </menu>
+
+            <div class="menu-actions row" style="gap: 0.5rem"></div>
           </div>
         </div>
         <div class="row">
@@ -331,8 +350,7 @@ app.get(base, (c) =>
           </button>
         </div>
         <div id="module-picker" class="popover menu" popover>
-          <h2 class="menu-title">Add a module</h2>
-          <ul id="module-list" class="menu-list"></ul>
+          <menu id="module-list"></menu>
         </div>
         <div id="rack"></div>`,
     ),

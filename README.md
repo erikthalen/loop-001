@@ -6,6 +6,7 @@ pnpm monorepo.
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter that shows the sound before and after it
+- `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two needles, left and right); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
 
 ## Commands (run from the repo root)
@@ -96,7 +97,7 @@ core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ core.output ─▶ 
 | ---------------- | ---------- | ------------------------------------------ | ---------------------- |
 | input and output | Low pass   | goes through the module                    | goes on                |
 | only output      | Metronome  | goes past the module                       | is mixed in            |
-| only input       | a meter    | goes to the module, and also past it       | (none)                 |
+| only input       | VU meter   | goes to the module, and also past it       | (none)                 |
 
 So a filter only changes the modules that come before it. `core.move(module, index)` changes the order
 (the rack calls it when you drag a module by its handle; dnd-kit, `@dnd-kit/dom`). `core.input` is the start of the chain

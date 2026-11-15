@@ -1,5 +1,5 @@
-import { css } from '@loop/core'
-import { MATRIX_FONT } from '@loop/ui'
+import { css } from "@loop/core";
+import { MATRIX_FONT } from "@loop/ui";
 
 // CSS: only applies inside this module. The button comes from @loop/ui and is not styled here. The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display copies the MT-01 design: a black dot-matrix screen, white text, one signal orange for "now".
@@ -23,6 +23,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     color: var(--color-neutral-1000);
+    background: var(--color-neutral-100);
     font-family: var(--loop-font);
   }
 
@@ -62,7 +63,7 @@ export const styles = css`
 
   .digits {
     display: flex;
-    font-family: '${MATRIX_FONT}', var(--loop-font);
+    font-family: "${MATRIX_FONT}", var(--loop-font);
     font-weight: 400;
     font-size: 48px;
     line-height: 0.85;
@@ -119,4 +120,5 @@ export const styles = css`
   .accent .beat.on:first-child {
     background: var(--orange);
     box-shadow: none;
-  }`
+  }
+`;

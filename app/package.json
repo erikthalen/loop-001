@@ -16,6 +16,7 @@
     "@loop/lp-filter": "workspace:*",
     "@loop/metronome": "workspace:*",
     "@loop/ui": "workspace:*",
+    "@loop/vu-meter": "workspace:*",
     "hono": "^4.13.18"
   },
   "devDependencies": {

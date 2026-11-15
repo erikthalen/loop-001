@@ -235,8 +235,16 @@
 
   /* ---- Vertical ----
    * A vertical writing mode turns the slider. `direction: rtl` puts the lowest value at the bottom.
-   * The thumb's timeline now runs top to bottom (it does not follow `direction`), so at the top
-   * it is at 0. That is the highest value, so the animation runs the other way.
+   * Mouse, touch and the arrow keys work as expected in every browser.
+   *
+   * The thumb's timeline (for the filled part) does not run the same way in every browser:
+   * - Chrome and Edge: top to bottom on the screen. At the top it is at 0, and the top is the
+   *   highest value, so the animation runs the other way: range-progress-vertical.
+   * - Safari: bottom to top, like the slider. That is like the horizontal slider: range-progress.
+   *   `font: -apple-system-body` only works in Safari (WebKit), so it picks out Safari below.
+   * (Other ways, like flipping the slider with `scale: 1 -1`, made Chrome's arrow keys go the
+   * wrong way. If Chrome changes its timeline one day, its vertical fill will be upside down:
+   * then drop range-progress-vertical.)
    */
   .range--vertical {
     writing-mode: vertical-lr;
@@ -244,6 +252,12 @@
     width: 16px;
     height: 129px;
     animation-name: range-progress-vertical;
+  }
+
+  @supports (font: -apple-system-body) {
+    .range--vertical {
+      animation-name: range-progress;
+    }
   }
 
   @keyframes range-progress-vertical {

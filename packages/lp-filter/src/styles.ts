@@ -34,6 +34,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     color: var(--color-neutral-1000);
+    background: var(--color-neutral-100);
     border-radius: 10px;
     font-family: var(--loop-font);
     font-size: 12px;
@@ -59,7 +60,7 @@ export const styles = css`
   h2 {
     margin: 0;
     font: inherit;
-    color: var(--blue);
+    color: var(--color-neutral-900);
   }
 
   .readout {
@@ -67,6 +68,8 @@ export const styles = css`
     align-items: flex-end;
     justify-content: flex-end;
     gap: 5px;
+
+    color: var(--blue);
   }
 
   .readout:not(.resonance-readout) {
@@ -74,7 +77,7 @@ export const styles = css`
   }
 
   .frequency-unit {
-    color: var(--color-neutral-600);
+    /* color: var(--color-neutral-600); */
   }
 
   .resonance-readout {

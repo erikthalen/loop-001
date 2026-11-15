@@ -189,6 +189,9 @@ importers:
       '@loop/ui':
         specifier: workspace:*
         version: link:../packages/ui
+      '@loop/vu-meter':
+        specifier: workspace:*
+        version: link:../packages/vu-meter
       hono:
         specifier: ^4.13.18
         version: 4.13.18
@@ -246,6 +249,19 @@ importers:
       vitest:
         specifier: ^5.1.0
         version: 5.1.0(vite@8.3.8)
+
+  packages/vu-meter:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
 packages:
 

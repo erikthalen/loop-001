@@ -1,55 +1,78 @@
-/*
- * Menu: a list of choices. Put it in a popover (see popover.css) for the box.
- *   <button class="button" popovertarget="my-menu">Open</button>
- *   <div id="my-menu" class="popover menu" popover>
- *     <h2 class="menu-title">Pick one</h2>
- *     <ul class="menu-list">
- *       <li><button class="menu-item"><strong>Title</strong><small>Description</small></button></li>
- *     </ul>
- *   </div>
- */
 @layer ui {
-  .menu {
-    min-width: 16rem;
-  }
+  menu {
+    > li {
+      list-style: none;
 
-  .menu-title {
-    margin: 0.25rem 0.5rem 0.5rem;
-    font-size: 0.875rem;
-    color: var(--color-neutral-600);
-  }
+      > button,
+      > .button {
+        white-space: nowrap;
+        justify-content: flex-start;
+        width: 100%;
+      }
 
-  .menu-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
+      > label {
+        width: 100%;
+        padding-block: 0.5rem;
+        padding-inline: 0.75rem;
+        border-radius: 2px;
+        white-space: nowrap;
+        cursor: pointer;
+        -webkit-user-select: none;
+        user-select: none;
 
-  .menu-item {
-    display: grid;
-    width: 100%;
-    padding: 0.5rem;
-    font: inherit;
-    text-align: left;
-    color: inherit;
-    background: none;
-    border: 0;
-    border-radius: 0.5rem;
-    cursor: pointer;
-  }
+        > input[type="radio"],
+        > input[type="checkbox"] {
+          appearance: none;
+          opacity: 0;
+          pointer-events: none;
+          width: 0;
+          height: 0;
+          position: absolute;
+        }
 
-  .menu-item:hover,
-  .menu-item:focus-visible {
-    background: var(--color-neutral-300);
-  }
+        @media (hover: hover) {
+          &:hover {
+            background: var(--color-neutral-100);
+          }
+        }
 
-  .menu-item small {
-    color: var(--color-neutral-600);
-  }
+        &:has(input[type="checkbox"], input[type="radio"]) {
+          &:after {
+            content: "";
+            visibility: hidden;
+            background-color: currentColor;
+            width: 1rem;
+            height: 1rem;
+            margin-left: auto;
+            display: inline-block;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+            mask-position: center;
+            mask-size: 1rem;
+            mask-repeat: no-repeat;
+          }
 
-  .menu-divider {
-    margin: 0.5rem 0;
-    border: 0;
-    border-top: 1px solid var(--color-neutral-400);
+          &:has(input:checked):after {
+            visibility: visible;
+          }
+        }
+      }
+
+      > small:only-child:not(:has(*)) {
+        padding: 0.33rem;
+        color: var(--color-neutral-500);
+        -webkit-user-select: none;
+        user-select: none;
+        margin-left: 2px;
+        display: block;
+      }
+    }
+
+    hr {
+      margin-block: 0.25rem;
+
+      border-color: var(--color-neutral-400);
+      border-style: solid;
+      border-bottom: none;
+    }
   }
 }
