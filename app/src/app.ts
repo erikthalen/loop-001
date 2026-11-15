@@ -115,7 +115,9 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
 
           /* The app places the modules. Each module styles its own inside. */
           #rack {
-            display: grid;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
             gap: 1rem;
             margin-top: 1.5rem;
             max-width: 32rem;
@@ -125,10 +127,43 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             color: #667085;
           }
 
-          /* Remove mode: modules jiggle, a badge shows, a click removes the module. */
+          /* A slot: the module, then the drag handle on its right. */
           .slot {
             position: relative;
+            display: flex;
+            gap: 0.25rem;
           }
+
+          /* Drag a module by its handle to change the order (see rack.ts). */
+          .drag-handle {
+            display: grid;
+            place-items: center;
+            flex: none;
+            width: 1rem;
+            padding: 0;
+            color: var(--color-neutral-500);
+            background: none;
+            border: 0;
+            border-radius: 4px;
+            cursor: grab;
+            /* Touch: dragging the handle moves the module, not the page. */
+            touch-action: none;
+          }
+          .drag-handle:hover {
+            color: var(--color-neutral-800);
+            background: var(--color-neutral-200);
+          }
+          .drag-handle:active {
+            cursor: grabbing;
+          }
+          .drag-handle svg {
+            fill: currentColor;
+          }
+          #rack[data-removing] .drag-handle {
+            visibility: hidden;
+          }
+
+          /* Remove mode: modules jiggle, a badge shows, a click removes the module. */
           .slot .remove-target {
             display: none;
           }
@@ -147,15 +182,15 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             content: "−";
             position: absolute;
             top: -0.6rem;
-            left: -0.6rem;
+            left: 0rem;
             display: grid;
             place-items: center;
-            width: 1.5rem;
-            height: 1.5rem;
+            width: 1rem;
+            height: 1rem;
             border-radius: 50%;
-            background: #555;
-            color: white;
-            font-size: 1.25rem;
+            background: var(--color-neutral-300);
+            color: var(--color-neutral-1000);
+            font-size: 1rem;
             line-height: 1;
           }
           #rack[data-removing] .slot {
@@ -279,7 +314,7 @@ app.get(base, (c) =>
         <div class="row">
           <button
             id="add"
-            class="button"
+            class="button button--small"
             type="button"
             popovertarget="module-picker"
           >
@@ -287,7 +322,7 @@ app.get(base, (c) =>
           </button>
           <button
             id="remove"
-            class="button"
+            class="button button--small"
             type="button"
             aria-pressed="false"
             disabled

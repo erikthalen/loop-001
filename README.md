@@ -5,6 +5,7 @@ pnpm monorepo.
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
+- `packages/lp-filter` – `@loop/lp-filter`: a low pass filter that shows the sound before and after it
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
 
 ## Commands (run from the repo root)
@@ -63,7 +64,8 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 | `layout.css`  | `.row`, `.stack` (other gap: `style="gap: 0.5rem"`)                              |
 | `components/button.css` | `.button` + modifier classes `.button--primary`, `.button--ghost`, `.button--small`; `aria-pressed` |
 | `components/input.css`  | `.input`, `.field` (label + control)                       |
-| `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode |
+| `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.range--vertical`: lowest value at the bottom, length with `height` |
+| `font.ts` | Display fonts for modules (files in `src/fonts/`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
 | `components/checkbox.css` | `.checkbox`: the native checkbox, drawn as a primary-color box with a white check |
 | `components/panel.css`  | `.panel`, `.panel-title`                                                          |
 | `components/menu.css`   | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`               |
@@ -78,14 +80,31 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 All audio runs on the page (`app/src/client.ts`). A service worker has no Web Audio API.
 
 ```
-UI (client.ts) ──methods──▶ Core ──events──▶ modules (Metronome, ...)
+UI (client.ts) ──methods──▶ Core ──events──▶ modules (Metronome, Low pass, ...)
                              │                   │
-                         AudioContext ◀── audio nodes (module.output → core.output → speakers)
+                         AudioContext ◀── audio nodes (the audio chain, below)
 ```
+
+**The audio chain** (`packages/core/src/chain.ts`): like cables between hardware boxes. Sound flows
+through the modules in the order they were added, then to the speakers:
+
+```
+core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ core.output ─▶ speakers
+```
+
+| Module has       | Example    | The sound from before ...                  | The module's own sound |
+| ---------------- | ---------- | ------------------------------------------ | ---------------------- |
+| input and output | Low pass   | goes through the module                    | goes on                |
+| only output      | Metronome  | goes past the module                       | is mixed in            |
+| only input       | a meter    | goes to the module, and also past it       | (none)                 |
+
+So a filter only changes the modules that come before it. `core.move(module, index)` changes the order
+(the rack calls it when you drag a module by its handle; dnd-kit, `@dnd-kit/dom`). `core.input` is the start of the chain
+(nothing is connected to it yet; later, for example, a microphone).
 
 - **Commands go in as function calls:** `core.start()`, `core.stop()`, `core.setBpm(90)`, `core.add(module)`.
 - **News goes out as events:** `core.events.on('beat', ...)`. The event bus (`createEmitter` in `packages/core/src/events.ts`) is a typed wrapper around the browser's `EventTarget` + `CustomEvent`.
-- **Events:** `start`, `stop`, `bpmchange`, `step` (every 16th note), `beat`, `moduleadd`, `moduleremove`, `modulechange`.
+- **Events:** `start`, `stop`, `bpmchange`, `step` (every 16th note), `beat`, `moduleadd`, `moduleremove`, `modulemove`, `modulechange`.
 
 ### The app: adding and removing modules
 
@@ -93,7 +112,7 @@ UI (client.ts) ──methods──▶ Core ──events──▶ modules (Metron
 | --------------------------- | -------------------------------------------------------------------- |
 | `app/src/modules.ts`        | The list of modules a user can add. **Add new modules here.**        |
 | `app/src/module-picker.ts`  | The "Add" list. A native popover (`popovertarget` on the Add button). |
-| `app/src/rack.ts`           | Shows the core's modules. Follows `moduleadd` / `moduleremove`.      |
+| `app/src/rack.ts`           | Shows the core's modules in chain order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it in the chain. |
 | `app/src/client.ts`         | Connects the buttons, the core, the picker and the rack.             |
 
 The core owns the chain. The page only shows it:

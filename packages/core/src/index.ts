@@ -1,4 +1,5 @@
 export { createCore, type Core, type CoreEventMap, type CoreOptions } from './core'
+export { planChain, type ChainConnection, type ChainSlot } from './chain'
 export {
   createClock,
   type BeatEvent,

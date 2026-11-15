@@ -1,19 +1,7 @@
 import { defineModuleScript, html, render } from '@loop/core'
-import { addDisplayFont } from './font'
+import { addMatrixFont } from '@loop/ui'
 import type { setup } from './setup'
 import { beatCells } from './template'
-
-/** The Italian tempo name for a bpm. */
-function marking(bpm: number): string {
-  if (bpm < 66) return 'largo'
-  if (bpm < 76) return 'adagio'
-  if (bpm < 108) return 'andante'
-  if (bpm < 120) return 'moderato'
-  if (bpm < 156) return 'allegro'
-  if (bpm < 176) return 'vivace'
-  if (bpm < 200) return 'presto'
-  return 'prestissimo'
-}
 
 /** How far the arm tip swings to each side, in icon pixels. */
 const SWING = 4
@@ -38,14 +26,11 @@ function armPath(lean: number): string {
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
 export const script = defineModuleScript<typeof setup>(({ root, module, core, on, signal }) => {
-  addDisplayFont()
+  addMatrixFont()
 
   const display = root.querySelector<HTMLElement>('.display')!
-  const volume = root.querySelector<HTMLInputElement>('[name=volume]')!
-  const accent = root.querySelector<HTMLInputElement>('[name=accent]')!
   const digits = [...root.querySelectorAll<HTMLElement>('.digit')]
   const tempoValue = root.querySelector<HTMLElement>('.tempo-value')!
-  const markingLabel = root.querySelector<HTMLElement>('.marking')!
   const signatureButton = root.querySelector<HTMLButtonElement>('.signature')!
   const beatsRow = root.querySelector<HTMLElement>('.beats')!
   const arm = root.querySelector<SVGPathElement>('.arm')!
@@ -63,7 +48,6 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       digit.classList.toggle('unlit', leading)
     })
     tempoValue.textContent = `${Math.round(bpm)} bpm`
-    markingLabel.textContent = marking(bpm)
   }
 
   /** The signature in the top right corner, and one cell per beat. */
@@ -76,12 +60,8 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     }
   }
 
+  // The first beat cell has an orange ring when the accent is on (saved with the project).
   const showAccent = () => display.classList.toggle('accent', module.accent)
-
-  /** What screen readers say for the slider. */
-  const showVolume = () => {
-    volume.setAttribute('aria-valuetext', `${volume.valueAsNumber} percent`)
-  }
 
   const showBeat = (index: number) => cells.forEach((cell, i) => cell.classList.toggle('on', i === index))
 
@@ -125,20 +105,11 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
 
   showTempo(core.bpm)
   showAccent()
-  showVolume()
   showSignature()
   showArm(REST)
   if (core.playing) startSwing()
   signal.addEventListener('abort', () => cancelAnimationFrame(frame))
 
-  volume.addEventListener('input', () => {
-    module.setVolume(volume.valueAsNumber / 100)
-    showVolume()
-  }, { signal })
-  accent.addEventListener('change', () => {
-    module.setAccent(accent.checked)
-    showAccent()
-  }, { signal })
   signatureButton.addEventListener('click', () => {
     module.nextSignature()
     showSignature()

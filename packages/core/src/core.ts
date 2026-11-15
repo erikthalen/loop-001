@@ -1,3 +1,4 @@
+import { planChain, type ChainConnection } from './chain'
 import { createClock, type Clock, type ClockEventMap, type ClockOptions } from './clock'
 import { createEmitter, type Emitter } from './events'
 import type { AudioModule, AudioModuleDefinition, ModuleContext, ModuleSetupResult, OptionsArg, ScopedOn } from './module'
@@ -14,10 +15,12 @@ import { render, toStyleSheet } from './ui'
  */
 export interface CoreEventMap extends ClockEventMap {
   bpmchange: { bpm: number }
-  /** A module was added to the chain. */
+  /** A module was added to the end of the chain. */
   moduleadd: { module: AudioModule }
   /** A module was removed from the chain. */
   moduleremove: { module: AudioModule }
+  /** A module moved to a new place in the chain. `index` is its new place (0 = first). */
+  modulemove: { module: AudioModule; index: number }
   /** A module's saved state changed (the module called `ctx.changed()`). */
   modulechange: { module: AudioModule }
 }
@@ -36,7 +39,12 @@ export interface CoreOptions extends ClockOptions {
  */
 export interface Core {
   readonly context: BaseAudioContext
-  /** Master output. Modules connect here. It goes to the speakers. */
+  /**
+   * Start of the audio chain. Sound connected here flows through every module, in order.
+   * Nothing is connected yet (later, for example, a microphone).
+   */
+  readonly input: GainNode
+  /** Master output: the end of the audio chain. It goes to the speakers. */
   readonly output: GainNode
   readonly events: Emitter<CoreEventMap>
   readonly clock: Clock
@@ -50,19 +58,25 @@ export interface Core {
    */
   start(): Promise<void>
   stop(): void
-  /** Set up a module and connect its output to the core output. */
+  /** Set up a module and put it at the end of the audio chain (see chain.ts). */
   add<Options, Result extends ModuleSetupResult>(
     definition: AudioModuleDefinition<Options, Result>,
     ...options: OptionsArg<Options>
   ): AudioModule<Result>
-  /** Disconnect a module and run its clean-up. */
+  /** Take a module out of the audio chain and run its clean-up. */
   remove(module: AudioModule): void
+  /**
+   * Move a module to a new place in the audio chain (0 = first). The sound then flows through
+   * the modules in the new order. `modules` follows the same order.
+   */
+  move(module: AudioModule, index: number): void
   /** Stop, remove all modules and close the audio context. */
   dispose(): Promise<void>
 }
 
 export function createCore(options: CoreOptions = {}): Core {
   const context = options.context ?? new AudioContext({ latencyHint: 'interactive' })
+  const input = new GainNode(context)
   const output = new GainNode(context)
   output.connect(context.destination)
 
@@ -79,11 +93,37 @@ export function createCore(options: CoreOptions = {}): Core {
   const modules = new Map<string, AudioModule>()
   const cleanups = new Map<string, () => void>()
 
+  // The audio chain (see chain.ts). Each module gets an out jack. The modules are in the
+  // chain in the order of `modules` (the order they were added).
+  const jacks = new Map<string, GainNode>()
+  let cables: ChainConnection<AudioNode>[] = []
+
+  /** Unplug the old cables and plug in the new ones. Only touches cables that the core made. */
+  const rewire = () => {
+    for (const [from, to] of cables) {
+      try {
+        from.disconnect(to)
+      } catch {
+        // Already gone, for example a removed module disconnected its own output.
+      }
+    }
+    const slots = [...modules.values()].map((module) => ({
+      input: module.input,
+      output: module.output,
+      jack: jacks.get(module.id)!,
+    }))
+    cables = planChain<AudioNode>(input, slots, output)
+    for (const [from, to] of cables) from.connect(to)
+  }
+
   const remove = (module: AudioModule) => {
     const cleanup = cleanups.get(module.id)
     if (!cleanup) return
     modules.delete(module.id)
     cleanups.delete(module.id)
+    rewire()
+    jacks.get(module.id)?.disconnect()
+    jacks.delete(module.id)
     module.output?.disconnect()
     cleanup()
     events.emit('moduleremove', { module })
@@ -91,6 +131,7 @@ export function createCore(options: CoreOptions = {}): Core {
 
   const core: Core = {
     context,
+    input,
     output,
     events,
     clock,
@@ -169,8 +210,9 @@ export function createCore(options: CoreOptions = {}): Core {
         },
       })
 
-      result.output?.connect(output)
+      jacks.set(id, new GainNode(context))
       modules.set(id, module)
+      rewire()
       cleanups.set(id, () => {
         controller.abort()
         for (const fn of disposers.reverse()) fn()
@@ -179,6 +221,18 @@ export function createCore(options: CoreOptions = {}): Core {
       return module
     },
     remove,
+    move(module, index) {
+      if (modules.get(module.id) !== module) return
+      const order = [...modules.values()].filter((other) => other !== module)
+      const to = Math.max(0, Math.min(order.length, Math.round(index)))
+      if (to === [...modules.keys()].indexOf(module.id)) return
+      order.splice(to, 0, module)
+      // A Map keeps the order things were added in, so add them again in the new order.
+      modules.clear()
+      for (const other of order) modules.set(other.id, other)
+      rewire()
+      events.emit('modulemove', { module, index: to })
+    },
     async dispose() {
       clock.stop()
       for (const module of [...modules.values()]) remove(module)

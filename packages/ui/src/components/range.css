@@ -3,6 +3,9 @@
  * so it does not depend on the browser's look. Light and dark mode follow `color-scheme`.
  *   <input class="range" type="range" min="0" max="100" value="50" />
  *
+ * Vertical (the lowest value at the bottom). Set the length with `height` (default 129px):
+ *   <input class="range range--vertical" type="range" />
+ *
  * The accent color is the primary color. For another color, set --loop-primary on the
  * slider or on a parent:
  *   <input class="range" type="range" style="--loop-primary: tomato" />
@@ -137,10 +140,14 @@
   }
 
   /* Older Safari (no scroll-driven animations): the thumb paints the filled part as a band
-     6px high (16px - 5px - 5px), reaching 100vw to the left. The slider cuts it off. */
+     6px high (16px - 5px - 5px), reaching 100vw to the left (vertical: down). The slider cuts it off. */
   @supports not (animation-timeline: view()) {
     .range::-webkit-slider-thumb {
       border-image: linear-gradient(currentColor 0 0) 0 fill / 5px 0 / 0 0 0 100vw;
+    }
+
+    .range--vertical::-webkit-slider-thumb {
+      border-image: linear-gradient(currentColor 0 0) 0 fill / 0 5px / 0 0 100vw 0;
     }
   }
 
@@ -224,6 +231,51 @@
   .range:enabled:active::-moz-range-thumb,
   .range:disabled::-moz-range-thumb {
     color: inherit;
+  }
+
+  /* ---- Vertical ----
+   * A vertical writing mode turns the slider. `direction: rtl` puts the lowest value at the bottom.
+   * The thumb's timeline now runs top to bottom (it does not follow `direction`), so at the top
+   * it is at 0. That is the highest value, so the animation runs the other way.
+   */
+  .range--vertical {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 16px;
+    height: 129px;
+    animation-name: range-progress-vertical;
+  }
+
+  @keyframes range-progress-vertical {
+    from {
+      --range-progress: 0;
+    }
+    to {
+      --range-progress: 1;
+    }
+  }
+
+  .range--vertical::-webkit-slider-runnable-track {
+    width: 8px;
+    height: 100%;
+    background-position: bottom;
+    background-size:
+      100% calc(8px + var(--range-progress) * (100% - 16px)),
+      100% calc(9px + var(--range-progress) * (100% - 18px)),
+      100% 100%,
+      100% 100%;
+  }
+
+  .range--vertical::-webkit-slider-thumb {
+    margin-top: 0;
+    /* The track's padding box is 6px wide: (6px - 16px) / 2 = -5px centers the thumb. */
+    margin-left: -5px;
+  }
+
+  .range--vertical::-moz-range-track,
+  .range--vertical::-moz-range-progress {
+    width: 8px;
+    height: 100%;
   }
 
   /* In Windows high-contrast mode, use the browser's own slider. */

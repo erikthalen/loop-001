@@ -9,8 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dnd-kit/abstract": "0.5.3",
+    "@dnd-kit/dom": "0.5.3",
     "@hono/service-worker": "^1.0.1",
     "@loop/core": "workspace:*",
+    "@loop/lp-filter": "workspace:*",
     "@loop/metronome": "workspace:*",
     "@loop/ui": "workspace:*",
     "hono": "^4.13.18"

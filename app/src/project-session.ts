@@ -81,7 +81,7 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     if (status !== 'saving') setStatus('saving')
   }
 
-  for (const type of ['bpmchange', 'moduleadd', 'moduleremove', 'modulechange'] as const) {
+  for (const type of ['bpmchange', 'moduleadd', 'moduleremove', 'modulemove', 'modulechange'] as const) {
     core.events.on(type, scheduleSave)
   }
 
