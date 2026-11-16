@@ -1,5 +1,5 @@
 import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { displayStyles, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -14,5 +14,5 @@ export const metronome = defineAudioModule({
   description: 'Ticks on every beat.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
-  ui: { styles: [uiStyles, styles], template, script },
+  ui: { styles: [uiStyles, displayStyles, styles], template, script },
 })

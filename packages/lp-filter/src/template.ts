@@ -6,64 +6,42 @@ export const FREQUENCY_STEPS = 1000;
 /** Resonance slider steps: 10 per dB. */
 export const RESONANCE_STEPS = 200;
 
-// HTML: made once, when the UI is mounted. Classes come from @loop/ui (range, range--vertical,
-// checkbox, field, sr-only) and styles.ts. The script fills in the numbers and draws the picture.
+// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, label, range,
+// checkbox, button, sr-only) and styles.ts. The script draws the picture (scene.ts): "music from
+// next door", a wall between a speaker and an ear that only lets the low sounds through.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">
-      <header class="top">
-        <h2>${module.name}</h2>
-        <span>
-          <p class="readout">
-            <span class="frequency-value digits"></span>
-            <span class="frequency-unit"></span>
-          </p>
-          <p class="readout resonance-readout">
-            <span class="resonance-value digits"></span>
-            <span class="readout-label">res</span>
-          </p>
-        </span>
-      </header>
+      <h2 class="sr-only">${module.name}</h2>
 
-      <div class="main">
-        <div class="frequency-control">
-          <input
-            class="range range--vertical frequency"
-            name="frequency"
-            type="range"
-            min="0"
-            max="${FREQUENCY_STEPS}"
-            step="1"
-            aria-label="Frequency"
-          />
-          <!-- Marks at 100 Hz, 1 kHz and 10 kHz, next to the slider. -->
-          <span class="scale" aria-hidden="true">
-            <span class="tick" style="--at: 0.233"></span>
-            <span class="tick" style="--at: 0.566"></span>
-            <span class="tick" style="--at: 0.9"></span>
-          </span>
-        </div>
-
-        <canvas class="spectrum" role="img"></canvas>
-
-        <div class="resonance-control">
-          <span class="meter" aria-hidden="true"></span>
-          <input
-            class="range range--vertical resonance"
-            name="resonance"
-            type="range"
-            min="0"
-            max="${RESONANCE_STEPS}"
-            step="1"
-            value="${Math.round(module.resonance * 10)}"
-            aria-label="Resonance"
-          />
-        </div>
+      <!-- One row: the cutoff slider (left), the picture, the resonance slider (right).
+           Their colors match the CUTOFF (blue) and RES (orange) numbers in the picture. -->
+      <div class="stage">
+        <input
+          class="range range--vertical frequency"
+          name="frequency"
+          type="range"
+          min="0"
+          max="${FREQUENCY_STEPS}"
+          step="1"
+          aria-label="Cutoff"
+        />
+        <canvas class="picture" role="img"></canvas>
+        <input
+          class="range range--vertical resonance"
+          name="resonance"
+          type="range"
+          min="0"
+          max="${RESONANCE_STEPS}"
+          step="1"
+          value="${Math.round(module.resonance * 10)}"
+          aria-label="Resonance"
+        />
       </div>
 
       <footer class="bottom">
         <!-- Bypass: checked = the filter is off, the sound goes through unchanged. -->
-        <label class="field bypass-field">
+        <label class="label">
           <input
             class="checkbox"
             name="bypass"
@@ -72,8 +50,16 @@ export const template = defineModuleTemplate<typeof setup>(
           />
           bypass
         </label>
-        <button class="button button--small slope" type="button">
-          ${module.slope} db/oct
+        <!-- The slope: 12 or 24 on a small flip screen (the script slides it), then "db/oct". -->
+        <button
+          class="button button--small slope"
+          type="button"
+          style="--at: ${module.slope === 24 ? 1 : 0}"
+        >
+          <span class="flip" aria-hidden="true">
+            <span class="flip-strip"><span>12</span><span>24</span></span>
+          </span>
+          <span aria-hidden="true">db/oct</span>
         </button>
       </footer>
     </section>

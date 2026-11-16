@@ -34,6 +34,9 @@ const isNumber = (value: unknown): value is number => typeof value === 'number' 
 export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const { audio } = ctx
   const output = new GainNode(audio, { gain: 1 })
+  // Listens to the output, for the level meter in the picture.
+  const outputAnalyser = new AnalyserNode(audio, { fftSize: 1024 })
+  output.connect(outputAnalyser)
 
   // Options can come from a saved project file, so check everything.
   let active = isNumber(options.active) ? clamp(Math.round(options.active), 0, CHANNELS - 1) : 0
@@ -162,10 +165,14 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // ——— Playing ———
 
-  let playing: { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number } | null = null
+  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number }
+  /** The sound from the play button (it says "stop" while this plays). */
+  let pressed: Playing | null = null
+  /** The newest sound of each channel, from the play button or a trigger: the picture shows it. */
+  const latest: (Playing | null)[] = Array.from({ length: CHANNELS }, () => null)
 
   /** Play a channel from its start marker to its end marker, at an exact audio time. */
-  const trigger = (channel: number, time = audio.currentTime) => {
+  const trigger = (channel: number, time = audio.currentTime): Playing | null => {
     const { buffer, start, end } = channels[channel] ?? {}
     if (!buffer || start === undefined || end === undefined) return null
     const source = new AudioBufferSourceNode(audio, { buffer })
@@ -173,36 +180,42 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     const offset = start * buffer.duration
     const length = Math.max(0.01, (end - start) * buffer.duration)
     source.start(time, offset, length)
-    source.onended = () => source.disconnect()
-    return { source, began: time, offset, length, channel }
+    const started = { source, began: time, offset, length, channel }
+    latest[channel] = started
+    source.onended = () => {
+      source.disconnect()
+      if (latest[channel] === started) latest[channel] = null
+    }
+    return started
   }
 
-  /** Play the active channel once. */
+  /** Play the active channel once (the play button). */
   const play = () => {
     if (recording || busy) return
     stop()
     wake()
     const started = trigger(active)
     if (!started) return
-    playing = started
+    pressed = started
     started.source.addEventListener('ended', () => {
-      if (playing?.source !== started.source) return
-      playing = null
+      if (pressed !== started) return
+      pressed = null
       update()
     })
     update()
   }
 
+  /** Stop the sound from the play button. */
   const stop = () => {
-    if (!playing) return
-    const { source } = playing
-    playing = null
+    if (!pressed) return
+    const { source } = pressed
+    pressed = null
     source.stop()
     update()
   }
 
-  // Triggers from modules before this one in the chain (for example a sequencer):
-  // play that channel at that time.
+  // Triggers from modules before this one in the chain (for example a sequencer): play that channel
+  // at that time. The play button does not change; the picture shows it (see nowPlaying).
   ctx.onTrigger(({ channel, time }) => void trigger(channel, time))
 
   ctx.onDispose(() => {
@@ -238,6 +251,11 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       const { buffer, start, end } = channels[active]!
       return { buffer, start, end }
     },
+    /** Any channel's sound (null: empty), and where its markers are (0 to 1). */
+    soundOf(channel: number) {
+      const { buffer = null, start = 0, end = 1 } = channels[channel] ?? {}
+      return { buffer, start, end }
+    },
     /** True if the channel has a sound. */
     hasSound: (channel: number) => !!channels[channel]?.buffer,
     setStart: (value: number) => setMarker('start', value),
@@ -259,18 +277,31 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       for (const value of samples) peak = Math.max(peak, Math.abs(value))
       return Math.min(1, peak)
     },
+    /** The loudest sample of the sampler's own sound just now, 0 to 1. */
+    outputLevel() {
+      outputAnalyser.getFloatTimeDomainData(samples)
+      let peak = 0
+      for (const value of samples) peak = Math.max(peak, Math.abs(value))
+      return Math.min(1, peak)
+    },
     record,
     stopRecording,
 
+    /** True while the sound from the play button plays. */
     get playing() {
-      return !!playing
+      return !!pressed
     },
-    /** Where the sound that plays is now, 0 to 1 of the whole sound. null: nothing plays. */
-    playhead() {
-      if (!playing || playing.channel !== active) return null
-      const duration = channels[active]!.buffer!.duration
-      const played = clamp(audio.currentTime - playing.began, 0, playing.length)
-      return (playing.offset + played) / duration
+    /**
+     * The active channel's sound that plays now (from the play button or a trigger), or null:
+     * nothing plays on it (or it has not started yet). `at`: where it is, 0 to 1 of the whole sound.
+     * `progress`: how much of the cut has played, 0 to 1.
+     */
+    nowPlaying() {
+      const sound = latest[active]
+      if (!sound || audio.currentTime < sound.began) return null
+      const duration = sound.source.buffer!.duration
+      const played = clamp(audio.currentTime - sound.began, 0, sound.length)
+      return { at: (sound.offset + played) / duration, progress: played / sound.length }
     },
     play,
     stop,

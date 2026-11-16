@@ -12,7 +12,8 @@
  * Order: tokens, base, layout, then every file in components/ (a new file there is included
  * automatically).
  */
-export { addMatrixFont, addVideoFont, MATRIX_FONT, VIDEO_FONT } from './font'
+export { addLoopFont, addMatrixFont, addVideoFont, LOOP_FONT, MATRIX_FONT, VIDEO_FONT } from './font'
+export { CHANNEL_COLORS, displayStyles } from './display'
 
 import base from './base.css?inline'
 import layout from './layout.css?inline'

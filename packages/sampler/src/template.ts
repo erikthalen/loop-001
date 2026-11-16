@@ -1,8 +1,9 @@
 import { defineModuleTemplate, html } from "@loop/core";
+import { CHANNEL_COLORS } from "@loop/ui";
 import { CHANNELS, type setup } from "./setup";
 
-// HTML: made once, when the UI is mounted. Classes come from @loop/ui (radio, checkbox, button,
-// sr-only) and styles.ts. The script draws the sound and keeps the text up to date.
+// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, label, radio,
+// checkbox, button, sr-only) and styles.ts. The script draws the tape and keeps the text up to date.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">
@@ -10,26 +11,37 @@ export const template = defineModuleTemplate<typeof setup>(
 
       <div class="wave">
         <canvas class="picture" role="img"></canvas>
-        <!-- "● rec" or a message, in the top left corner of the picture. -->
+        <!-- The channel number, top left: a flip screen. All numbers stand in a column, in a
+             window one number high. The script slides the column up or down to the active channel. -->
+        <span class="channel-number" aria-hidden="true" style="--active: ${module.active}">
+          <span class="channel-strip">
+            ${Array.from(
+              { length: CHANNELS },
+              (_, i) => html`<span style="color: ${CHANNEL_COLORS[i]}">${i + 1}</span>`,
+            )}
+          </span>
+        </span>
+        <!-- "● rec" or a message, next to the channel number. -->
         <span class="status" role="status"></span>
-        <!-- The markers: drag them, or use the arrow keys. -->
-        <button class="marker start" type="button" role="slider" aria-label="Start marker" aria-valuemin="0" aria-valuemax="100"></button>
-        <button class="marker end" type="button" role="slider" aria-label="End marker" aria-valuemin="0" aria-valuemax="100"></button>
+        <!-- Play, top right. -->
+        <button class="button button--small play" type="button">play</button>
+        <!-- The markers: drag them, or use the arrow keys. They ride on the tape with their channel. -->
+        <div class="cut-window">
+          <div class="cuts">
+            <button class="marker start" type="button" role="slider" aria-label="Start cut" aria-valuemin="0" aria-valuemax="100"></button>
+            <button class="marker end" type="button" role="slider" aria-label="End cut" aria-valuemin="0" aria-valuemax="100"></button>
+          </div>
+        </div>
       </div>
 
-      <p class="times">
-        <span>start <span class="start-time"></span></span>
-        <span>len <span class="length-time"></span></span>
-        <span>end <span class="end-time"></span></span>
-      </p>
-
-      <footer class="bottom">
+      <!-- One row: the channels, then rec. -->
+      <div class="controls">
         <fieldset class="channels">
           <legend class="sr-only">Channel</legend>
           ${Array.from(
             { length: CHANNELS },
             (_, i) => html`
-              <label class="channel">
+              <label class="channel" style="--c: ${CHANNEL_COLORS[i]}">
                 <input
                   class="radio"
                   type="radio"
@@ -42,14 +54,11 @@ export const template = defineModuleTemplate<typeof setup>(
             `,
           )}
         </fieldset>
-        <span class="actions">
-          <label class="rec">
-            <input class="checkbox" name="rec" type="checkbox" />
-            rec
-          </label>
-          <button class="button button--small play" type="button">play</button>
-        </span>
-      </footer>
+        <label class="label rec">
+          <input class="checkbox" name="rec" type="checkbox" />
+          rec
+        </label>
+      </div>
     </section>
   `,
 );

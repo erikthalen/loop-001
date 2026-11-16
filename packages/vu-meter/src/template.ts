@@ -1,25 +1,17 @@
 import { defineModuleTemplate, html } from "@loop/core";
 import type { setup } from "./setup";
 
-// HTML: made once, when the UI is mounted. Classes come from styles.ts.
-// The script draws the two meters.
+// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, sr-only)
+// and styles.ts. The script draws the meters (meter.ts): two dials and two segment bars.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
-    <article>
-      <section class="display">
-        <div class="meters">
-          <canvas
-            class="meter"
-            role="img"
-            aria-label="Left channel level"
-          ></canvas>
-          <canvas
-            class="meter"
-            role="img"
-            aria-label="Right channel level"
-          ></canvas>
-        </div>
-      </section>
-    </article>
+    <section class="display">
+      <h2 class="sr-only">${module.name}</h2>
+      <canvas
+        class="picture"
+        role="img"
+        aria-label="Stereo VU meter: two dials with needles from -20 to +3 VU, and two level bars, left and right"
+      ></canvas>
+    </section>
   `,
 );

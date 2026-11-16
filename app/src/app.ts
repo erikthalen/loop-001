@@ -28,38 +28,6 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
         <link rel="icon" href="${base}icons/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="${base}icons/apple-touch-icon.png" />
         <title>${title}</title>
-        <link
-          rel="preload"
-          href="${base}fonts/italian-plate-no1-mono-light.woff2"
-          as="font"
-          type="font/woff2"
-          crossorigin
-        />
-        <link
-          rel="preload"
-          href="${base}fonts/italian-plate-no1-mono-medium.woff2"
-          as="font"
-          type="font/woff2"
-          crossorigin
-        />
-        <style>
-          @font-face {
-            font-family: "Italian Plate No1 Mono";
-            src: url("${base}fonts/italian-plate-no1-mono-light.woff2")
-              format("woff2");
-            font-weight: 300;
-            font-style: normal;
-            font-display: swap;
-          }
-          @font-face {
-            font-family: "Italian Plate No1 Mono";
-            src: url("${base}fonts/italian-plate-no1-mono-medium.woff2")
-              format("woff2");
-            font-weight: 500;
-            font-style: normal;
-            font-display: swap;
-          }
-        </style>
         <!-- @loop/ui: the shared component library (buttons, inputs, menus, ...). -->
         <style>
           ${raw(uiStyles.cssText)}
@@ -130,7 +98,7 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
+            /* gap: 1rem; */
             margin-top: 1.5rem;
             max-width: 32rem;
           }
@@ -321,20 +289,6 @@ app.get(base, (c) =>
               type="checkbox"
               aria-label="play and pauses"
             />
-          </label>
-        </div>
-        <div class="row">
-          <label class="field">
-            <input
-              id="bpm"
-              class="range"
-              type="range"
-              min="20"
-              max="300"
-              step="1"
-              value="120"
-            />
-            <output class="sr-only" id="bpm-value" for="bpm">120</output>
           </label>
         </div>
         <div class="row">

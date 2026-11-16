@@ -5,10 +5,10 @@ pnpm monorepo.
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
-- `packages/lp-filter` – `@loop/lp-filter`: a low pass filter that shows the sound before and after it
-- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps), built only of checkboxes; it makes no sound, it only sends triggers to the modules after it
-- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, with start and end markers
-- `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two needles, left and right); it only listens
+- `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
+- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules after it
+- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
+- `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
 
 ## Commands (run from the repo root)
@@ -68,7 +68,8 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 | `components/button.css` | `.button` + modifier classes `.button--primary`, `.button--ghost`, `.button--small`; `aria-pressed` |
 | `components/input.css`  | `.input`, `.field` (label + control)                       |
 | `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.range--vertical`: lowest value at the bottom, length with `height` |
-| `font.ts` | Display fonts for modules (files in `src/fonts/`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
+| `font.ts` | Fonts (files in `src/fonts/`). `addLoopFont()` + `LOOP_FONT`: Italian Plate No1 Mono, the app's font (`--loop-font`), weights 100 to 900, upright and italic; the app calls it once at start (`app/src/client.ts`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
+| `display.ts` | The shared look of the module screens: `displayStyles` (colors such as `--ink`, `--blue`, `--orange`; the `.display` box; `.label`) and `CHANNEL_COLORS` (the 6 channel colors). Use it as `styles: [uiStyles, displayStyles, styles]` |
 | `components/checkbox.css` | `.checkbox`: the native checkbox, drawn as a primary-color box with a white check |
 | `components/radio.css` | `.radio`: the native radio button, drawn as a primary-color circle with a white dot |
 | `components/panel.css`  | `.panel`, `.panel-title`                                                          |

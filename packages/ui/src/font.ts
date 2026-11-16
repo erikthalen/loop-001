@@ -1,5 +1,7 @@
-// Display fonts for modules. The font files are part of this package, so every module that uses
-// one brings it to any app.
+// Fonts. The font files are part of this package, so every app and module that uses one brings it along.
+//
+// - Italian Plate No1 Mono: the font of the whole app (--loop-font). Weights 100 to 900, upright
+//   and italic, in fonts/Italian Plate/. Add it once at start: addLoopFont().
 //
 // - MatrixType Display: square pixels with gaps, like an LED display (metronome). Public domain
 //   (CC0), see fonts/matrixtype/License.txt. Two weights: 400 and 700 (bold: no gaps).
@@ -42,4 +44,33 @@ export function addMatrixFont(): void {
 export function addVideoFont(): void {
   addFont(VIDEO_FONT, homeVideoRegularUrl, 'truetype', '400')
   addFont(VIDEO_FONT, homeVideoBoldUrl, 'truetype', '700')
+}
+
+/**
+ * The Italian Plate No1 Mono files, by file name, for example "300-upright.woff2" or "700-italic.woff2".
+ * (Vite finds them and gives each one a URL.)
+ */
+const loopFontFiles = import.meta.glob<string>('./fonts/Italian Plate/*.woff2', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+})
+
+/** The --loop-font family name. */
+export const LOOP_FONT = 'Italian Plate No1 Mono'
+
+/**
+ * Add Italian Plate No1 Mono to the page (once): weights 100 to 900, upright and italic.
+ * The browser downloads only the weights that some text uses.
+ */
+export function addLoopFont(): void {
+  for (const [path, url] of Object.entries(loopFontFiles)) {
+    const name = path.split('/').pop()!
+    const weight = name.split('-')[0]!
+    const style = name.includes('italic') ? 'italic' : 'normal'
+    const key = `${LOOP_FONT} ${weight} ${style}`
+    if (added.has(key) || typeof FontFace === 'undefined') continue
+    added.add(key)
+    document.fonts.add(new FontFace(LOOP_FONT, `url("${url}") format("woff2")`, { weight, style, display: 'swap' }))
+  }
 }

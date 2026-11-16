@@ -1,171 +1,172 @@
 import { css } from "@loop/core";
-import { VIDEO_FONT } from "@loop/ui";
 
-// CSS: only applies inside this module. The inputs (radio, checkbox, button) come from @loop/ui and
-// are not styled here: the module only sets their color (--loop-primary).
+// CSS: only applies inside this module. The screen and the colors come from @loop/ui
+// (displayStyles); the inputs too. The module only sets their colors (--loop-primary).
 // The rules here are outside a cascade layer, so they win over @loop/ui.
-// The display copies the SP-01 design: the sound as cells, green between the markers, red for "rec".
+// The display is a tape machine in thin lines, with two markers to cut the sound.
 export const styles = css`
   :host {
     display: inline-block;
-
-    --green: light-dark(#14a46a, #3ddc97);
-    --rec: light-dark(#e2382a, #ff4d3d);
   }
 
-  p,
-  h2,
-  fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    font: inherit;
-  }
-
-  /* The screen: 275px wide. The small text is 10px. */
   .display {
-    /* @loop/ui colors its inputs with --loop-primary. On this screen that is green. */
-    --loop-primary: var(--green);
-
-    /* Colors for the canvas (script.ts reads them). */
-    --wave-background: var(--color-neutral-100);
-    --wave-middle: var(--color-neutral-400);
-    --wave-bright: var(--green);
-    --wave-dim: light-dark(#b5dcc8, #1f3a2f);
-    --wave-playhead: var(--color-neutral-1000);
-    --wave-text: var(--color-neutral-700);
-
-    display: flex;
-    flex-direction: column;
-    width: 275px;
-    color: var(--color-neutral-1000);
-    background: var(--color-neutral-100);
-    font-family: "${VIDEO_FONT}", var(--loop-font);
-    font-size: 10px;
-    text-transform: uppercase;
+    --loop-primary: var(--orange);
   }
 
-  /* The picture with the two markers on top, and the status in the top left corner. */
-  .status {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    color: var(--rec);
-    letter-spacing: 0.12em;
-    line-height: 1;
-    pointer-events: none;
-  }
-
+  /* The picture, with the channel number, the status and the two markers on top of it. */
   .wave {
     position: relative;
   }
 
   .picture {
     display: block;
-    width: 275px;
-    height: 84px;
-    border-radius: 3px;
+    width: 247px;
+    height: 120px;
   }
 
   /*
-   * A marker: a 12px wide button (easy to grab) with a 1px line in the middle and a small flag:
-   * at the top right for the start, at the bottom left for the end. --at is its place, 0 to 1.
+   * The channel number, top left: a flip screen. A window one number high shows one number of a
+   * column 1 to 6. --active (0 to 5) slides the column up or down to the right number.
+   * Each number gets a full 26px row, so no part of the next number shows in the window.
+   */
+  .channel-number {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    height: 26px;
+    overflow: clip;
+    font-size: 26px;
+    font-weight: 200;
+    line-height: 26px;
+    pointer-events: none;
+  }
+
+  .channel-strip {
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(var(--active, 0) * -26px));
+    transition: transform 0.3s ease;
+  }
+
+  /* "● rec" or a message, top right, left of the level meter. */
+  .status {
+    position: absolute;
+    top: 9px;
+    left: 22px;
+    color: var(--red);
+    font-size: 10px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .channel-strip {
+      transition: none;
+    }
+  }
+
+  /*
+   * The two markers ride on the tape: while the tape winds to another channel, the script moves
+   * .cuts sideways with it, so the old channel's markers slide out and the new ones slide in.
+   * .cut-window stays still. It is 10px wider than the picture on each side, so a marker at the
+   * very start or end can still be grabbed. While winding, the window cuts off everything outside
+   * the picture (the 10px too), so a marker is never seen outside it.
+   */
+  .cut-window {
+    position: absolute;
+    top: 81px;
+    left: -10px;
+    right: -10px;
+    height: 39px;
+    pointer-events: none;
+  }
+
+  .cut-window.winding {
+    clip-path: inset(-4px 10px);
+  }
+
+  .cuts {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+   * A marker: a line from the ticks down through the sound and the tracks.
+   * A 20px wide button, so it is easy to grab. --at is its place, 0 to 1.
    */
   .marker {
     --at: 0;
     position: absolute;
     top: 0;
-    left: calc(var(--at) * 100% - 6px);
-    width: 12px;
+    left: calc(var(--at) * (100% - 20px));
+    width: 20px;
     height: 100%;
     padding: 0;
     border: 0;
-    background:
-      linear-gradient(var(--green), var(--green)) 6px 0 / 1px 100% no-repeat;
+    background: linear-gradient(var(--blue), var(--blue)) 9.5px 0 / 1px 100%
+      no-repeat;
     cursor: ew-resize;
     touch-action: none;
+    pointer-events: auto;
   }
 
-  .marker::after {
-    content: "";
-    position: absolute;
-    width: 5px;
-    height: 6px;
-    background: var(--green);
-  }
-
-  .marker.start::after {
-    top: 0;
-    left: 7px;
-  }
-
-  .marker.end::after {
-    bottom: 0;
-    left: 1px;
+  .marker:disabled {
+    cursor: default;
   }
 
   .marker:focus-visible {
-    outline: 2px solid var(--color-neutral-1000);
-    outline-offset: 0;
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
-  .marker[hidden] {
-    display: none;
-  }
-
-  .times {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 4px;
-    color: var(--color-neutral-700);
-    text-transform: none;
-  }
-
-  /* Bottom: the channels on the left, rec and play on the right. */
-  .bottom {
+  /* The channels, spread over the whole width. Each one in its own color (--c). */
+  /* One row under the picture: the channels (spread out), then rec. */
+  .controls {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
+    gap: 14px;
+    margin-top: 10px;
   }
 
   .channels {
+    flex: 1;
     display: flex;
-    gap: 8px;
+    justify-content: space-between;
   }
 
-  .channel,
-  .rec {
+  .channel {
+    --loop-primary: var(--c);
     display: flex;
     align-items: center;
     gap: 4px;
+    color: var(--c);
+    font-size: 12px;
     cursor: pointer;
+
+    input {
+      border-color: var(--loop-primary);
+    }
   }
 
-  /* The active channel's number is green. An empty channel's number is grey. */
-  .channel.empty {
-    color: var(--color-neutral-600);
-  }
-
-  .channel:has(:checked) {
-    color: var(--green);
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  /* An empty channel: a darker color (but the active one is always bright). */
+  .channel.empty:not(:has(:checked)) {
+    color: color-mix(in srgb, var(--c) 45%, var(--screen));
   }
 
   .rec {
-    --loop-primary: var(--rec);
-    letter-spacing: 0.12em;
-    color: var(--color-neutral-800);
+    --loop-primary: var(--red);
   }
 
   /* Browsers do not pass text-transform on to buttons, so ask for it here. */
+  /* Play: top right of the picture, above the level meter. */
   .play {
-    min-width: 5ch;
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 6ch;
     text-transform: uppercase;
+    letter-spacing: 0.12em;
   }
 `;

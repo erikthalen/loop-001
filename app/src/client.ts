@@ -1,5 +1,6 @@
 // Page script. All audio runs here, on the page (not in the service worker).
 import { createCore } from '@loop/core'
+import { addLoopFont } from '@loop/ui'
 import { createModulePicker } from './module-picker'
 import { availableModules, newProject } from './modules'
 import { connectProjectMenu } from './project-menu'
@@ -7,17 +8,19 @@ import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
 import { createRack } from './rack'
 
+// The app's font, Italian Plate No1 Mono (all weights, from @loop/ui). Before anything shows text.
+addLoopFont()
+
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
 const playToggle = $<HTMLInputElement>('#play')
-const bpmInput = $<HTMLInputElement>('#bpm')
-const bpmValue = $<HTMLOutputElement>('#bpm-value')
 const removeButton = $<HTMLButtonElement>('#remove')
 const picker = $('#module-picker')
 
 // The audio context starts "suspended". Browsers only allow sound after a user action,
 // so core.start() (on the Play click) wakes it up.
-const core = createCore({ bpm: readBpm() })
+// The tempo is set in the metronome module (and saved with the project).
+const core = createCore()
 
 // ---- Modules: the rack shows what is in the core ----
 const rack = createRack(core, $('#rack'), {
@@ -49,20 +52,9 @@ document.addEventListener('keydown', (event) => {
 })
 
 // ---- Transport ----
-// Keep the controls in sync with the core (also when a project loads).
-const showBpm = (bpm: number) => {
-  bpmInput.value = String(bpm)
-  bpmValue.value = String(bpm)
-}
-showBpm(core.bpm)
-core.events.on('bpmchange', ({ bpm }) => showBpm(bpm))
+// Keep the play checkbox in sync with the core.
 core.events.on('start', () => (playToggle.checked = true))
 core.events.on('stop', () => (playToggle.checked = false))
-
-function readBpm(): number {
-  const value = bpmInput.valueAsNumber
-  return Number.isFinite(value) ? Math.min(300, Math.max(20, value)) : 120
-}
 
 // Play is a checkbox: checked = playing.
 playToggle.addEventListener('change', async () => {
@@ -77,9 +69,6 @@ playToggle.addEventListener('change', async () => {
   }
   playToggle.checked = core.playing
 })
-
-// The tempo changes live while you drag.
-bpmInput.addEventListener('input', () => core.setBpm(readBpm()))
 
 // ---- Projects: saved in this browser (IndexedDB), local first ----
 const store = await openProjectStore()

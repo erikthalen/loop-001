@@ -1,26 +1,39 @@
 import { defineModuleScript } from '@loop/core'
-import { MAX_SECONDS, type setup } from './setup'
-import { COLUMNS, columnsOf, drawWave, type WaveColors } from './wave'
+import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNELS, MAX_SECONDS, type setup } from './setup'
+import { COLUMNS, columnsOf, drawWave, tapeRadius, type WaveColors } from './wave'
 
 const seconds = (value: number) => `${value.toFixed(2)} s`
+
+/** Channel 1's place on the tape (0 to 1: how much is on the right reel), and the space to the next channel. */
+const FIRST_PLACE = 0.1
+const CHANNEL_SPACE = 0.13
+const placeOnTape = (channel: number) => FIRST_PLACE + channel * CHANNEL_SPACE
+/** How far the tape moves while a whole sound plays (or a whole recording): a short strip. */
+const STRIP = 0.08
+/** Rewind and fast forward speed: part of the whole tape per second. */
+const WIND_SPEED = 0.6
+/** The tape's length in px, to turn the reels the right amount. */
+const TAPE_LENGTH = 600
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
 export const script = defineModuleScript<typeof setup>(({ root, module, signal }) => {
   const display = root.querySelector<HTMLElement>('.display')!
   const status = root.querySelector<HTMLElement>('.status')!
+  const channelNumber = root.querySelector<HTMLElement>('.channel-number')!
   const wave = root.querySelector<HTMLElement>('.wave')!
   const canvas = root.querySelector<HTMLCanvasElement>('.picture')!
   const startMarker = root.querySelector<HTMLButtonElement>('.marker.start')!
   const endMarker = root.querySelector<HTMLButtonElement>('.marker.end')!
-  const startTime = root.querySelector<HTMLElement>('.start-time')!
-  const lengthTime = root.querySelector<HTMLElement>('.length-time')!
-  const endTime = root.querySelector<HTMLElement>('.end-time')!
+  const cuts = root.querySelector<HTMLElement>('.cuts')!
+  const cutWindow = root.querySelector<HTMLElement>('.cut-window')!
   const radios = [...root.querySelectorAll<HTMLInputElement>('[name=channel]')]
   const rec = root.querySelector<HTMLInputElement>('[name=rec]')!
   const play = root.querySelector<HTMLButtonElement>('.play')!
 
-  // The canvas cannot use CSS variables, so read the colors from styles.ts.
+  // The canvas cannot use CSS variables, so read the colors from the CSS.
   // A hidden element turns any CSS color (also light-dark()) into rgb().
+  // Read them again when the page switches between light and dark mode.
   const probe = document.createElement('span')
   probe.hidden = true
   display.append(probe)
@@ -31,13 +44,15 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
   let colors: WaveColors
   const readColors = () => {
     colors = {
-      background: resolve('var(--wave-background)'),
-      middle: resolve('var(--wave-middle)'),
-      bright: resolve('var(--wave-bright)'),
-      dim: resolve('var(--wave-dim)'),
-      rec: resolve('var(--rec)'),
-      playhead: resolve('var(--wave-playhead)'),
-      text: resolve('var(--wave-text)'),
+      marker: resolve('var(--blue)'),
+      screen: resolve('var(--screen)'),
+      ink: resolve('var(--ink)'),
+      dim: resolve('var(--dim)'),
+      muted: resolve('var(--muted)'),
+      line: resolve('var(--line)'),
+      tape: resolve('var(--orange)'),
+      rec: resolve('var(--red)'),
+      channels: CHANNEL_COLORS.map(resolve),
       font: getComputedStyle(display).fontFamily,
     }
   }
@@ -58,14 +73,15 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     const duration = buffer?.duration ?? 0
 
     status.textContent = module.recording ? '● rec' : module.message
+    channelNumber.style.setProperty('--active', String(module.active))
 
-    startTime.textContent = buffer ? seconds(start * duration) : '–'
-    endTime.textContent = buffer ? seconds(end * duration) : '–'
-    lengthTime.textContent = buffer ? seconds((end - start) * duration) : '–'
 
-    for (const [marker, value] of [[startMarker, start], [endMarker, end]] as const) {
-      marker.hidden = !buffer || module.recording
-      marker.style.setProperty('--at', String(value))
+    // An empty channel (or while recording):
+    // at the start and the end of the tape, and they cannot be moved.
+    const movable = !!buffer && !module.recording
+    for (const [marker, value, rest] of [[startMarker, start, 0], [endMarker, end, 1]] as const) {
+      marker.disabled = !movable
+      marker.style.setProperty('--at', String(movable ? value : rest))
       marker.setAttribute('aria-valuenow', String(Math.round(value * 100)))
       marker.setAttribute('aria-valuetext', seconds(value * duration))
     }
@@ -85,8 +101,9 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     canvas.setAttribute(
       'aria-label',
       buffer
-        ? `Sound of channel ${module.active + 1}, ${seconds(duration)} long`
-        : `Channel ${module.active + 1} is empty`,
+        ? `Tape of channel ${module.active + 1}, ${seconds(duration)} long. ` +
+          `The cut goes from ${seconds(start * duration)} to ${seconds(end * duration)} (${seconds((end - start) * duration)}).`
+        : `Channel ${module.active + 1} is blank tape`,
     )
   }
 
@@ -153,8 +170,25 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
 
   // While recording: one level per column, over the 5 seconds.
   let recorded: number[] | null = null
+  // One tape for all 6 channels, like a real tape with 6 songs on it. Each channel has its own place
+  // on the tape: switching channels winds the tape there (rewind or fast forward). `wind` is the
+  // channel under the window (between two whole numbers while winding).
+  // Playing or recording moves a short strip further (`strip`); after the sound it winds back.
+  // `tape` is how much tape is on the right reel (0 to 1).
+  let wind = module.active
+  let strip = 0
+  let tape = placeOnTape(wind)
+  const turns: [number, number] = [0, 0]
+  // The level meter: jumps up, falls back slowly.
+  let level = 0
+  // The time counter, in seconds (it turns towards the right time).
+  let counter = 0
+  let last = 0
   let frame = 0
-  const draw = () => {
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+  const draw = (now: number) => {
+    const seconds = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60
+    last = now
     if (module.recording) {
       recorded ??= []
       const column = Math.floor((module.recordedSeconds / MAX_SECONDS) * COLUMNS)
@@ -163,8 +197,62 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     } else {
       recorded = null
     }
-    const { buffer, start, end } = module.sound
-    drawWave(canvas, { columns: buffer ? columnsFor(buffer) : null, start, end, playhead: module.playhead(), recorded }, colors)
+    // The shown channel's sound that plays (from the play button or a trigger): the reels turn,
+    // the play icon shows and the playhead moves. Other channels' sounds do not show.
+    const sound = module.nowPlaying()
+    const playhead = sound ? sound.at : null
+    // Wind to the channel that is shown, and play (or record) a short strip. At most WIND_SPEED
+    // per second; playing is slower, so the strip follows the sound exactly. Less motion: jump there.
+    const limit = reducedMotion.matches ? Infinity : WIND_SPEED * seconds
+    const toward = (from: number, to: number, max: number) => from + Math.max(-max, Math.min(max, to - from))
+    wind = toward(wind, module.active, limit / CHANNEL_SPACE)
+    // The markers ride on the tape with their channel (the canvas draws the other channels' markers).
+    const offset = (module.active - wind) * canvas.clientWidth
+    cuts.style.transform = offset ? `translateX(${offset.toFixed(1)}px)` : ''
+    cutWindow.classList.toggle('winding', offset !== 0)
+    let stripTarget = 0
+    if (recorded) stripTarget = STRIP * Math.min(1, module.recordedSeconds / MAX_SECONDS)
+    else if (sound) stripTarget = STRIP * sound.progress
+    strip = toward(strip, stripTarget, limit)
+    const moved = placeOnTape(wind) + strip - tape
+    tape += moved
+    // Both reels turn by the same length of tape. A small reel turns faster than a big one.
+    turns[0] -= (moved * TAPE_LENGTH) / tapeRadius(1 - tape)
+    turns[1] -= (moved * TAPE_LENGTH) / tapeRadius(tape)
+    // The level: the microphone while recording, else the sampler's own sound.
+    level = Math.max(recorded ? module.level() : module.outputLevel(), level - seconds * 1.2)
+    // The counter: the recorded time, the place in the sound that plays, or the cut's start.
+    // A jump (another channel, a moved marker) turns the wheels quickly to the new time,
+    // like an analog counter. Less motion: jump there.
+    const shown = module.sound
+    const duration = shown.buffer?.duration ?? 0
+    let target = shown.start * duration
+    if (recorded) target = module.recordedSeconds
+    else if (playhead !== null) target = playhead * duration
+    // Whole hundredths, so the wheels stop on a full digit when the time stands still.
+    target = Math.round(target * 100) / 100
+    counter = reducedMotion.matches ? target : counter + (target - counter) * Math.min(1, seconds * 14)
+    if (Math.abs(target - counter) < 0.0005) counter = target
+    drawWave(
+      canvas,
+      {
+        channels: Array.from({ length: CHANNELS }, (_, channel) => {
+          const { buffer, start, end } = module.soundOf(channel)
+          return { columns: buffer ? columnsFor(buffer) : null, start, end }
+        }),
+        wind,
+        active: module.active,
+        playhead,
+        playing: !!sound,
+        recorded,
+        tape,
+        turns,
+        counter,
+        level,
+        time: now / 1000,
+      },
+      colors,
+    )
     frame = requestAnimationFrame(draw)
   }
   frame = requestAnimationFrame(draw)

@@ -1,39 +1,55 @@
 import { css } from "@loop/core";
 
-// CSS: only applies inside this module. The checkboxes come from @loop/ui; here they only get a place
-// in the grid and a mark for the playing step.
+// CSS: only applies inside this module. The screen and the colors come from @loop/ui
+// (displayStyles); the checkboxes too. Here the grid's checkboxes only get their row's color (--c),
+// like the SQ-01 design. The rules here are outside a cascade layer, so they win.
 export const styles = css`
   :host {
     display: inline-block;
   }
 
-  .display {
-    background: var(--color-neutral-100);
+  p {
+    margin: 0;
   }
 
-  /* 16 columns, 6 rows. A wider gap after every 4 steps (one beat), so the beats are easy to see. */
+  .display {
+    --loop-primary: var(--ink);
+  }
+
+  /*
+   * 16 columns, 6 rows. A wider gap after every 4 steps (one beat).
+   * 16 boxes of 13px, 12 gaps of 2px and 3 gaps of 5px: 247px, the full width.
+   */
   .grid {
     display: grid;
     grid-template-columns: repeat(16, auto);
-    gap: 4px 3px;
+    justify-content: start;
+    gap: 4px 2px;
   }
 
-  .checkbox:nth-child(4n + 1):not(:nth-child(16n + 1)) {
-    margin-left: 5px;
+  .grid .checkbox:nth-child(4n + 1):not(:nth-child(16n + 1)) {
+    margin-left: 3px;
   }
 
-  /* The first step of each beat: a slightly darker frame. */
-  .checkbox:nth-child(4n + 1):not(:checked) {
-    border-color: var(--color-neutral-700);
+  /*
+   * A step: the normal @loop/ui checkbox (size, check mark), in its row's color (--c).
+   * On: filled with the color. Off: a frame in the color.
+   * (Rules here win over @loop/ui, so the frame color is only for boxes that are off.)
+   */
+  .grid .checkbox {
+    --loop-primary: var(--c);
   }
 
-  /* The playing step. */
-  .checkbox.now {
-    /* border-color: var(--loop-primary); */
-    box-shadow: 0 0 0 1px var(--color-neutral-1000);
+  .grid .checkbox:not(:checked) {
+    border-color: var(--c);
   }
 
-  .checkbox.now:checked {
-    filter: brightness(1.3);
+  /* The playing step: a frame in the ink color. */
+  .grid .checkbox.now:not(:checked) {
+    border-color: var(--ink);
+  }
+
+  .grid .checkbox.now:checked {
+    box-shadow: 0 0 0 1.5px var(--ink);
   }
 `;
