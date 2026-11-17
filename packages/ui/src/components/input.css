@@ -1,7 +1,7 @@
 /*
  * Inputs.
  *   <input class="input" type="text" />          (also number, search, ...)
- *   <label class="field">BPM <input class="input" type="number" /></label>
+ *   In a label: see field.css.
  */
 @layer ui {
   .input {
@@ -17,11 +17,5 @@
   .input:focus-visible {
     outline: 2px solid var(--loop-primary);
     outline-offset: -1px;
-  }
-
-  .field {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
   }
 }

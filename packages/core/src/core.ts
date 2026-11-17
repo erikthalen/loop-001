@@ -1,7 +1,8 @@
-import { modulesAfter, planChain, type ChainConnection } from './chain'
+import { planChain, planChannels, routeTrigger, type ChainConnection } from './chain'
 import { createClock, type Clock, type ClockEventMap, type ClockOptions } from './clock'
 import { createEmitter, type Emitter } from './events'
 import type { AudioModule, AudioModuleDefinition, ModuleContext, ModuleSetupResult, OptionsArg, ScopedOn, Trigger } from './module'
+import { createTape } from './tape'
 import { render, toStyleSheet } from './ui'
 
 /**
@@ -25,6 +26,16 @@ export interface CoreEventMap extends ClockEventMap {
   modulechange: { module: AudioModule }
 }
 
+/** How long the tape takes to speed up on start, and to slow down on stop (seconds). */
+export const SPIN_UP = 0.4
+export const SPIN_DOWN = 0.9
+/**
+ * Rewind: how fast the tape goes backwards, as a tempo (the steps go by backwards at this bpm), and
+ * how long it takes to get there (seconds).
+ */
+export const REWIND_BPM = 200
+export const REWIND_RAMP = 0.6
+
 export interface CoreOptions extends ClockOptions {
   /** Use your own audio context, for example an OfflineAudioContext in tests. */
   context?: BaseAudioContext
@@ -44,12 +55,35 @@ export interface Core {
    * Nothing is connected yet (later, for example, a microphone).
    */
   readonly input: GainNode
-  /** Master output: the end of the audio chain. It goes to the speakers. */
+  /**
+   * Master output: after the end of the audio chain and the tape (see tape.ts). It goes to the
+   * speakers. Its gain is the master volume.
+   */
   readonly output: GainNode
   readonly events: Emitter<CoreEventMap>
   readonly clock: Clock
   readonly bpm: number
+  /** True from start until the tape has stopped (also while it slows down after `stop()`). */
   readonly playing: boolean
+  /** True while the tape slows down after `stop()`. */
+  readonly stopping: boolean
+  /** True while the tape rewinds to the start (see `rewind()`). */
+  readonly rewinding: boolean
+  /**
+   * The tape speed now: 1 is full speed (normal tempo and pitch), 0 is stopped, below 0 is
+   * backwards (rewind). On start it goes up from 0 to 1, on stop down to 0, like a tape machine.
+   * The clock (steps, beats) follows it.
+   * The `speedchange` event tells when it starts to change, and how.
+   */
+  readonly speed: number
+  /** The tape speed at an audio time (as far as it is known now). */
+  speedAt(time: number): number
+  /**
+   * The tape speed as a sound signal (see `speed`). Connect it to an AudioParam to follow the speed,
+   * for example the pitch of a sample: set `source.playbackRate.value = 0`, then
+   * `core.speedSignal.connect(source.playbackRate)`.
+   */
+  readonly speedSignal: AudioNode
   readonly modules: ReadonlyMap<string, AudioModule>
   setBpm(bpm: number): void
   /**
@@ -57,7 +91,13 @@ export interface Core {
    * browsers only allow audio to start after the user does something on the page.
    */
   start(): Promise<void>
+  /** Slow down and stop (it keeps its place). While it rewinds: stop the rewind. */
   stop(): void
+  /**
+   * Rewind to the first step of the bar (the start of the sequence): the tape goes backwards and
+   * plays the sound it just played, backwards. While it plays, it turns around. Call this from a user action (like `start`).
+   */
+  rewind(): Promise<void>
   /** Set up a module and put it at the end of the audio chain (see chain.ts). */
   add<Options, Result extends ModuleSetupResult>(
     definition: AudioModuleDefinition<Options, Result>,
@@ -87,8 +127,44 @@ export function createCore(options: CoreOptions = {}): Core {
     context,
     <K extends keyof ClockEventMap>(type: K, detail: ClockEventMap[K]) =>
       events.emit(type, detail as CoreEventMap[K]),
-    options,
+    { spinUp: SPIN_UP, spinDown: SPIN_DOWN, rewindBpm: REWIND_BPM, rewindRamp: REWIND_RAMP, ...options },
   )
+
+  // The tape speed as a sound signal. It follows each speed change of the clock exactly.
+  const speedSignal = new ConstantSourceNode(context, { offset: 0 })
+  speedSignal.start()
+  // Chrome only moves a node's changes (the ramps) forward while something reads it all the time.
+  // Sounds read it only while they play, so without this it stays stuck in the middle of a ramp
+  // (everything too low). An analyser always reads its input, and it makes no sound.
+  speedSignal.connect(new AnalyserNode(context, { fftSize: 32 }))
+  events.on('speedchange', ({ plan }) => {
+    const offset = speedSignal.offset
+    const now = context.currentTime
+    offset.cancelScheduledValues(0)
+    // From the speed now, then in straight lines from point to point (a jump: two at one time).
+    offset.setValueAtTime(clock.speedAt(now), now)
+    let last = now
+    for (const { time, speed } of plan) {
+      if (time <= now) continue
+      if (time === last) offset.setValueAtTime(speed, time)
+      else offset.linearRampToValueAtTime(speed, time)
+      last = time
+    }
+  })
+
+  // The tape (see tape.ts): the chain ends at `chainEnd`, then the tape, then the master output.
+  // The tape loads in the background; until then the chain goes straight to the output.
+  const chainEnd = new GainNode(context)
+  chainEnd.connect(output)
+  createTape(context, chainEnd, output, speedSignal)
+    .then((tape) => {
+      // The tape and the clock agree on where the tape is, when it stands still.
+      const align = () => tape.setPosition(clock.positionAt(context.currentTime))
+      events.on('rewindend', align)
+      // (Not when a rewind turned the tape around: it still moves then.)
+      events.on('stop', () => clock.rewinding || align())
+    })
+    .catch((error) => console.error('The tape (rewind sound) could not load:', error))
 
   const modules = new Map<string, AudioModule>()
   const cleanups = new Map<string, () => void>()
@@ -99,20 +175,19 @@ export function createCore(options: CoreOptions = {}): Core {
   let cables: ChainConnection<AudioNode>[] = []
 
   // Triggers (see Trigger in module.ts) flow down the chain like sound: a module's triggers
-  // only reach the modules after it. Each module's trigger listeners, by module id.
+  // only reach the modules after it, in order, and a module on the way can change them.
+  // Each module's trigger listeners and pass-through change, by module id.
   const triggerListeners = new Map<string, ((trigger: Trigger) => void)[]>()
-  const sendTrigger = (from: string, trigger: Trigger) => {
-    for (const id of modulesAfter([...modules.keys()], from)) {
-      for (const listener of triggerListeners.get(id) ?? []) {
-        // Like the event bus: one broken listener does not stop the others.
-        try {
-          listener(trigger)
-        } catch (error) {
-          reportError(error)
-        }
-      }
-    }
-  }
+  const triggerPasses = new Map<string, (trigger: Trigger) => Trigger | null>()
+  const sendTrigger = (from: string, trigger: Trigger) =>
+    routeTrigger(
+      [...modules.keys()],
+      from,
+      trigger,
+      (id) => ({ listeners: triggerListeners.get(id), pass: triggerPasses.get(id) }),
+      // Like the event bus: one broken listener does not stop the others.
+      reportError,
+    )
 
   /** Unplug the old cables and plug in the new ones. Only touches cables that the core made. */
   const rewire = () => {
@@ -126,9 +201,12 @@ export function createCore(options: CoreOptions = {}): Core {
     const slots = [...modules.values()].map((module) => ({
       input: module.input,
       output: module.output,
+      channelOutputs: module.channelOutputs,
+      channelInputs: module.channelInputs,
       jack: jacks.get(module.id)!,
     }))
-    cables = planChain<AudioNode>(input, slots, output)
+    // The main chain, and the channel cables (see chain.ts).
+    cables = [...planChain<AudioNode>(input, slots, chainEnd), ...planChannels<AudioNode>(slots)]
     for (const [from, to] of cables) from.connect(to)
   }
 
@@ -158,6 +236,17 @@ export function createCore(options: CoreOptions = {}): Core {
     get playing() {
       return clock.running
     },
+    get stopping() {
+      return clock.stopping
+    },
+    get rewinding() {
+      return clock.rewinding
+    },
+    get speed() {
+      return clock.speed
+    },
+    speedAt: (time) => clock.speedAt(time),
+    speedSignal,
     setBpm(bpm) {
       if (bpm === clock.bpm) return
       clock.setBpm(bpm)
@@ -169,6 +258,10 @@ export function createCore(options: CoreOptions = {}): Core {
     },
     stop() {
       clock.stop()
+    },
+    async rewind() {
+      if (context instanceof AudioContext && context.state !== 'running') await context.resume()
+      clock.rewind()
     },
     add(definition, ...[moduleOptions]) {
       const id = crypto.randomUUID()
@@ -189,6 +282,9 @@ export function createCore(options: CoreOptions = {}): Core {
           const listeners = triggerListeners.get(id) ?? []
           listeners.push(listener)
           triggerListeners.set(id, listeners)
+        },
+        passTrigger: (change) => {
+          if (!controller.signal.aborted) triggerPasses.set(id, change)
         },
         changed: () => {
           // Only after setup is done and while the module is still in the chain.
@@ -239,6 +335,7 @@ export function createCore(options: CoreOptions = {}): Core {
       cleanups.set(id, () => {
         controller.abort()
         triggerListeners.delete(id)
+        triggerPasses.delete(id)
         for (const fn of disposers.reverse()) fn()
       })
       events.emit('moduleadd', { module })
@@ -258,8 +355,9 @@ export function createCore(options: CoreOptions = {}): Core {
       events.emit('modulemove', { module, index: to })
     },
     async dispose() {
-      clock.stop()
+      clock.halt()
       for (const module of [...modules.values()]) remove(module)
+      speedSignal.stop()
       if (context instanceof AudioContext) await context.close()
     },
   }

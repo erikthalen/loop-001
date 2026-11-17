@@ -1,5 +1,5 @@
 /**
- * The VU-01 picture, drawn on a 2D canvas (247 x 80), in the same thin-line style as the sampler.
+ * The VU-01 picture, drawn on a 2D canvas (247 x 66), in the same thin-line style as the sampler.
  *
  *   ┌─────────────────────────────────────────────┐
  *   │    20 10 7 5 3 0  3        VU     20 10 ...  │   numbers over each scale
@@ -7,11 +7,11 @@
  *   │        \             ●   R -14         /     │   the needle (and its ghost), the peak lamp (●)
  *   │ L       ◎                  R    ◎            │   the pivot
  *   │ ───────────────────        ───────────────── │
- *   │ L ▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▯▯▯▯▯▯▯▯▯▮▯▯▯▯▯   │   segment bars: fast level, red over 0 VU,
- *   │ R ▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▯▯▯▯▯▯▯▯▯▯▯▯▮▯▯▯▯▯   │   orange peak hold
  *   └─────────────────────────────────────────────┘
  *
- * - The needles swing on a spring, like a real meter (slow). The bars follow the sound fast.
+ * - The needles swing on a spring, like a real meter (slow).
+ * - It also keeps a fast level for each channel ("bars": up at once, down a little slower). It is
+ *   not drawn here: the <meter>s under the picture show it (see script.ts).
  * - The peak lamp lights red for a moment when the sound goes over +0.5 VU. Like on a real meter,
  *   it shows short peaks that the heavy needle is too slow to reach.
  * - The peak hold marks stay at the highest level for a second, then fall.
@@ -32,10 +32,14 @@ export interface MeterColors {
 export interface Meter {
   /** Move the needles and bars towards the levels (in VU) for `seconds`, then draw. */
   update(levels: readonly [number, number], seconds: number): void
+  /** Where the needles are now: 0 is -20 VU, 1 is +3 VU (a little outside it at the ends). */
+  readonly needles: readonly [left: number, right: number]
+  /** The fast levels now (0 to BAR_MAX, the same scale as the needles): up at once, down slower. */
+  readonly bars: readonly [left: number, right: number]
 }
 
 export const WIDTH = 247
-export const HEIGHT = 80
+export const HEIGHT = 66
 /** Canvas pixels per screen pixel, in each direction (like the sampler: sharp thin lines). */
 const SUPERSAMPLE = 4
 
@@ -46,18 +50,15 @@ const RADIUS = 46
 const SPAN = (48 * Math.PI) / 180
 /** The scale: -20 to +3 VU. Position 0 is -20 VU, 1 is +3 VU. Like a real meter, it is not linear. */
 const MAX_VU = 3
-const positionOf = (vu: number) => (10 ** (vu / 20) - 0.1) / (10 ** (MAX_VU / 20) - 0.1)
+export const positionOf = (vu: number) => (10 ** (vu / 20) - 0.1) / (10 ** (MAX_VU / 20) - 0.1)
 const ZERO = positionOf(0)
 /** The big marks, with their numbers ('' : no number). */
 const MARKS: readonly [vu: number, label: string][] = [
   [-20, '20'], [-10, '10'], [-7, '7'], [-5, '5'], [-3, '3'], [-2, ''], [-1, ''],
   [0, '0'], [1, ''], [2, ''], [3, '3'],
 ]
-/** The segment bars. */
-const BARS_Y = [68, 75] as const
-const BAR_LEFT = 11
-const SEGMENT = 4
-const SEGMENTS = Math.floor((WIDTH - BAR_LEFT) / SEGMENT)
+/** The fast level ("bars") goes a little past +3 VU, like the needles: up to this much of the scale. */
+export const BAR_MAX = 1.06
 /** Spring: how hard the needle is pulled to the level, and how much it is slowed down. */
 const STIFFNESS = 140
 const DAMPING = 16
@@ -222,27 +223,15 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
       g.textAlign = 'right'
       g.fillText(text, middle + 14, y, 21)
     })
-
-    // ——— The segment bars ———
-    channels.forEach((channel, i) => {
-      const y = BARS_Y[i]!
-      g.font = `600 7px ${c.font}`
-      g.textAlign = 'left'
-      g.fillStyle = i === 0 ? c.left : c.right
-      g.fillText(i === 0 ? 'L' : 'R', 0, y + 2)
-      const lit = (channel.bar / 1.06) * SEGMENTS
-      const hold = Math.min(SEGMENTS - 1, Math.round((channel.hold / 1.06) * SEGMENTS))
-      for (let k = 0; k < SEGMENTS; k++) {
-        const over = k / SEGMENTS >= ZERO / 1.06
-        if (k === hold && channel.hold > 0.01) g.fillStyle = c.orange
-        else if (k < lit) g.fillStyle = over ? c.red : c.ink
-        else g.fillStyle = c.dim
-        g.fillRect(BAR_LEFT + k * SEGMENT, y, SEGMENT - 1.5, 4)
-      }
-    })
   }
 
   return {
+    get needles() {
+      return [channels[0]!.position, channels[1]!.position] as const
+    },
+    get bars() {
+      return [channels[0]!.bar, channels[1]!.bar] as const
+    },
     update(levels, seconds) {
       const scale = (devicePixelRatio || 1) * SUPERSAMPLE
       if (canvas.width !== Math.round(WIDTH * scale)) {

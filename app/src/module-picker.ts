@@ -27,7 +27,7 @@ export function createModulePicker({
           <li>
             <button
               type="button"
-              class="button button--ghost"
+              class="button ghost"
               data-index="${index}"
             >
               ${definition.name}

@@ -33,10 +33,12 @@ const isNumber = (value: unknown): value is number => typeof value === 'number' 
  */
 export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const { audio } = ctx
-  const output = new GainNode(audio, { gain: 1 })
-  // Listens to the output, for the level meter in the picture.
+  // One output per channel: a mixer after the sampler gets each channel on its own. Without a mixer,
+  // the core mixes them into the main chain here (see planChannels in @loop/core).
+  const channelOutputs = Array.from({ length: CHANNELS }, () => new GainNode(audio, { gain: 1 }))
+  // Listens to all channels, for the level meter in the picture.
   const outputAnalyser = new AnalyserNode(audio, { fftSize: 1024 })
-  output.connect(outputAnalyser)
+  for (const channel of channelOutputs) channel.connect(outputAnalyser)
 
   // Options can come from a saved project file, so check everything.
   let active = isNumber(options.active) ? clamp(Math.round(options.active), 0, CHANNELS - 1) : 0
@@ -165,29 +167,64 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // ——— Playing ———
 
-  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number }
+  /** `tape`: it follows the core's tape speed (a trigger from the clock), see core.speed. */
+  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number; tape: boolean }
   /** The sound from the play button (it says "stop" while this plays). */
   let pressed: Playing | null = null
   /** The newest sound of each channel, from the play button or a trigger: the picture shows it. */
   const latest: (Playing | null)[] = Array.from({ length: CHANNELS }, () => null)
 
-  /** Play a channel from its start marker to its end marker, at an exact audio time. */
-  const trigger = (channel: number, time = audio.currentTime): Playing | null => {
+  /** The sounds that follow the tape speed now. When the tape has stopped, they stop. */
+  const onTape = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>()
+
+  /**
+   * Play a channel from its start marker to its end marker, at an exact audio time and a volume
+   * (0 to 1). `tape`: follow the core's tape speed (speed and pitch), like a sound on the tape.
+   */
+  const trigger = (channel: number, time = audio.currentTime, volume = 1, tape = false): Playing | null => {
     const { buffer, start, end } = channels[channel] ?? {}
     if (!buffer || start === undefined || end === undefined) return null
     const source = new AudioBufferSourceNode(audio, { buffer })
-    source.connect(output)
+    // Its own volume (the trigger's volume), then the channel's output.
+    const gain = new GainNode(audio, { gain: Math.max(0, volume) })
+    source.connect(gain).connect(channelOutputs[channel]!)
+    const sound = { source, gain }
+    if (tape) {
+      // The speed signal sets the playback rate: at half tape speed, half speed and an octave lower.
+      source.playbackRate.value = 0
+      ctx.core.speedSignal.connect(source.playbackRate)
+      onTape.add(sound)
+    }
     const offset = start * buffer.duration
     const length = Math.max(0.01, (end - start) * buffer.duration)
     source.start(time, offset, length)
-    const started = { source, began: time, offset, length, channel }
+    const started = { source, began: time, offset, length, channel, tape }
     latest[channel] = started
     source.onended = () => {
+      // Chrome may already have taken this cable away when the sound ended: then it throws.
+      if (tape) {
+        try {
+          ctx.core.speedSignal.disconnect(source.playbackRate)
+        } catch {
+          // Already gone.
+        }
+      }
+      onTape.delete(sound)
       source.disconnect()
+      gain.disconnect()
       if (latest[channel] === started) latest[channel] = null
     }
     return started
   }
+
+  // The tape has stopped: the sounds on it are frozen (speed 0). Fade them out fast, then stop them.
+  ctx.on('stop', () => {
+    const now = audio.currentTime
+    for (const { source, gain } of onTape) {
+      gain.gain.setTargetAtTime(0, now, 0.005)
+      source.stop(now + 0.05)
+    }
+  })
 
   /** Play the active channel once (the play button). */
   const play = () => {
@@ -216,7 +253,8 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // Triggers from modules before this one in the chain (for example a sequencer): play that channel
   // at that time. The play button does not change; the picture shows it (see nowPlaying).
-  ctx.onTrigger(({ channel, time }) => void trigger(channel, time))
+  // They are on the tape: they follow its speed (see core.speed).
+  ctx.onTrigger(({ channel, time, volume }) => void trigger(channel, time, volume, true))
 
   ctx.onDispose(() => {
     busy = false
@@ -234,7 +272,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   }
 
   return {
-    output,
+    channelOutputs,
     get active() {
       return active
     },
@@ -300,13 +338,15 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       const sound = latest[active]
       if (!sound || audio.currentTime < sound.began) return null
       const duration = sound.source.buffer!.duration
-      const played = clamp(audio.currentTime - sound.began, 0, sound.length)
+      // A sound on the tape plays as far as the tape has moved.
+      const seconds = sound.tape ? ctx.core.clock.travel(sound.began, audio.currentTime) : audio.currentTime - sound.began
+      const played = clamp(seconds, 0, sound.length)
       return { at: (sound.offset + played) / duration, progress: played / sound.length }
     },
     play,
     stop,
     /** Play any channel at an exact audio time (for example from a sequencer). */
-    trigger: (channel: number, time?: number) => void trigger(channel, time),
+    trigger: (channel: number, time?: number, volume?: number) => void trigger(channel, time, volume),
 
     get message() {
       return message

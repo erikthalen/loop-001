@@ -11,7 +11,8 @@ export type ScopedOn = <K extends keyof CoreEventMap & string>(
 
 /**
  * A signal between modules, like a MIDI note or a CV gate: "play channel X at this time".
- * It flows down the chain like sound: only the modules AFTER the sender get it.
+ * It flows down the chain like sound: only the modules AFTER the sender get it, in order. A module
+ * on the way can change it (see ctx.passTrigger), for example a mixer that makes a channel quieter.
  * For example, the sequencer sends one for each step that is on, and a sampler after it
  * plays that channel.
  */
@@ -20,6 +21,8 @@ export interface Trigger {
   channel: number
   /** Exact audio time (AudioContext clock), so the sound can be scheduled to the sample. */
   time: number
+  /** How loud, 0 to 1 (like MIDI velocity). Leave it out: 1. A mixer can change it on the way. */
+  volume?: number
 }
 
 /**
@@ -40,6 +43,11 @@ export interface ModuleContext {
   send(trigger: Trigger): void
   /** Get the triggers from the modules before this one. The listener is removed when the module is removed. */
   onTrigger(listener: (trigger: Trigger) => void): void
+  /**
+   * Change the triggers that pass this module, before the modules after it get them (like a box
+   * in a MIDI chain). Return the changed trigger, or null to stop it. Only one per module.
+   */
+  passTrigger(change: (trigger: Trigger) => Trigger | null): void
   /** Tell the core that the module's saved state changed (for example, the volume). The app saves the project. */
   changed(): void
 }
@@ -50,6 +58,14 @@ export interface ModuleSetupResult {
   input?: AudioNode
   /** The node that sends sound out. Leave it out if the module makes no sound. */
   output?: AudioNode
+  /**
+   * One output per channel (channel 1 first): the module sends each channel's sound separately,
+   * for example a sampler. A later module with `channelInputs` (a mixer) gets them; if there is
+   * none, the sound joins the main chain at this module. See planChannels in chain.ts.
+   */
+  channelOutputs?: readonly AudioNode[]
+  /** One input per channel: the module takes in the channels of the modules before it (a mixer). */
+  channelInputs?: readonly AudioNode[]
   /**
    * Return the settings to save with the project. Must be plain JSON data.
    * When the project loads, this data is passed back to `setup` as `options`.

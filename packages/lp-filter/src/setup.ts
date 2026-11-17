@@ -44,8 +44,8 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
   const { audio } = ctx
   // Options can come from a saved project file, so check the types.
   let frequency =
-    typeof options.frequency === 'number' ? clamp(options.frequency, MIN_FREQUENCY, MAX_FREQUENCY) : 1000
-  let resonance = typeof options.resonance === 'number' ? clamp(options.resonance, 0, MAX_RESONANCE) : 6
+    typeof options.frequency === 'number' ? clamp(options.frequency, MIN_FREQUENCY, MAX_FREQUENCY) : 20000
+  let resonance = typeof options.resonance === 'number' ? clamp(options.resonance, 0, MAX_RESONANCE) : 0
   let on = typeof options.on === 'boolean' ? options.on : true
   let slope: Slope = options.slope === 24 ? 24 : 12
 

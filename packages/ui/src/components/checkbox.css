@@ -1,14 +1,5 @@
-/*
- * Checkbox: styles the native checkbox. It is still a real <input>, so keyboard,
- * forms and screen readers work as normal.
- *   <input class="checkbox" type="checkbox" />
- *   <label class="field"><input class="checkbox" type="checkbox" /> Accent</label>
- *
- * Checked: a primary-color box with a white check mark.
- * Also styled: hover, keyboard focus, disabled, and indeterminate (set in JS: el.indeterminate = true).
- */
 @layer ui {
-  .checkbox {
+  input[type="checkbox"] {
     /* Turn off the browser's own drawing, then draw the box ourselves. */
     appearance: none;
     flex: none;
@@ -20,49 +11,76 @@
     border-radius: 3px;
     cursor: pointer;
     transition:
-      background-color 0.1s,
+      background-color 0s,
       border-color 0.1s;
   }
 
-  .checkbox:hover {
+  input[type="checkbox"]:hover {
     border-color: #98a2b3;
   }
 
-  .checkbox:checked,
-  .checkbox:indeterminate {
+  input[type="checkbox"]:checked,
+  input[type="checkbox"]:indeterminate {
     background-color: var(--loop-primary);
     border-color: var(--loop-primary);
   }
 
-  /* White check mark (an SVG, written into the CSS). */
-  .checkbox:checked {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5l5 5L19.5 7' fill='none' stroke='%23ffffff' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /*
+   * The check mark (and the dash for "some, not all") is a hole in the box: a mask cuts its shape
+   * out, so whatever is behind the box shows through. So the mark always has the background's
+   * color, on any screen, in light and dark mode.
+   * The mask has two layers: the whole box, and the mark. "exclude" keeps the box without the mark.
+   * The box layer is 5px bigger on each side and not clipped (no-clip), so the focus ring
+   * (outside the box) still shows.
+   */
+  input[type="checkbox"]:checked {
+    mask:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5l5 5L19.5 7' fill='none' stroke='%23000' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat,
+      linear-gradient(#000 0 0) center / calc(100% + 10px) calc(100% + 10px) no-repeat;
+    mask-clip: no-clip;
+    mask-composite: exclude;
   }
 
-  /* White dash for "some, not all". */
-  .checkbox:indeterminate {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12h12' fill='none' stroke='%23ffffff' stroke-width='3.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  input[type="checkbox"]:indeterminate {
+    mask:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12h12' fill='none' stroke='%23000' stroke-width='3.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% no-repeat,
+      linear-gradient(#000 0 0) center / calc(100% + 10px) calc(100% + 10px) no-repeat;
+    mask-clip: no-clip;
+    mask-composite: exclude;
   }
 
-  .checkbox:focus-visible {
+  input[type="checkbox"]:focus-visible {
     outline: 2px solid var(--loop-primary);
     outline-offset: 2px;
   }
 
-  .checkbox:disabled {
+  /*
+   * Safari: a masked element never paints outside its box, so the focus ring (outside the box)
+   * would be gone on a checked box. There, show the focus as a thick frame inside the box instead.
+   * (`font: -apple-system-body` only works in Safari, so it picks out Safari.)
+   */
+  @supports (font: -apple-system-body) {
+    input[type="checkbox"]:checked:focus-visible,
+    input[type="checkbox"]:indeterminate:focus-visible {
+      border-color: var(--color-neutral-1000);
+      box-shadow: inset 0 0 0 1px var(--color-neutral-1000);
+    }
+  }
+
+  input[type="checkbox"]:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
 
   /* In Windows high-contrast mode, keep a visible box and check. */
   @media (forced-colors: active) {
-    .checkbox {
+    input[type="checkbox"] {
       appearance: auto;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .checkbox {
+    input[type="checkbox"] {
       transition: none;
     }
   }

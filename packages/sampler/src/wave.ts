@@ -12,8 +12,9 @@
  *   └───────────────────────────────────────────┘
  *
  * - One tape holds all 6 channels (see script.ts). The more tape has moved to the right reel,
- *   the bigger it is. Winding to another channel slides the cut and the sound left or right,
- *   past the channels in between.
+ *   the bigger it is. Winding to another channel slides the cut and the sound with the tape (to the
+ *   right when winding forward, like the tape going from the left reel to the right one), past the
+ *   channels in between.
  * - The sound: columns of small cells, one on the middle row, then the same number above and below.
  *   Between the markers it is bright, outside them dim. While recording: the microphone, in red.
  * - While a sound plays, an orange playhead line moves along the sound.
@@ -326,8 +327,9 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   for (const channel of [first, first + 1]) {
     const tape = state.channels[channel]
     if (!tape) continue
-    // How far this channel is from the head, in px.
-    const shift = Math.round((channel - state.wind) * WIDTH)
+    // How far this channel is from the head, in px. The tape runs from the left reel to the right
+    // one (the reels turn counterclockwise), so the next channel comes in from the left.
+    const shift = Math.round((state.wind - channel) * WIDTH)
     if (Math.abs(shift) >= WIDTH) continue
     g.save()
     g.translate(shift, 0)
@@ -345,7 +347,7 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
     if (channel === state.active && state.recorded) {
       state.recorded.forEach((level, i) => column(i, level * 1.4, c.rec))
     } else if (!tape.columns) {
-      g.font = `italic 400 10px ${c.font}`
+      g.font = `400 10px ${c.font}`
       g.fillStyle = c.muted
       g.textAlign = 'center'
       // In the middle of its space: between the ticks and the tracks. Centered by the letters
@@ -372,7 +374,7 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   for (const channel of [first, first + 1]) {
     const tape = state.channels[channel]
     if (!tape || channel === state.active) continue
-    const shift = (channel - state.wind) * WIDTH
+    const shift = (state.wind - channel) * WIDTH
     const [start, end] = tape.columns ? [tape.start, tape.end] : [0, 1]
     for (const at of [start, end]) {
       const x = Math.round(shift + at * WIDTH)

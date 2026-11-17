@@ -1,21 +1,10 @@
 import { defineModuleSetup } from '@loop/core'
 
-/** The time signatures the metronome can play, in the order the button steps through them. */
-export const SIGNATURES = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8'] as const
-export type Signature = (typeof SIGNATURES)[number]
-
-const isSignature = (value: unknown): value is Signature => SIGNATURES.includes(value as Signature)
-
-/** Beats in one bar: the top number of the signature. Every beat of the core clock is one tick. */
-const beatsIn = (signature: Signature) => Number.parseInt(signature, 10)
-
 export interface MetronomeOptions {
   /** Volume from 0 to 1. Default: 0.5. */
   volume?: number
   /** Play a higher tick on the first beat of each bar. Default: true. */
   accent?: boolean
-  /** Time signature. Default: '4/4'. */
-  signature?: Signature
   /** Silent: no ticks (the picture still swings). Default: false. */
   muted?: boolean
 }
@@ -26,33 +15,41 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
   // Options can come from a saved project file, so check the types.
   let volume = typeof options.volume === 'number' ? Math.min(1, Math.max(0, options.volume)) : 0.5
   let accent = typeof options.accent === 'boolean' ? options.accent : true
-  let signature: Signature = isSignature(options.signature) ? options.signature : '4/4'
   let muted = typeof options.muted === 'boolean' ? options.muted : false
   const output = new GainNode(audio, { gain: muted ? 0 : volume })
 
   /** Schedule one tick at an exact audio time. */
   const tick = (time: number, high: boolean) => {
-    // A short sine "blip": fast attack, fast decay.
-    const oscillator = new OscillatorNode(audio, { type: 'sine', frequency: high ? 1760 : 880 })
+    // It follows the tape speed (see core.speed): a slow tape plays the tick lower and longer.
+    // The pitch follows the speed signal all the time; the length is set by the speed at the start.
+    const speed = Math.max(0.2, ctx.core.speedAt(time))
+    const decay = 0.05 / speed
+    // A short sine "blip": fast attack, fast decay. Its frequency is the speed signal × the pitch.
+    const oscillator = new OscillatorNode(audio, { type: 'sine', frequency: 0 })
+    const pitch = new GainNode(audio, { gain: high ? 1760 : 880 })
+    ctx.core.speedSignal.connect(pitch).connect(oscillator.frequency)
     const envelope = new GainNode(audio, { gain: 0 })
     envelope.gain.setValueAtTime(0, time)
-    envelope.gain.linearRampToValueAtTime(1, time + 0.002)
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05)
+    envelope.gain.linearRampToValueAtTime(1, time + 0.002 / speed)
+    envelope.gain.exponentialRampToValueAtTime(0.001, time + decay)
 
     oscillator.connect(envelope).connect(output)
     oscillator.start(time)
-    oscillator.stop(time + 0.06)
-    oscillator.onended = () => envelope.disconnect()
+    oscillator.stop(time + decay + 0.01)
+    oscillator.onended = () => {
+      try {
+        ctx.core.speedSignal.disconnect(pitch)
+      } catch {
+        // Already gone.
+      }
+      pitch.disconnect()
+      envelope.disconnect()
+    }
   }
 
+  // A tick on every beat of the core clock; a higher one on the first beat of each bar (4/4).
   // Removed for us when the module is removed.
-  const setSignature = (value: Signature) => {
-    signature = value
-    ctx.changed()
-  }
-
-  // The metronome counts its own bars, so its signature does not change the core clock.
-  ctx.on('beat', ({ time, beat }) => tick(time, accent && beat % beatsIn(signature) === 0))
+  ctx.on('beat', ({ time, beatInBar }) => tick(time, accent && beatInBar === 0))
 
   return {
     output,
@@ -61,12 +58,6 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
     },
     get accent() {
       return accent
-    },
-    get signature() {
-      return signature
-    },
-    get beatsPerBar() {
-      return beatsIn(signature)
     },
     setVolume(value: number) {
       volume = value
@@ -86,12 +77,7 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
       accent = value
       ctx.changed()
     },
-    setSignature,
-    /** Step to the next signature in SIGNATURES (after the last one: the first one). */
-    nextSignature() {
-      setSignature(SIGNATURES[(SIGNATURES.indexOf(signature) + 1) % SIGNATURES.length]!)
-    },
     /** Saved with the project. Comes back as `options` when the project loads. */
-    save: (): MetronomeOptions => ({ volume, accent, signature, muted }),
+    save: (): MetronomeOptions => ({ volume, accent, muted }),
   }
 })

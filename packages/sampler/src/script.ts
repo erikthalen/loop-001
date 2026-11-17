@@ -73,7 +73,6 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     const duration = buffer?.duration ?? 0
 
     status.textContent = module.recording ? '● rec' : module.message
-    channelNumber.style.setProperty('--active', String(module.active))
 
 
     // An empty channel (or while recording):
@@ -206,8 +205,10 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     const limit = reducedMotion.matches ? Infinity : WIND_SPEED * seconds
     const toward = (from: number, to: number, max: number) => from + Math.max(-max, Math.min(max, to - from))
     wind = toward(wind, module.active, limit / CHANNEL_SPACE)
+    // The channel number turns with the tape: it settles when the tape does.
+    channelNumber.style.setProperty('--at', wind.toFixed(4))
     // The markers ride on the tape with their channel (the canvas draws the other channels' markers).
-    const offset = (module.active - wind) * canvas.clientWidth
+    const offset = (wind - module.active) * canvas.clientWidth
     cuts.style.transform = offset ? `translateX(${offset.toFixed(1)}px)` : ''
     cutWindow.classList.toggle('winding', offset !== 0)
     let stripTarget = 0

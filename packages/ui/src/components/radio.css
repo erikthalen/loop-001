@@ -1,10 +1,10 @@
 /*
- * Radio: styles the native radio button. It is still a real <input>, so the keyboard (arrow keys
+ * Radio: styles every native radio button (<input type="radio">, no class needed). It is still a real <input>, so the keyboard (arrow keys
  * move between the buttons of a group), forms and screen readers work as normal.
  *   <fieldset>
  *     <legend>Channel</legend>
- *     <label class="field"><input class="radio" type="radio" name="channel" value="1" checked /> 1</label>
- *     <label class="field"><input class="radio" type="radio" name="channel" value="2" /> 2</label>
+ *     <label class="field"><input type="radio" name="channel" value="1" checked /> 1</label>
+ *     <label class="field"><input type="radio" name="channel" value="2" /> 2</label>
  *   </fieldset>
  *
  * Checked: a primary-color circle with a white dot in the middle. The same size and colors as
@@ -12,7 +12,7 @@
  * Also styled: hover, keyboard focus and disabled.
  */
 @layer ui {
-  .radio {
+  input[type="radio"] {
     /* Turn off the browser's own drawing, then draw the circle ourselves. */
     appearance: none;
     flex: none;
@@ -28,12 +28,12 @@
       border-color 0.1s;
   }
 
-  .radio:hover {
+  input[type="radio"]:hover {
     border-color: #98a2b3;
   }
 
   /* The white dot: a circle in the middle of the background. */
-  .radio:checked {
+  input[type="radio"]:checked {
     background: var(--loop-primary)
       radial-gradient(
         circle,
@@ -43,25 +43,25 @@
     border-color: var(--loop-primary);
   }
 
-  .radio:focus-visible {
+  input[type="radio"]:focus-visible {
     outline: 2px solid var(--loop-primary);
     outline-offset: 2px;
   }
 
-  .radio:disabled {
+  input[type="radio"]:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
 
   /* In Windows high-contrast mode, keep a visible circle and dot. */
   @media (forced-colors: active) {
-    .radio {
+    input[type="radio"] {
       appearance: auto;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .radio {
+    input[type="radio"] {
       transition: none;
     }
   }

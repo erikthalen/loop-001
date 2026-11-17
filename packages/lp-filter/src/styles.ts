@@ -1,7 +1,7 @@
 import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
-// (displayStyles); the inputs too. The module only sets their colors (--loop-primary).
+// (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
 // The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display: "music from next door" (scene.ts), in thin lines like the sampler.
 export const styles = css`
@@ -13,62 +13,56 @@ export const styles = css`
     --loop-primary: var(--blue);
   }
 
-  /* One row: a vertical slider on each side of the picture. */
+  /*
+   * One row (a grid): a vertical slider on each side, the middle column between them.
+   * The middle column sets the row's height. The sliders start at 0 high (so their own natural
+   * height, 129px, does not count) and grow to fill the row (min-height: 100%).
+   */
   .stage {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     gap: 8px;
+  }
+
+  input[type="range"].vertical {
+    height: 0;
+    min-height: 100%;
+  }
+
+  /* The middle column: the controls on top, the picture under them. */
+  .screen {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .top-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .picture {
     display: block;
     width: 199px;
-    height: 96px;
-  }
-
-  .range--vertical {
-    height: 96px;
+    height: 70px;
   }
 
   .resonance {
     --loop-primary: var(--orange);
   }
 
-  /* Bottom: bypass and the slope. */
-  .bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-  }
-
-  .label .checkbox {
+  .field input[type="checkbox"],
+  .field input[type="radio"] {
     --loop-primary: var(--ink);
   }
 
-  /* The slope: a small @loop/ui button. Click it to switch between 12 and 24 dB/oct.
-     (Browsers do not pass text-transform on to buttons, so ask for it here.) */
+  /* The slope: two radio buttons side by side. */
   .slope {
-    text-transform: uppercase;
-  }
-
-  /* The 12 / 24 on the slope button: a flip screen. --at (0 or 1) slides the column. */
-  .flip {
-    display: inline-block;
-    height: 1em;
-    overflow: clip;
-  }
-
-  .flip-strip {
     display: flex;
-    flex-direction: column;
-    line-height: 1em;
-    transform: translateY(calc(var(--at, 0) * -1em));
-    transition: transform 0.3s ease;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .flip-strip {
-      transition: none;
-    }
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 `;

@@ -98,8 +98,8 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            /* gap: 1rem; */
-            margin-top: 1.5rem;
+            gap: 5px;
+            margin-top: 10px;
             max-width: 32rem;
           }
           #rack:not(:has(.slot))::before {
@@ -112,6 +112,16 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             position: relative;
             display: flex;
             gap: 0.25rem;
+
+            /* While you drag it, dnd-kit makes the slot a popover (so it floats above the page).
+               @loop/ui gives popovers a frame (border, shadow, round corners): not here. */
+            &[popover] {
+              border: 0;
+              border-radius: 0;
+              box-shadow: none;
+              padding: 0;
+              background: none;
+            }
 
             &:not(:hover) {
               .drag-handle {
@@ -229,12 +239,12 @@ app.get(base, (c) =>
           >
             Projects
           </button>
-          <div id="project-menu" class="popover" popover>
+          <div id="project-menu" popover>
             <menu>
               <li>
                 <button
                   id="project-new"
-                  class="button button--small"
+                  class="button small"
                   type="button"
                 >
                   New
@@ -243,7 +253,7 @@ app.get(base, (c) =>
               <li>
                 <button
                   id="project-import"
-                  class="button button--small"
+                  class="button small"
                   type="button"
                 >
                   Import…
@@ -252,7 +262,7 @@ app.get(base, (c) =>
               <li>
                 <button
                   id="project-export"
-                  class="button button--small"
+                  class="button small"
                   type="button"
                 >
                   Export
@@ -282,19 +292,9 @@ app.get(base, (c) =>
           ></span>
         </div>
         <div class="row">
-          <label class="field">
-            <input
-              id="play"
-              class="checkbox"
-              type="checkbox"
-              aria-label="play and pauses"
-            />
-          </label>
-        </div>
-        <div class="row">
           <button
             id="add"
-            class="button button--small"
+            class="button small"
             type="button"
             popovertarget="module-picker"
           >
@@ -302,7 +302,7 @@ app.get(base, (c) =>
           </button>
           <button
             id="remove"
-            class="button button--small"
+            class="button small"
             type="button"
             aria-pressed="false"
             disabled
@@ -310,7 +310,7 @@ app.get(base, (c) =>
             Remove
           </button>
         </div>
-        <div id="module-picker" class="popover menu" popover>
+        <div id="module-picker" class="menu" popover>
           <menu id="module-list"></menu>
         </div>
         <div id="rack"></div>

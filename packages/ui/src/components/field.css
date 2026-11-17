@@ -1,0 +1,22 @@
+/*
+ * Field: a label with an input in it, for example "rec" or "bypass" next to a checkbox.
+ * Click the text, and the input reacts.
+ *   <label class="field"><input type="checkbox" /> rec</label>
+ *   <label class="field">tempo <input class="input" type="number" /></label>
+ */
+@layer ui {
+  .field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    span {
+      text-box: trim-both cap alphabetic;
+    }
+  }
+}

@@ -1,0 +1,76 @@
+/*
+ * Progress: every <progress> looks like Chrome's own progress bar, but every part is drawn here,
+ * so it does not depend on the browser's look. Light and dark mode follow `color-scheme`.
+ *   <progress max="16" value="4"></progress>
+ *
+ * The accent color is the primary color. For another color, set --loop-primary on the bar or on
+ * a parent. Set the length with `width` (default 160px, like Chrome).
+ *
+ * Sizes and colors are measured from Chrome's own progress bar:
+ * - The bar: 8px high, round ends, a 1px border. Grey, or dark grey in dark mode.
+ * - The filled part: the accent color, with a 1px border (the accent mixed with grey). Its left
+ *   end is round, its right end square. In dark mode the accent is lighter (mixed with white).
+ *
+ * The bar itself is the track. The filled part is the browser's "value" part, pulled out by 1px so
+ * that its border covers the track's border. clip-path rounds both ends of everything.
+ */
+@layer ui {
+  progress {
+    appearance: none;
+    box-sizing: border-box;
+    width: 160px;
+    height: 8px;
+    margin: 0;
+    vertical-align: middle;
+    background: light-dark(#efefef, #3b3b3b);
+    border: 1px solid light-dark(#b2b2b2, #858585);
+    border-radius: 4px;
+    clip-path: inset(0 round 4px);
+    overflow: hidden;
+  }
+
+  /* Chrome, Edge, Safari: the track part is drawn by the bar itself, so make it see-through. */
+  progress::-webkit-progress-bar {
+    background: transparent;
+  }
+
+  progress::-webkit-progress-value {
+    box-sizing: content-box;
+    height: 100%;
+    margin: -1px 0px -1px -1px;
+    background: light-dark(
+      var(--loop-primary),
+      color-mix(in srgb, var(--loop-primary) 40%, white)
+    );
+    /* Its border: top and bottom as borders, the left one as an inner shadow, so that an empty
+       bar (0 wide) shows nothing at all. */
+    border-block: 1px solid
+      light-dark(color-mix(in srgb, var(--loop-primary), #767676), #858585);
+    box-shadow: inset 1px 0 0
+      light-dark(color-mix(in srgb, var(--loop-primary), #767676), #858585);
+  }
+
+  /* Firefox: its "progress bar" part is the filled part. */
+  progress::-moz-progress-bar {
+    box-sizing: content-box;
+    height: 100%;
+    margin: -1px 0 -1px -1px;
+    background: light-dark(
+      var(--loop-primary),
+      color-mix(in srgb, var(--loop-primary) 40%, white)
+    );
+    /* Its border: top and bottom as borders, the left one as an inner shadow, so that an empty
+       bar (0 wide) shows nothing at all. */
+    border-block: 1px solid
+      light-dark(color-mix(in srgb, var(--loop-primary), #767676), #858585);
+    box-shadow: inset 1px 0 0
+      light-dark(color-mix(in srgb, var(--loop-primary), #767676), #858585);
+  }
+
+  /* In Windows high-contrast mode, use the browser's own progress bar. */
+  @media (forced-colors: active) {
+    progress {
+      appearance: auto;
+    }
+  }
+}

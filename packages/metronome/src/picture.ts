@@ -1,17 +1,22 @@
 /**
- * The MT-01 picture, drawn on a 2D canvas (140 x 44), in the same thin-line style as the sampler.
+ * The MT-01 picture, drawn on a 2D canvas (24px high, as wide as the module), in the same
+ * thin-line style as the sampler and the VU meter. One flat row: the ∞ on the left, the tempo on
+ * the right. Both are exactly as high as the digits.
  *
- *   ┌────────────────────────────────────────────┐
- *   │    .·'''·.     1 2 0  bpm                  │   a scale arc with ticks, over the swinging arm
- *   │   /  |/  \       ~~~~~~                    │   the tempo on digit wheels (like the sampler's counter)
- *   │  /   ▮    \                                │   the weight (orange): high is slow, low is fast
- *   │ /    ◎     \     [ tempo slider ]           │   (a @loop/ui range slider, on top of the canvas)
- *   │ ‾‾‾‾‾‾‾‾‾‾‾‾                               │
- *   └────────────────────────────────────────────┘
+ *    ┊ ·  ·  ·  ·  ·   ·  ·  ·  ·  · ┊
+ *    ┊·             ╲ ╱             ·┊      1 2 0  B P M
+ *    ┊ ·  ·  ·  ·  ·  ✕  ·  ●~~ ·  · ┊
  *
- * - The arm swings over a scale. Two faint "ghost" arms show where it was a moment ago.
- * - The tempo turns like an analog counter: a jump in tempo rolls the digit wheels to it.
- *   A leading zero (for example the 0 in "090") is dim.
+ * The ∞ (a lemniscate of Gerono): the dot goes once around it every two beats. It passes the
+ * crossing in the middle exactly on each beat, then goes around one loop (fast in the middle,
+ * slow at the end), and back to the middle on the next beat, then around the other loop.
+ * - The path has fine ticks, and small marks at both ends. An orange cross marks the middle.
+ * - The dot (orange) draws a trail behind it, about half a beat long: thick and bright at the dot,
+ *   thin and faint at its end, with a soft glow.
+ * - On each beat the middle flashes (orange on the first beat of the bar).
+ *
+ * The tempo: digit wheels and "BPM" in the same size, on one base line. A jump in tempo rolls the
+ * wheels to it, like an analog counter. A leading zero (for example the 0 in "090") is dim.
  */
 
 export interface PictureColors {
@@ -24,48 +29,48 @@ export interface PictureColors {
 }
 
 export interface PictureState {
-  /** The arm's angle, in degrees. Negative is left. */
-  angle: number
-  /** The arm a moment ago (faint). */
-  ghosts: readonly number[]
+  /**
+   * Where the dot is on the ∞, in radians: 0, π, 2π... is the middle; π/2 the right end, 3π/2 the
+   * left end (then it goes on: 2π + π/2 is the right end again).
+   */
+  phase: number
+  /** Where the dot's trail starts (behind the dot, along the path). The same as phase: no trail. */
+  trail: number
   /** The tempo. Not rounded: between two values, the digit wheels are turning. */
   bpm: number
+  /** The beat flash: 1 just on a beat, down to 0. */
+  flash: number
+  /** True if the last beat was the first one of the bar (an orange flash). */
+  accent: boolean
 }
 
-export const WIDTH = 140
-export const HEIGHT = 44
+export const HEIGHT = 24
+/** Where the dot rests when the metronome is stopped: in the middle, where the first beat starts. */
+export const REST = Math.PI
+/** How long the trail behind the dot is, along the path (in radians: π is one beat). */
+export const TRAIL = 1.6
 /** Canvas pixels per screen pixel, in each direction (like the sampler: sharp thin lines). */
 const SUPERSAMPLE = 4
+/** The tempo text's size, and where it stands (its base line). */
+const TEXT_SIZE = 22
+const BASE_Y = 21
+/** The space between the ∞ and the tempo. */
+const GAP = 12
+/** Ticks along the ∞ (and a longer one every MAJOR). */
+const TICKS = 48
+const MAJOR = 6
 
-/** The pivot, where the arm turns. */
-const PIVOT_X = 23
-const PIVOT_Y = 37
-const ARM = 33
-/** The swing, and the scale arc above it. */
-export const SWING = 24
-const SCALE_RADIUS = 30
-/** The tempo range. */
-export const MIN_BPM = 20
-export const MAX_BPM = 300
-/** The digit wheels. */
-const DIGITS_X = 50
-const DIGITS_Y = 13
-const DIGIT_ROW = 30
-
-/** How far the weight sits from the pivot: high (slow) at 30 bpm, low (fast) at 300 bpm. */
-const weightAt = (bpm: number) =>
-  29 - ((Math.min(MAX_BPM, Math.max(MIN_BPM, bpm)) - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 16
-
-export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: PictureColors) {
+/** `width`: the canvas's width in CSS px (the module's width). */
+export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: PictureColors, width: number) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
-  if (canvas.width !== Math.round(WIDTH * scale)) {
-    canvas.width = Math.round(WIDTH * scale)
+  if (canvas.width !== Math.round(width * scale) || canvas.height !== Math.round(HEIGHT * scale)) {
+    canvas.width = Math.round(width * scale)
     canvas.height = Math.round(HEIGHT * scale)
   }
   const g = canvas.getContext('2d')!
   g.setTransform(scale, 0, 0, scale, 0, 0)
   g.fillStyle = c.screen
-  g.fillRect(0, 0, WIDTH, HEIGHT)
+  g.fillRect(0, 0, width, HEIGHT)
   g.lineCap = 'round'
   g.lineJoin = 'round'
 
@@ -75,93 +80,134 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
     g.lineTo(x2, y2)
     g.stroke()
   }
-  /** A point at `angle` degrees from straight up, `r` px from the pivot. */
-  const at = (angle: number, r: number): [number, number] => {
-    const a = (angle * Math.PI) / 180
-    return [PIVOT_X + Math.sin(a) * r, PIVOT_Y - Math.cos(a) * r]
-  }
 
-  // ——— The body and the base ———
-  g.strokeStyle = c.ink
-  g.lineWidth = 1
-  g.beginPath()
-  g.moveTo(19, 2)
-  g.lineTo(27, 2)
-  g.lineTo(40, 41)
-  g.lineTo(6, 41)
-  g.closePath()
-  g.stroke()
-  g.lineWidth = 1.5
-  line(2, 43, 44, 43)
-
-  // ——— The scale: ticks on an arc, a long one in the middle ———
-  g.lineWidth = 0.8
-  for (let i = -6; i <= 6; i++) {
-    const angle = (i / 6) * (SWING + 2)
-    g.strokeStyle = i === 0 ? c.orange : c.muted
-    line(...at(angle, i === 0 ? SCALE_RADIUS - 4 : SCALE_RADIUS - 2), ...at(angle, SCALE_RADIUS))
-  }
-
-  // ——— The arm: faint ghosts, then the arm with its weight ———
-  const arm = (angle: number) => {
-    line(PIVOT_X, PIVOT_Y, ...at(angle, ARM))
-    g.save()
-    g.translate(...at(angle, weightAt(state.bpm)))
-    g.rotate((angle * Math.PI) / 180)
-    g.fillRect(-3.5, -2.5, 7, 5)
-    g.restore()
-  }
-  g.lineWidth = 1.2
-  state.ghosts.forEach((ghost, i) => {
-    g.globalAlpha = 0.12 + i * 0.08
-    g.strokeStyle = c.ink
-    g.fillStyle = c.ink
-    arm(ghost)
-  })
-  g.globalAlpha = 1
-  g.strokeStyle = c.ink
-  g.fillStyle = c.orange
-  arm(state.angle)
-
-  // The pivot: a ring with a dot.
-  g.fillStyle = c.screen
-  g.strokeStyle = c.ink
-  g.lineWidth = 1
-  g.beginPath()
-  g.arc(PIVOT_X, PIVOT_Y, 2.8, 0, Math.PI * 2)
-  g.fill()
-  g.stroke()
-  g.fillStyle = c.ink
-  g.beginPath()
-  g.arc(PIVOT_X, PIVOT_Y, 1, 0, Math.PI * 2)
-  g.fill()
-
-  // ——— The tempo on 3 digit wheels ———
-  // Like an odometer: the last wheel turns; a wheel to its left only turns while the wheels to its
-  // right roll over from 9 to 0.
-  g.font = `200 30px ${c.font}`
-  g.textAlign = 'center'
-  g.textBaseline = 'middle'
-  const bpm = Math.max(0, state.bpm)
+  // ——— The tempo, on the right: its size sets the height of everything ———
+  g.font = `200 ${TEXT_SIZE}px ${c.font}`
+  g.textBaseline = 'alphabetic'
   const charWidth = g.measureText('0').width
+  const capHeight = g.measureText('0').actualBoundingBoxAscent
+  const top = BASE_Y - capHeight
+  const textWidth = charWidth * 6.4
+  const textLeft = width - textWidth
+
+  // ——— The ∞, on the left, from the top of the digits to their base line ———
+  // x = sin θ, y = sin θ · cos θ: the loops are as wide as the space, and as high as the digits
+  // (minus the dot's size, so that the dot stays inside too).
+  const infinityWidth = textLeft - GAP
+  const cx = infinityWidth / 2
+  const cy = top + capHeight / 2
+  const rx = cx - 3
+  const ry = capHeight - 4
+  const at = (theta: number): [number, number] => [
+    cx + rx * Math.sin(theta),
+    cy + ry * Math.sin(theta) * Math.cos(theta),
+  ]
+  /** The direction of the path at θ (for ticks across it). */
+  const across = (theta: number): [number, number] => {
+    const dx = rx * Math.cos(theta)
+    const dy = ry * Math.cos(2 * theta)
+    const length = Math.hypot(dx, dy) || 1
+    return [-dy / length, dx / length]
+  }
+  const path = (from: number, to: number) => {
+    g.beginPath()
+    const steps = Math.max(2, Math.ceil(Math.abs(to - from) * 40))
+    for (let i = 0; i <= steps; i++) {
+      const [x, y] = at(from + ((to - from) * i) / steps)
+      if (i) g.lineTo(x, y)
+      else g.moveTo(x, y)
+    }
+  }
+
+  // The path, thin.
+  g.strokeStyle = c.muted
+  g.lineWidth = 0.6
+  path(0, Math.PI * 2)
+  g.stroke()
+
+  // Ticks across the path, longer every MAJOR. Not right at the middle (the cross is there).
+  g.lineCap = 'butt'
+  for (let k = 0; k < TICKS; k++) {
+    if (k % (TICKS / 2) === 0) continue
+    const theta = (k / TICKS) * Math.PI * 2
+    const [x, y] = at(theta)
+    const [nx, ny] = across(theta)
+    const length = k % MAJOR === 0 ? 1.8 : 1
+    g.lineWidth = k % MAJOR === 0 ? 0.7 : 0.45
+    line(x - nx * length, y - ny * length, x + nx * length, y + ny * length)
+  }
+  g.lineCap = 'round'
+
+  // Marks at both ends of the ∞.
+  g.strokeStyle = c.ink
+  g.lineWidth = 0.8
+  for (const side of [-1, 1]) {
+    const x = cx + side * (rx + 2.5)
+    line(x, cy - 2.5, x, cy + 2.5)
+  }
+
+  // The middle: an orange cross. On each beat it flashes, and a ring grows from it.
+  g.strokeStyle = c.orange
+  g.lineWidth = 0.8
+  line(cx - 1.8, cy - 1.8, cx + 1.8, cy + 1.8)
+  line(cx - 1.8, cy + 1.8, cx + 1.8, cy - 1.8)
+  if (state.flash > 0) {
+    g.globalAlpha = state.flash
+    g.strokeStyle = state.accent ? c.orange : c.ink
+    g.beginPath()
+    g.arc(cx, cy, 2.5 + (1 - state.flash) * 4, 0, Math.PI * 2)
+    g.stroke()
+    g.globalAlpha = 1
+  }
+
+  // ——— The dot, with its trail: from faint and thin (its end) to bright and thick (at the dot) ———
+  const trailSteps = 24
+  g.strokeStyle = c.orange
+  for (let i = 0; i < trailSteps; i++) {
+    const from = state.trail + ((state.phase - state.trail) * i) / trailSteps
+    const to = state.trail + ((state.phase - state.trail) * (i + 1)) / trailSteps
+    const near = (i + 1) / trailSteps
+    path(from, to)
+    // A soft glow under the line, then the line.
+    g.globalAlpha = near * 0.25
+    g.lineWidth = 1 + near * 3
+    g.stroke()
+    g.globalAlpha = 0.15 + near * 0.85
+    g.lineWidth = 0.6 + near * 1.4
+    g.stroke()
+  }
+  g.globalAlpha = 1
+  const [dx, dy] = at(state.phase)
+  g.fillStyle = c.orange
+  g.beginPath()
+  g.arc(dx, dy, 2.2, 0, Math.PI * 2)
+  g.fill()
+  g.strokeStyle = c.screen
+  g.lineWidth = 0.6
+  g.stroke()
+
+  // ——— The tempo: 3 digit wheels, then "BPM" in the same size ———
+  // Like an odometer: the last wheel turns; a wheel to its left only turns while the wheels to its
+  // right roll over from 9 to 0. The window: from the top of the digits to just under the line.
+  g.textAlign = 'center'
+  const row = TEXT_SIZE * 1.05
+  const bpm = Math.max(0, state.bpm)
   g.save()
   g.beginPath()
-  g.rect(DIGITS_X - 2, DIGITS_Y - DIGIT_ROW / 2, charWidth * 3 + 4, DIGIT_ROW)
+  g.rect(textLeft - 1, top - 2, charWidth * 3 + 2, capHeight + 4)
   g.clip()
   ;[100, 10, 1].forEach((unit, i) => {
-    const x = DIGITS_X + charWidth * (i + 0.5)
+    const x = textLeft + charWidth * (i + 0.5)
     const steps = bpm / unit
     const digit = Math.floor(steps) % 10
     const turn = unit === 1 ? steps % 1 : Math.max(0, (bpm % unit) - (unit - 1))
     // A leading zero is dim, like an unlit display.
     g.fillStyle = unit > 1 && bpm < unit ? c.dim : c.ink
-    g.fillText(String(digit), x, DIGITS_Y - turn * DIGIT_ROW)
-    if (turn > 0) g.fillText(String((digit + 1) % 10), x, DIGITS_Y + (1 - turn) * DIGIT_ROW)
+    g.fillText(String(digit), x, BASE_Y - turn * row)
+    if (turn > 0) g.fillText(String((digit + 1) % 10), x, BASE_Y + (1 - turn) * row)
   })
   g.restore()
-  g.font = `500 8px ${c.font}`
-  // "BPM" at the top right, in line with the end of the tempo slider below it.
-  g.textAlign = 'right'
+  g.textAlign = 'left'
   g.fillStyle = c.muted
-  g.fillText('BPM', WIDTH, 5)
+  g.fillText('BPM', textLeft + charWidth * 3.4, BASE_Y)
 }

@@ -45,6 +45,41 @@ export function planChain<N>(start: N, slots: readonly ChainSlot<N>[], end: N): 
   return connections
 }
 
+/** One module, as the channel cables see it (see planChannels). */
+export interface ChannelSlot<N> {
+  /** The module's out jack (where its sound joins the main chain). */
+  readonly jack: N
+  /** One output per channel: the module sends each channel's sound out separately (a sampler). */
+  readonly channelOutputs?: readonly N[]
+  /** One input per channel: the module takes the channels in (a mixer). */
+  readonly channelInputs?: readonly N[]
+}
+
+/**
+ * The channel cables. Besides the main chain, a module can send its sound per channel (for
+ * example a sampler: channel 1, channel 2...), and a later module can take the channels in (a
+ * mixer). Channel k of every module that sends goes to channel k of the next module that takes
+ * them. Sound that no module after it takes joins the main chain at the module that sent it (its
+ * jack), so it is still heard, as if the module had a normal output.
+ */
+export function planChannels<N>(slots: readonly ChannelSlot<N>[]): ChainConnection<N>[] {
+  const connections: ChainConnection<N>[] = []
+  // Per channel: the outputs that wait for a module that takes them, and their module's jack.
+  const waiting: { output: N; jack: N }[][] = []
+  for (const slot of slots) {
+    slot.channelInputs?.forEach((input, k) => {
+      for (const { output } of waiting[k] ?? []) connections.push([output, input])
+      waiting[k] = []
+    })
+    slot.channelOutputs?.forEach((output, k) => {
+      ;(waiting[k] ??= []).push({ output, jack: slot.jack })
+    })
+  }
+  // Not taken by any module after it: into the main chain, at the module that sent it.
+  for (const channel of waiting) for (const { output, jack } of channel ?? []) connections.push([output, jack])
+  return connections
+}
+
 /**
  * The ids after `from` in the chain order: the modules that get `from`'s triggers.
  * Empty if `from` is not in the chain.
@@ -52,4 +87,45 @@ export function planChain<N>(start: N, slots: readonly ChainSlot<N>[], end: N): 
 export function modulesAfter(order: readonly string[], from: string): string[] {
   const index = order.indexOf(from)
   return index < 0 ? [] : order.slice(index + 1)
+}
+
+/** What one module does with the triggers that reach it (see routeTrigger). */
+export interface TriggerStop<T> {
+  /** Called with each trigger that reaches the module. */
+  readonly listeners?: readonly ((trigger: T) => void)[]
+  /** Changes the trigger for the modules after this one. null: stop it here. */
+  readonly pass?: (trigger: T) => T | null
+}
+
+/**
+ * Send a trigger down the chain, from `from` to the end, like sound through hardware boxes:
+ * each module after `from` hears the trigger, then may change it (or stop it) for the modules after
+ * it. Modules before `from` never get it. A listener or pass that throws is reported to `onError`
+ * and skipped (the trigger goes on unchanged).
+ */
+export function routeTrigger<T>(
+  order: readonly string[],
+  from: string,
+  trigger: T,
+  stopOf: (id: string) => TriggerStop<T> | undefined,
+  onError: (error: unknown) => void = () => {},
+): void {
+  let current: T | null = trigger
+  for (const id of modulesAfter(order, from)) {
+    const stop = stopOf(id)
+    for (const listener of stop?.listeners ?? []) {
+      try {
+        listener(current)
+      } catch (error) {
+        onError(error)
+      }
+    }
+    if (!stop?.pass) continue
+    try {
+      current = stop.pass(current)
+    } catch (error) {
+      onError(error)
+    }
+    if (current === null) return
+  }
 }

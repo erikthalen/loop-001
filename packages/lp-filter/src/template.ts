@@ -6,19 +6,20 @@ export const FREQUENCY_STEPS = 1000;
 /** Resonance slider steps: 10 per dB. */
 export const RESONANCE_STEPS = 200;
 
-// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, label, range,
-// checkbox, button, sr-only) and styles.ts. The script draws the picture (scene.ts): "music from
-// next door", a wall between a speaker and an ear that only lets the low sounds through.
+// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, vertical,
+// sr-only) and styles.ts; @loop/ui also styles the sliders, the checkbox and the radio buttons.
+// The script draws the picture (scene.ts): "music from next door", a wall between a speaker and
+// an ear that only lets the low sounds through.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">
       <h2 class="sr-only">${module.name}</h2>
 
-      <!-- One row: the cutoff slider (left), the picture, the resonance slider (right).
-           Their colors match the CUTOFF (blue) and RES (orange) numbers in the picture. -->
+      <!-- One row: the cutoff slider (left), the middle column, the resonance slider (right).
+           The sliders are as tall as the middle column. -->
       <div class="stage">
         <input
-          class="range range--vertical frequency"
+          class="vertical frequency"
           name="frequency"
           type="range"
           min="0"
@@ -26,9 +27,31 @@ export const template = defineModuleTemplate<typeof setup>(
           step="1"
           aria-label="Cutoff"
         />
-        <canvas class="picture" role="img"></canvas>
+        <!-- The middle column: the bypass checkbox and the slope (two radio buttons), then the picture. -->
+        <div class="screen">
+          <div class="top-controls">
+            <!-- Bypass: checked = the filter is off, the sound goes through unchanged. -->
+            <label class="field">
+              <input name="bypass" type="checkbox" ${module.on ? "" : "checked"} />
+              <span>bypass</span>
+            </label>
+            <!-- The slope: 12 or 24 dB per octave. -->
+            <fieldset class="slope">
+              <legend class="sr-only">Slope (dB per octave)</legend>
+              <label class="field">
+                <input name="slope" type="radio" value="12" ${module.slope === 12 ? "checked" : ""} />
+                <span>12db</span>
+              </label>
+              <label class="field">
+                <input name="slope" type="radio" value="24" ${module.slope === 24 ? "checked" : ""} />
+                <span>24db</span>
+              </label>
+            </fieldset>
+          </div>
+          <canvas class="picture" role="img"></canvas>
+        </div>
         <input
-          class="range range--vertical resonance"
+          class="vertical resonance"
           name="resonance"
           type="range"
           min="0"
@@ -39,29 +62,6 @@ export const template = defineModuleTemplate<typeof setup>(
         />
       </div>
 
-      <footer class="bottom">
-        <!-- Bypass: checked = the filter is off, the sound goes through unchanged. -->
-        <label class="label">
-          <input
-            class="checkbox"
-            name="bypass"
-            type="checkbox"
-            ${module.on ? "" : "checked"}
-          />
-          bypass
-        </label>
-        <!-- The slope: 12 or 24 on a small flip screen (the script slides it), then "db/oct". -->
-        <button
-          class="button button--small slope"
-          type="button"
-          style="--at: ${module.slope === 24 ? 1 : 0}"
-        >
-          <span class="flip" aria-hidden="true">
-            <span class="flip-strip"><span>12</span><span>24</span></span>
-          </span>
-          <span aria-hidden="true">db/oct</span>
-        </button>
-      </footer>
     </section>
   `,
 );

@@ -13,7 +13,7 @@
  * automatically).
  */
 export { addLoopFont, addMatrixFont, addVideoFont, LOOP_FONT, MATRIX_FONT, VIDEO_FONT } from './font'
-export { CHANNEL_COLORS, displayStyles } from './display'
+export { CHANNEL_COLORS } from './display'
 
 import base from './base.css?inline'
 import layout from './layout.css?inline'

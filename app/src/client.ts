@@ -13,7 +13,6 @@ addLoopFont()
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
-const playToggle = $<HTMLInputElement>('#play')
 const removeButton = $<HTMLButtonElement>('#remove')
 const picker = $('#module-picker')
 
@@ -52,23 +51,7 @@ document.addEventListener('keydown', (event) => {
 })
 
 // ---- Transport ----
-// Keep the play checkbox in sync with the core.
-core.events.on('start', () => (playToggle.checked = true))
-core.events.on('stop', () => (playToggle.checked = false))
-
-// Play is a checkbox: checked = playing.
-playToggle.addEventListener('change', async () => {
-  if (playToggle.checked) {
-    try {
-      await core.start()
-    } catch (error) {
-      console.error('Could not start playback:', error)
-    }
-  } else {
-    core.stop()
-  }
-  playToggle.checked = core.playing
-})
+// Play and stop are in the Master module (packages/master).
 
 // ---- Projects: saved in this browser (IndexedDB), local first ----
 const store = await openProjectStore()

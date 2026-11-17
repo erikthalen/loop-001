@@ -6,6 +6,7 @@ import type { setup } from './setup'
 export const script = defineModuleScript<typeof setup>(({ root, module, signal }) => {
   const display = root.querySelector<HTMLElement>('.display')!
   const canvas = root.querySelector<HTMLCanvasElement>('.picture')!
+  const levels = [...root.querySelectorAll<HTMLMeterElement>('.levels meter')]
 
   // The canvas cannot use CSS variables, so read the colors from the CSS.
   // A hidden element turns any CSS color (also light-dark()) into rgb().
@@ -43,6 +44,8 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     const seconds = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60
     last = now
     meter.update(module.levels(), seconds)
+    // The <meter>s show each channel's fast level.
+    meter.bars.forEach((bar, i) => (levels[i]!.value = bar))
     frame = requestAnimationFrame(draw)
   }
   frame = requestAnimationFrame(draw)

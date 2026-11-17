@@ -54,7 +54,7 @@ export function connectProjectMenu(
           <li>
             <button
               type="button"
-              class="button button--ghost"
+              class="button ghost"
               data-action="open"
               data-id="${project.id}"
               aria-current="${project.id === session.current.id}"
@@ -64,7 +64,7 @@ export function connectProjectMenu(
             </button>
             <button
               type="button"
-              class="button button--ghost"
+              class="button ghost"
               data-action="delete"
               data-id="${project.id}"
               aria-label="Delete ${project.name}"

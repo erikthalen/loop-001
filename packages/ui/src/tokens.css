@@ -1,11 +1,36 @@
 /*
- * The only two variables. Everything else is written straight into the CSS.
- * They are set on :root. CSS variables are inherited, so they also reach
- * into every module's Shadow DOM.
+ * Tokens: the shared CSS variables.
+ * CSS variables are inherited, so the ones on :root also reach into every module's Shadow DOM.
  */
 @layer ui {
+  /* The app's main color and font. */
   :root {
     --loop-primary: dodgerblue;
-    --loop-font: 'Italian Plate No1 Mono', ui-monospace, monospace;
+    --loop-font: "Italian Plate No1 Mono", ui-monospace, monospace;
+  }
+
+  /*
+   * The display colors (components/display.css): a dark screen with light ink and five accent
+   * colors. In light mode, the screen is light and the accents are darker, so they stay easy to
+   * read. Set on :root and on :host, like the neutral colors in base.css.
+   */
+  :root,
+  :host {
+    --screen: var(--color-neutral-50);
+    --ink: var(--color-neutral-1000);
+    --muted: var(--color-neutral-700);
+    --line: var(--color-neutral-400);
+    --dim: var(--color-neutral-300);
+
+    --blue: #4d7cff;
+    --orange: #f2a541;
+    --red: #ff4b33;
+    --green: #46d18b;
+    --purple: #b48cff;
+    /* --blue: light-dark(#1f5fd6, #4d7cff);
+    --orange: light-dark(#b06a00, #f2a541);
+    --red: light-dark(#d93a22, #ff4b33);
+    --green: light-dark(#1d8f55, #46d18b);
+    --purple: light-dark(#7650d0, #b48cff); */
   }
 }

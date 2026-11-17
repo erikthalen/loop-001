@@ -4,7 +4,7 @@ import { CHANNELS, STEPS, type setup } from './setup'
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
 export const script = defineModuleScript<typeof setup>(({ root, module, core, on, signal }) => {
   const grid = root.querySelector<HTMLElement>('.grid')!
-  const boxes = [...grid.querySelectorAll<HTMLInputElement>('.checkbox')]
+  const boxes = [...grid.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
   const boxAt = (row: number, step: number) => boxes[row * STEPS + step]
 
   // One listener for all 96 checkboxes.
@@ -32,8 +32,11 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
 
   // The playing step: its column of checkboxes gets the class "now".
   let shown = -1
+  const progress = root.querySelector<HTMLProgressElement>('.steps')!
   const showStep = (step: number) => {
     if (step === shown) return
+    // The progress bar: the step that plays (or played last), 1 to 16. At the start of the tape: 0.
+    progress.value = step + 1
     for (let row = 0; row < CHANNELS; row++) {
       if (shown >= 0) boxAt(row, shown)?.classList.remove('now')
       if (step >= 0) boxAt(row, step)?.classList.add('now')
@@ -41,10 +44,18 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     shown = step
   }
 
-  // Step events arrive early (the clock schedules ahead), so wait until the step really plays.
-  on('step', ({ step, time }) => {
+  // The step the tape is on, from the next step it plays: the one before it (none at the start).
+  // It keeps its place when the core stops, so the progress bar does too.
+  const stepBefore = (next: number) => (next > 0 ? (next - 1) % STEPS : -1)
+  showStep(stepBefore(core.clock.step))
+
+  // Events arrive early (the clock schedules ahead), so wait until the tape really gets there.
+  const at = (time: number, show: () => void) => {
     const delay = Math.max(0, (time - core.context.currentTime) * 1000)
-    setTimeout(() => core.playing && !signal.aborted && showStep(step % STEPS), delay)
-  })
-  on('stop', () => showStep(-1))
+    setTimeout(() => signal.aborted || show(), delay)
+  }
+  on('step', ({ step, time }) => at(time, () => showStep(step % STEPS)))
+  // Rewind: the tape goes back past the steps, so the progress bar goes back too. A rewind ends
+  // exactly at the first step of the sequence: then the bar is empty, like at the start.
+  on('rewindstep', ({ step, time }) => at(time, () => showStep(step % STEPS === 0 ? -1 : stepBefore(step))))
 })

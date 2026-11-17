@@ -1,5 +1,14 @@
 export { createCore, type Core, type CoreEventMap, type CoreOptions } from './core'
-export { modulesAfter, planChain, type ChainConnection, type ChainSlot } from './chain'
+export {
+  modulesAfter,
+  planChain,
+  planChannels,
+  routeTrigger,
+  type ChainConnection,
+  type ChainSlot,
+  type ChannelSlot,
+  type TriggerStop,
+} from './chain'
 export {
   createClock,
   type BeatEvent,
@@ -7,6 +16,8 @@ export {
   type ClockEmit,
   type ClockEventMap,
   type ClockOptions,
+  type SpeedPlan,
+  type SpeedPoint,
   type StepEvent,
   type TimeSource,
 } from './clock'

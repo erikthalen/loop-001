@@ -19,7 +19,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
   const frequency = root.querySelector<HTMLInputElement>('[name=frequency]')!
   const resonance = root.querySelector<HTMLInputElement>('[name=resonance]')!
   const bypass = root.querySelector<HTMLInputElement>('[name=bypass]')!
-  const slope = root.querySelector<HTMLButtonElement>('.slope')!
+  const slopes = [...root.querySelectorAll<HTMLInputElement>('[name=slope]')]
   const canvas = root.querySelector<HTMLCanvasElement>('.picture')!
 
   /** What the picture shows, in words, for screen readers. */
@@ -45,8 +45,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
   }
 
   const showSlope = () => {
-    slope.style.setProperty('--at', module.slope === 24 ? '1' : '0')
-    slope.setAttribute('aria-label', `Slope ${module.slope} dB per octave. Click to change.`)
+    for (const radio of slopes) radio.checked = Number(radio.value) === module.slope
     describe()
   }
 
@@ -63,10 +62,12 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     module.setResonance(resonance.valueAsNumber / 10)
     showResonance()
   }, { signal })
-  slope.addEventListener('click', () => {
-    module.toggleSlope()
-    showSlope()
-  }, { signal })
+  for (const radio of slopes) {
+    radio.addEventListener('change', () => {
+      module.setSlope(radio.value === '24' ? 24 : 12)
+      showSlope()
+    }, { signal })
+  }
   bypass.addEventListener('change', () => {
     module.setOn(!bypass.checked)
     describe()
@@ -111,15 +112,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     return Math.max(0, Math.min(1, (loudest + 80) / 60))
   }
 
-  // The numbers turn towards the real values, like digit wheels. Less motion: jump there.
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
-  let kHz = Math.round(module.frequency / 10) / 100
-  let resonanceShown = module.resonance
-  const turnTo = (shown: number, target: number, seconds: number) => {
-    if (reducedMotion.matches) return target
-    const next = shown + (target - shown) * Math.min(1, seconds * 14)
-    return Math.abs(target - next) < 0.0005 ? target : next
-  }
 
   // Draw about 60 times a second, while the UI is mounted.
   let loudness = 0
@@ -131,14 +124,10 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     if (module.on) module.getResponse(bandFrequencies, bandGains)
     else bandGains.fill(1)
     loudness = Math.max(level(), loudness - seconds * 1.5)
-    // Whole steps (10 Hz, 0.1 dB), so the wheels stop on a full digit.
-    kHz = turnTo(kHz, Math.round(module.frequency / 10) / 100, seconds)
-    resonanceShown = turnTo(resonanceShown, Math.round(module.resonance * 10) / 10, seconds)
     drawScene(
       canvas,
       {
-        kHz,
-        resonance: resonanceShown,
+        resonance: module.resonance,
         position: frequency.valueAsNumber / FREQUENCY_STEPS,
         bypass: !module.on,
         gains: [...bandGains],

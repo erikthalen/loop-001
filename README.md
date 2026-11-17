@@ -4,9 +4,11 @@ pnpm monorepo.
 
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
+- `packages/master` – `@loop/master`: play / stop and the master volume, HTML only; it makes no sound
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
 - `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules after it
+- `packages/mixer` – `@loop/mixer`: mixes the 6 channels of a sampler before it: a volume and two sends (A, B) per channel, and two send buses (send and return) ready for effects
 - `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
@@ -62,16 +64,20 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 
 | File          | Classes / content                                                                 |
 | ------------- | --------------------------------------------------------------------------------- |
-| `tokens.css`  | The only 2 variables: `--loop-primary` (main color) and `--loop-font`. All other values are written straight into the CSS. |
+| `tokens.css`  | The shared variables: `--loop-primary` (main color), `--loop-font`, and the display colors for the modules' screens (`--screen`, `--ink`, `--blue`, `--orange`, ...). |
 | `base.css`    | Page font and colors, heading weight, focus ring, `.text-muted`, `.text-small`    |
 | `layout.css`  | `.row`, `.stack` (other gap: `style="gap: 0.5rem"`)                              |
-| `components/button.css` | `.button` + modifier classes `.button--primary`, `.button--ghost`, `.button--small`; `aria-pressed` |
-| `components/input.css`  | `.input`, `.field` (label + control)                       |
-| `components/range.css` | `.range`: a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.range--vertical`: lowest value at the bottom, length with `height` |
+| `components/button.css` | `.button` + modifier classes `.primary`, `.ghost`, `.small` (for example `class="button small"`); `aria-pressed` |
+| `components/input.css`  | `.input`                                                   |
+| `components/range.css` | `input[type="range"]` (no class needed): a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.vertical`: lowest value at the bottom, length with `height` |
 | `font.ts` | Fonts (files in `src/fonts/`). `addLoopFont()` + `LOOP_FONT`: Italian Plate No1 Mono, the app's font (`--loop-font`), weights 100 to 900, upright and italic; the app calls it once at start (`app/src/client.ts`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
-| `display.ts` | The shared look of the module screens: `displayStyles` (colors such as `--ink`, `--blue`, `--orange`; the `.display` box; `.label`) and `CHANNEL_COLORS` (the 6 channel colors). Use it as `styles: [uiStyles, displayStyles, styles]` |
-| `components/checkbox.css` | `.checkbox`: the native checkbox, drawn as a primary-color box with a white check |
-| `components/radio.css` | `.radio`: the native radio button, drawn as a primary-color circle with a white dot |
+| `components/display.css` | `.display`: a module's screen (275px wide, rounded). Its colors (`--screen`, `--ink`, `--muted`, `--line`, `--dim`, `--blue`, `--orange`, `--red`, `--green`, `--purple`) are in `tokens.css` |
+| `components/field.css` | `.field`: a label with an input in it (small uppercase text next to the input) |
+| `display.ts` | `CHANNEL_COLORS`: the 6 channel colors, as CSS colors (for CSS, or for a canvas) |
+| `components/checkbox.css` | `input[type="checkbox"]` (no class needed): the native checkbox, drawn as a primary-color box with a white check |
+| `components/radio.css` | `input[type="radio"]` (no class needed): the native radio button, drawn as a primary-color circle with a white dot |
+| `components/progress.css` | `progress` (no class needed): a progress bar drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the bar); light and dark mode; length with `width` |
+| `components/meter.css` | `meter` (no class needed): a meter drawn fully in CSS that looks like Chrome's; green, yellow or red from `low`, `high` and `optimum`; light and dark mode; length with `width` |
 | `components/panel.css`  | `.panel`, `.panel-title`                                                          |
 | `components/menu.css`   | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`               |
 
@@ -111,6 +117,13 @@ So a filter only changes the modules that come before it. `core.move(module, ind
 A module sends one with `ctx.send({ channel, time })`. Only the modules **after** it get it, with
 `ctx.onTrigger(listener)`. Example: the sequencer sends a trigger for each step that is on, and a sampler
 after it plays that channel. A sampler before the sequencer gets nothing.
+A trigger can carry a `volume` (0 to 1, like MIDI velocity). A module on the way can change the triggers
+that pass it with `ctx.passTrigger(change)` (return null to stop one).
+
+**Channels** are separate sound cables next to the main chain. A module can send its sound per channel
+(`channelOutputs`, for example the sampler), and a later module can take them in (`channelInputs`, the
+mixer): channel 1 to channel 1, and so on. If no module after it takes them, the channels join the main
+chain at the module that sent them, so they are still heard. See `planChannels` in `packages/core/src/chain.ts`.
 
 - **Commands go in as function calls:** `core.start()`, `core.stop()`, `core.setBpm(90)`, `core.add(module)`.
 - **News goes out as events:** `core.events.on('beat', ...)`. The event bus (`createEmitter` in `packages/core/src/events.ts`) is a typed wrapper around the browser's `EventTarget` + `CustomEvent`.
@@ -161,6 +174,27 @@ Modules schedule sound at that time: `oscillator.start(time)`.
 To sync the screen to the sound, wait `time - context.currentTime` seconds (see `client.ts`).
 
 **Never** make a sound "now" inside an event listener. Always use the event's `time`.
+
+### Tape speed: start and stop like a tape machine
+
+The clock runs like a tape. On start the tape speeds up from 0 to 1 (`SPIN_UP`, 0.4 s). On stop it slows down
+to 0 (`SPIN_DOWN`, 0.9 s), then the `stop` event comes. The steps and beats follow the speed, so all modules
+get slower or faster triggers by themselves. Click play while it slows down: it speeds up again from there.
+
+- `core.speed` / `core.speedAt(time)`: the speed (1 full, 0 still, below 0 backwards). `core.stopping`: true while it slows down.
+- The `speedchange` event: the speed starts to change (`{ plan }`: points in time, straight lines between them).
+- `core.speedSignal`: the speed as a sound signal. Connect it to an AudioParam to follow it.
+  The sampler connects it to `playbackRate` (speed and pitch), the metronome to its tick's frequency.
+- `core.clock.travel(from, to)`: how far the tape moved between two times (seconds at full speed).
+
+The tape keeps its place: stop, then start, and it goes on from the next step (`core.clock.step`).
+
+**Rewind** (`core.rewind()`, the "rew" button in Master): the tape goes backwards to the first step of the
+bar it is in (the start of the sequence), no further. It ramps up to `REWIND_BPM` (130 bpm, backwards) in
+`REWIND_RAMP` (0.2 s), and ramps down at the end. No steps play; `rewindstep` events tell where the tape is,
+and `rewindend` comes at the end. The sound is real: the end of the chain records onto a short tape (the last
+13 s, one bar at the slowest tempo; see `packages/core/src/tape.ts`, an AudioWorklet), and a rewind plays it
+backwards. The tape is before `core.output`, so the master volume works on it too.
 
 ### Write a module
 
@@ -245,7 +279,7 @@ src/
 Use `import type { setup } from './setup'`: it only imports the type, not the code.
 
 - **Scoped CSS:** each UI lives in its own **Shadow DOM**. Module CSS cannot leak out. App CSS cannot leak in.
-- **Theme:** only 2 CSS variables, in `packages/ui/src/tokens.css`: `--loop-primary` (main color) and `--loop-font`. They pass into the Shadow DOM. Write all other values straight into the CSS. The font (Italian Plate No1 Mono, `app/public/fonts/`) has only 2 weights: use `300` and `500`, never `bold`.
+- **Theme:** the shared CSS variables are in `packages/ui/src/tokens.css`: `--loop-primary` (main color), `--loop-font`, and the display colors (`--screen`, `--ink`, `--blue`, ...). They pass into the Shadow DOM. The font (Italian Plate No1 Mono, `packages/ui/src/fonts/Italian Plate/`, added with `addLoopFont()`) has weights 100 to 900, upright and italic.
 - **Layout:** the app places modules (`#rack`). The module styles its own box with `:host`. App CSS on the host element (`#rack > section`) wins over `:host`.
 - **Clean-up:** use `signal` for DOM listeners and `on` for core events. Both are removed when the UI unmounts or the module is removed.
 - **No custom elements:** they need classes. Shadow DOM on a plain `<section>` gives the same scoping.

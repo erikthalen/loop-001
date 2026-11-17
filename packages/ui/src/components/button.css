@@ -1,9 +1,9 @@
 /*
  * Buttons. Modifier classes change the look, and you can combine them.
  *   <button class="button">Play</button>
- *   <button class="button button--primary">Save</button>
- *   <button class="button button--ghost">×</button>
- *   <button class="button button--small">New</button>
+ *   <button class="button primary">Save</button>
+ *   <button class="button ghost">×</button>
+ *   <button class="button small">New</button>
  *   <button class="button" aria-pressed="true">Remove</button>   (a toggle that is on)
  *
  * aria-pressed stays an attribute: it is the button's state, and screen readers read it.
@@ -26,34 +26,35 @@
     line-height: 1;
     font-size: 13px;
     font-weight: 500;
+    text-transform: uppercase;
   }
 
   .button:hover {
     background: var(--color-neutral-400);
   }
 
-  .button--primary,
+  .button.primary,
   .button[aria-pressed="true"] {
     color: #ffffff;
     background: var(--loop-primary);
     border-color: transparent;
   }
 
-  .button--primary:hover,
+  .button.primary:hover,
   .button[aria-pressed="true"]:hover {
     background: color-mix(in srgb, var(--loop-primary), black 10%);
   }
 
-  .button--ghost {
+  .button.ghost {
     background: none;
     border-color: transparent;
   }
 
-  .button--ghost:hover {
+  .button.ghost:hover {
     background: var(--color-neutral-300);
   }
 
-  .button--small {
+  .button.small {
     font-size: 11px;
   }
 

@@ -1,13 +1,12 @@
 /**
- * The LP-01 picture, drawn on a 2D canvas (199 x 96): "music from next door".
+ * The LP-01 picture, drawn on a 2D canvas (199 x 70): "music from next door".
  * A low pass filter is like a wall between a speaker and your ear: the low sounds (bass) come
  * through, the high sounds stay behind.
  *
  *   ┌─────────────────────────────────────────────┐
- *   │ CUTOFF 00.45 kHz                 RES 15.0 dB│   numbers on digit wheels
- *   │ ┌──┐ HI ∿∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ·············   ╭─╮  │   high: short waves (blue), stopped by the wall
- *   │ │◎ │ MID ∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ∿∿∿∿∿∿∿∿∿∿∿∿  <  ●│  │   mid: weaker behind the wall
- *   │ │◎ │ LO ∿∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ∿∿∿∿∿∿∿∿∿∿∿∿   ╰─╯  │   low: long waves (orange), they come through
+ *   │ ┌──┐    ∿∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ·············   ╭─╮  │   high: short waves (blue), stopped by the wall
+ *   │ │◎ │    ∿∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ∿∿∿∿∿∿∿∿∿∿∿∿  <  ●│  │   mid: weaker behind the wall
+ *   │ │◎ │    ∿∿∿∿∿∿∿∿∿∿ ▓▓▓▓ ∿∿∿∿∿∿∿∿∿∿∿∿   ╰─╯  │   low: long waves (orange), they come through
  *   │ ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾ │
  *   └─────────────────────────────────────────────┘
  *
@@ -31,8 +30,7 @@ export interface SceneColors {
 }
 
 export interface SceneState {
-  /** Cutoff in kHz, and resonance in dB. Not rounded: between two values, the digit wheels turn. */
-  kHz: number
+  /** The resonance, in dB (the wall rings more). */
   resonance: number
   /** The cutoff as a place on the slider, 0 to 1 (the wall's thickness). */
   position: number
@@ -46,15 +44,17 @@ export interface SceneState {
 }
 
 export const WIDTH = 199
-export const HEIGHT = 96
+export const HEIGHT = 70
+/** The scene is drawn for y 26 to 92; this moves it to the top of the canvas. */
+const SCENE_SHIFT = -24
 /** Canvas pixels per screen pixel, in each direction (like the sampler: sharp thin lines). */
 const SUPERSAMPLE = 4
 
-/** The three waves: their frequency (for the filter's curve), name, lane, wavelength and color. */
+/** The three waves (high, mid, low): their frequency (for the filter's curve), lane, wavelength and color. */
 export const BANDS = [
-  { hz: 6000, name: 'HI', y: 40, wavelength: 5, color: 'blue' },
-  { hz: 1000, name: 'MID', y: 56, wavelength: 13, color: 'ink' },
-  { hz: 100, name: 'LO', y: 72, wavelength: 34, color: 'orange' },
+  { hz: 6000, y: 40, wavelength: 5, color: 'blue' },
+  { hz: 1000, y: 56, wavelength: 13, color: 'ink' },
+  { hz: 100, y: 72, wavelength: 34, color: 'orange' },
 ] as const
 
 /** Where things are. */
@@ -64,43 +64,6 @@ const WALL_TOP = 26
 const WALL_BOTTOM = 86
 const HEAD_X = 158
 const GROUND = 88
-
-/**
- * A number on digit wheels, like an odometer (the same as the sampler's counter): the last wheel
- * turns all the time; a wheel to its left only turns while the wheels to its right roll over from
- * 9 to 0. `decimals`: digits after the point. Leading zeros are dim. Returns the width in px.
- */
-function wheels(
-  g: CanvasRenderingContext2D, value: number, digits: number, decimals: number,
-  x: number, y: number, row: number, ink: string, dim: string,
-): number {
-  const units = Math.max(0, value) * 10 ** decimals
-  const charWidth = g.measureText('0').width
-  const pointWidth = decimals ? g.measureText('.').width : 0
-  g.save()
-  g.beginPath()
-  g.rect(x - 1, y - row / 2, digits * charWidth + pointWidth + 2, row)
-  g.clip()
-  let left = x
-  for (let i = digits - 1; i >= 0; i--) {
-    const unit = 10 ** i
-    const steps = units / unit
-    const digit = Math.floor(steps) % 10
-    const turn = unit === 1 ? steps % 1 : Math.max(0, (units % unit) - (unit - 1))
-    const leading = i >= decimals + 1 && units < unit
-    g.fillStyle = leading ? dim : ink
-    g.fillText(String(digit), left, y - turn * row)
-    if (turn > 0) g.fillText(String((digit + 1) % 10), left, y + (1 - turn) * row)
-    left += charWidth
-    if (i === decimals && decimals) {
-      g.fillStyle = ink
-      g.fillText('.', left, y)
-      left += pointWidth
-    }
-  }
-  g.restore()
-  return left - x
-}
 
 export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: SceneColors) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
@@ -122,35 +85,9 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
     g.stroke()
   }
 
-  // ——— Top: CUTOFF and RES, on digit wheels ———
-  g.textBaseline = 'middle'
-  g.textAlign = 'left'
-  g.font = `600 7px ${c.font}`
-  g.fillStyle = c.blue
-  g.fillText('CUTOFF', 0, 7)
-  let x = g.measureText('CUTOFF').width + 5
-  g.font = `300 13px ${c.font}`
-  x += wheels(g, state.kHz, 4, 2, x, 7, 14, state.bypass ? c.muted : c.ink, c.dim)
-  g.font = `500 7px ${c.font}`
-  g.fillStyle = c.muted
-  g.fillText('kHz', x + 3, 8)
-
-  g.font = `500 7px ${c.font}`
-  const dbWidth = g.measureText('dB').width
-  g.fillText('dB', WIDTH - dbWidth, 8)
-  g.font = `300 13px ${c.font}`
-  const resWidth = g.measureText('00.0').width
-  const resX = WIDTH - dbWidth - 3 - resWidth
-  wheels(g, state.resonance, 3, 1, resX, 7, 14, state.bypass ? c.muted : c.ink, c.dim)
-  g.font = `600 7px ${c.font}`
-  g.fillStyle = c.red
-  g.textAlign = 'right'
-  g.fillText('RES', resX - 5, 7)
-
-  if (state.bypass) {
-    g.textAlign = 'center'
-    g.fillText('● BYPASS', WIDTH / 2 + 8, 7)
-  }
+  // ——— The scene, moved to the top ———
+  g.save()
+  g.translate(0, SCENE_SHIFT)
 
   // ——— The ground ———
   g.strokeStyle = c.dim
@@ -244,17 +181,20 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
       g.setLineDash([])
       g.globalAlpha = 1
     }
-    g.font = `600 6px ${c.font}`
-    g.textAlign = 'left'
-    g.fillStyle = stroke
-    g.fillText(band.name, WAVES_FROM - 8, band.y - 6)
   })
 
   // ——— The listener: a head in thin lines, facing the wall, with a red dot in the ear ———
+  // The head is drawn for a box from y 26 to 87. (headScale: if the wall gets lower, the head gets
+  // smaller with it, the same shape, standing on the same line.)
+  const headScale = (87 - WALL_TOP) / (87 - 26)
+  const hp = (hx: number, hy: number): [number, number] => [
+    HEAD_X + 20 + (hx - 224) * headScale,
+    87 - (87 - hy) * headScale,
+  ]
   const head: [number, number][] = [
     [238, 87], [236, 74], [240, 60], [241, 46], [236, 33], [224, 26], [212, 30], [207, 39],
     [206, 45], [201, 52], [206, 55], [205, 60], [208, 62], [206, 67], [212, 71], [215, 78], [214, 87],
-  ].map(([hx, hy]) => [hx + (HEAD_X - 204), hy])
+  ].map(([hx, hy]) => hp(hx, hy))
   g.strokeStyle = c.orange
   g.lineWidth = 1.1
   g.beginPath()
@@ -269,14 +209,15 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
   // The ear, and the eye.
   g.lineWidth = 0.9
   g.beginPath()
-  g.arc(HEAD_X + 22, 52, 4, Math.PI * 0.6, Math.PI * 1.6)
+  g.arc(...hp(226, 52), 4 * headScale, Math.PI * 0.6, Math.PI * 1.6)
   g.stroke()
   g.fillStyle = c.red
   g.beginPath()
-  g.arc(HEAD_X + 22.5, 52, 1.6 + state.level * 0.8, 0, Math.PI * 2)
+  g.arc(...hp(226.5, 52), 1.6 + state.level * 0.8, 0, Math.PI * 2)
   g.fill()
   g.fillStyle = c.ink
   g.beginPath()
-  g.arc(HEAD_X + 6, 43, 0.9, 0, Math.PI * 2)
+  g.arc(...hp(210, 43), 0.9, 0, Math.PI * 2)
   g.fill()
+  g.restore()
 }

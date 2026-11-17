@@ -1,20 +1,13 @@
-import { defineModuleScript, html, render } from '@loop/core'
-import { drawPicture, SWING, type PictureColors } from './picture'
+import { defineModuleScript } from '@loop/core'
+import { drawPicture, REST, TRAIL, type PictureColors } from './picture'
 import type { setup } from './setup'
-import { beatCells } from './template'
-
-/** Where the arm rests when the metronome is stopped: leaning all the way left. */
-const REST = -SWING
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
 export const script = defineModuleScript<typeof setup>(({ root, module, core, on, signal }) => {
   const display = root.querySelector<HTMLElement>('.display')!
   const canvas = root.querySelector<HTMLCanvasElement>('.picture')!
-  const signatureButton = root.querySelector<HTMLButtonElement>('.signature')!
   const mute = root.querySelector<HTMLInputElement>('[name=mute]')!
   const tempo = root.querySelector<HTMLInputElement>('[name=tempo]')!
-  const beatsRow = root.querySelector<HTMLElement>('.beats')!
-  let cells = [...root.querySelectorAll<HTMLInputElement>('.beat')]
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
   // The canvas cannot use CSS variables, so read the colors from the CSS.
@@ -45,33 +38,10 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const describe = () =>
     canvas.setAttribute(
       'aria-label',
-      `Metronome at ${Math.round(core.bpm)} bpm in ${module.signature}${module.muted ? ', muted' : ''}.`,
+      `Metronome at ${Math.round(core.bpm)} bpm${module.muted ? ', muted' : ''}.`,
     )
 
-  /** The signature button, and one radio button per beat. */
-  const showSignature = () => {
-    signatureButton.textContent = module.signature
-    signatureButton.setAttribute('aria-label', `Time signature ${module.signature}. Click to change.`)
-    if (cells.length !== module.beatsPerBar) {
-      render(html`${beatCells(module.beatsPerBar)}`, beatsRow)
-      cells = [...beatsRow.querySelectorAll<HTMLInputElement>('.beat')]
-    }
-    describe()
-  }
-
-  // The first beat is orange when the accent is on (saved with the project).
-  const showAccent = () => display.classList.toggle('accent', module.accent)
-
-  // Check the radio button of the beat that plays. -1: none (stopped).
-  const showBeat = (index: number) => cells.forEach((cell, i) => (cell.checked = i === index))
-
-  showAccent()
-  showSignature()
-
-  signatureButton.addEventListener('click', () => {
-    module.nextSignature()
-    showSignature()
-  }, { signal })
+  describe()
 
   mute.addEventListener('change', () => {
     module.setMuted(mute.checked)
@@ -89,30 +59,29 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   tempo.addEventListener('input', () => core.setBpm(tempo.valueAsNumber), { signal })
   on('bpmchange', showTempo)
 
-  // The arm is in the middle on every beat. Between two beats it swings out to one side and
-  // back (a sine curve: fast in the middle, slow at the side). The next beat swings to the other side.
+  // The dot is in the middle of the ∞ on every beat. Between two beats it goes around one loop
+  // (fast in the middle, slow at the ends); the next beat, the other loop.
   // Beat events arrive early (the clock schedules ahead), so keep them until their time comes.
-  const swings: { time: number; side: number }[] = []
+  const swings: { time: number; beat: number; accent: boolean }[] = []
 
-  on('beat', ({ beat, time }) => {
-    // After even beats the arm swings out to the left, after odd beats to the right.
-    swings.push({ time, side: beat % 2 === 0 ? -1 : 1 })
-
-    // The metronome's own bar (see setup.ts), not the core clock's.
-    // Wait until the beat really plays, then check its radio button.
-    const beatInBar = beat % module.beatsPerBar
-    const delay = Math.max(0, (time - core.context.currentTime) * 1000)
-    setTimeout(() => core.playing && !signal.aborted && showBeat(beatInBar), delay)
+  on('beat', ({ beat, beatInBar, time }) => {
+    // The middle flashes on each beat (orange on the first beat of the bar, when the accent is on).
+    swings.push({ time, beat, accent: module.accent && beatInBar === 0 })
   })
 
   on('stop', () => {
-    showBeat(-1)
     swings.length = 0
   })
 
   // ——— The picture, about 60 times a second ———
-  let angle = REST
-  const history: number[] = []
+  // Where the dot is on the ∞ (see picture.ts): one beat is half of the way around.
+  // It keeps its place when the core stops (like the tape), and goes back while it rewinds.
+  let phase = REST
+  // Where the trail behind the dot starts. It follows the dot, at most TRAIL behind it (ahead of
+  // it while the tape goes backwards). It stays where it is when the dot stops, so the path stays
+  // drawn; and it grows from the middle the first time.
+  let trail = REST
+  let lastTime = core.context.currentTime
   // The tempo on the digit wheels: it turns towards the real tempo. Less motion: jump there.
   let bpm = core.bpm
   let last = 0
@@ -124,20 +93,37 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     const time = core.context.currentTime
     while (swings.length > 1 && swings[1]!.time <= time) swings.shift()
     const current = swings[0]
-    if (!core.playing) angle = REST
-    else if (current && current.time <= time) {
-      // Less motion: no swing, the arm only jumps to the side of each beat.
-      const progress = reducedMotion.matches ? 0.5 : Math.min(1, (time - current.time) / (60 / core.bpm))
-      angle = current.side * SWING * Math.sin(Math.PI * progress)
+    if (core.playing && current && current.time <= time) {
+      // Less motion: the dot only jumps to the end of each loop.
+      // How far into the beat: how far the tape has moved since the beat, in beats. So the dot
+      // follows the tape speed exactly (also while it speeds up or slows down), and never goes back.
+      const moved = core.clock.travel(current.time, time) / (60 / core.bpm)
+      const progress = reducedMotion.matches ? 0.5 : Math.min(1, Math.max(0, moved))
+      // Even beats: the left loop; odd beats: the right loop.
+      phase = Math.PI * (current.beat + progress + 1)
+    } else if (!reducedMotion.matches) {
+      // Stopped, rewinding, or not at the first beat yet: the dot moves as far as the tape (back
+      // while it rewinds; not at all while it stands still).
+      phase += (Math.PI * core.clock.travel(lastTime, time)) / (60 / core.bpm)
     }
-    history.push(angle)
-    if (history.length > 8) history.shift()
+    lastTime = time
+    if (reducedMotion.matches) trail = phase
+    else if (phase - trail > TRAIL) trail = phase - TRAIL
+    else if (trail - phase > TRAIL) trail = phase + TRAIL
+    // The beat flash: bright on the beat, gone after 0.25 s.
+    const flash = core.playing && current && current.time <= time ? Math.max(0, 1 - (time - current.time) / 0.25) : 0
 
     const target = Math.round(core.bpm)
     bpm = reducedMotion.matches ? target : bpm + (target - bpm) * Math.min(1, seconds * 14)
     if (Math.abs(target - bpm) < 0.005) bpm = target
 
-    drawPicture(canvas, { angle, ghosts: [history[0] ?? angle, history[4] ?? angle], bpm }, colors)
+    // The canvas is as wide as the module, so read its width.
+    drawPicture(
+      canvas,
+      { phase, trail, bpm, flash, accent: current?.accent ?? false },
+      colors,
+      canvas.clientWidth,
+    )
     frame = requestAnimationFrame(draw)
   }
   frame = requestAnimationFrame(draw)

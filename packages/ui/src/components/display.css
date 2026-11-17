@@ -1,0 +1,23 @@
+/*
+ * Display: the screen of a module. Every module uses it, so they look like
+ * one family.
+ *   <section class="display">...</section>
+ *
+ * The display colors (--screen, --ink, --blue, ...) are in tokens.css.
+ * For the 6 channel colors in JS (for example for a canvas), see CHANNEL_COLORS in display.ts.
+ */
+@layer ui {
+  /* The screen: 275px wide, 14px inside it on every side (so the content is 247px wide). */
+  .display {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 275px;
+    padding: 14px;
+    color: var(--ink);
+    background: var(--screen);
+    border-radius: 14px;
+    font-family: var(--loop-font);
+    font-size: 11px;
+  }
+}

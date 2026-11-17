@@ -1,14 +1,14 @@
 /*
- * Range (slider): looks like Chrome's own slider, but every part is drawn here,
- * so it does not depend on the browser's look. Light and dark mode follow `color-scheme`.
- *   <input class="range" type="range" min="0" max="100" value="50" />
+ * Range (slider): every <input type="range"> looks like Chrome's own slider, but every part is
+ * drawn here, so it does not depend on the browser's look. Light and dark mode follow `color-scheme`.
+ *   <input type="range" min="0" max="100" value="50" />
  *
  * Vertical (the lowest value at the bottom). Set the length with `height` (default 129px):
- *   <input class="range range--vertical" type="range" />
+ *   <input class="vertical" type="range" />
  *
  * The accent color is the primary color. For another color, set --loop-primary on the
  * slider or on a parent:
- *   <input class="range" type="range" style="--loop-primary: tomato" />
+ *   <input type="range" style="--loop-primary: tomato" />
  *
  * Sizes and colors are measured from Chrome's own slider:
  * - Track: 8px high, round ends, a 1px border. Grey, or dark grey in dark mode.
@@ -29,7 +29,7 @@
 }
 
 @layer ui {
-  .range {
+  input[type="range"] {
     appearance: none;
     height: 16px;
     /* Clips the band in older Safari, and makes the slider a scroll container for the timeline. */
@@ -55,21 +55,21 @@
     }
   }
 
-  .range:enabled:hover {
+  input[type="range"]:enabled:hover {
     color: light-dark(
       color-mix(in srgb, var(--loop-primary), black 21.5%),
       color-mix(in srgb, var(--loop-primary), white 55%)
     );
   }
 
-  .range:enabled:active {
+  input[type="range"]:enabled:active {
     color: light-dark(
       color-mix(in srgb, var(--loop-primary), white 21.5%),
       color-mix(in srgb, var(--loop-primary), black 25%)
     );
   }
 
-  .range:disabled {
+  input[type="range"]:disabled {
     color: light-dark(#cbcbcb, #757575);
     cursor: not-allowed;
   }
@@ -82,7 +82,7 @@
    * The filled part ends at the thumb's middle. The thumb moves inside the track's padding box
    * (100% - 16px wide), and is 8px from the edge at the ends.
    */
-  .range::-webkit-slider-runnable-track {
+  input[type="range"]::-webkit-slider-runnable-track {
     box-sizing: border-box;
     height: 8px;
     border: 1px solid transparent;
@@ -102,7 +102,7 @@
       linear-gradient(light-dark(#b2b2b2, #858585) 0 0);
   }
 
-  .range:enabled:hover::-webkit-slider-runnable-track {
+  input[type="range"]:enabled:hover::-webkit-slider-runnable-track {
     background-image:
       linear-gradient(currentColor 0 0),
       linear-gradient(light-dark(color-mix(in srgb, currentColor, #505050), #acacac) 0 0),
@@ -110,7 +110,7 @@
       linear-gradient(light-dark(#9a9a9a, #acacac) 0 0);
   }
 
-  .range:enabled:active::-webkit-slider-runnable-track {
+  input[type="range"]:enabled:active::-webkit-slider-runnable-track {
     background-image:
       linear-gradient(currentColor 0 0),
       linear-gradient(light-dark(color-mix(in srgb, currentColor, #8d8d8d), #6e6e6e) 0 0),
@@ -118,7 +118,7 @@
       linear-gradient(light-dark(#c1c1c1, #6e6e6e) 0 0);
   }
 
-  .range:disabled::-webkit-slider-runnable-track {
+  input[type="range"]:disabled::-webkit-slider-runnable-track {
     background-image:
       linear-gradient(currentColor 0 0),
       linear-gradient(light-dark(#b1b1b1, #626262) 0 0),
@@ -126,7 +126,7 @@
       linear-gradient(light-dark(#d2d2d2, #626262) 0 0);
   }
 
-  .range::-webkit-slider-thumb {
+  input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: 16px;
     height: 16px;
@@ -142,33 +142,33 @@
   /* Older Safari (no scroll-driven animations): the thumb paints the filled part as a band
      6px high (16px - 5px - 5px), reaching 100vw to the left (vertical: down). The slider cuts it off. */
   @supports not (animation-timeline: view()) {
-    .range::-webkit-slider-thumb {
+    input[type="range"]::-webkit-slider-thumb {
       border-image: linear-gradient(currentColor 0 0) 0 fill / 5px 0 / 0 0 0 100vw;
     }
 
-    .range--vertical::-webkit-slider-thumb {
+    input[type="range"].vertical::-webkit-slider-thumb {
       border-image: linear-gradient(currentColor 0 0) 0 fill / 0 5px / 0 0 100vw 0;
     }
   }
 
-  .range:enabled::-webkit-slider-thumb:hover {
+  input[type="range"]:enabled::-webkit-slider-thumb:hover {
     color: light-dark(
       color-mix(in srgb, var(--loop-primary), black 21.5%),
       color-mix(in srgb, var(--loop-primary), white 55%)
     );
   }
 
-  .range:enabled:active::-webkit-slider-thumb {
+  input[type="range"]:enabled:active::-webkit-slider-thumb {
     color: inherit;
   }
 
-  .range:disabled::-webkit-slider-thumb {
+  input[type="range"]:disabled::-webkit-slider-thumb {
     color: inherit;
   }
 
   /* ---- Firefox ---- */
 
-  .range::-moz-range-track {
+  input[type="range"]::-moz-range-track {
     box-sizing: border-box;
     height: 8px;
     background: light-dark(#efefef, #3b3b3b);
@@ -176,7 +176,7 @@
     border-radius: 4px;
   }
 
-  .range::-moz-range-progress {
+  input[type="range"]::-moz-range-progress {
     box-sizing: border-box;
     height: 8px;
     background: currentColor;
@@ -184,7 +184,7 @@
     border-radius: 4px;
   }
 
-  .range::-moz-range-thumb {
+  input[type="range"]::-moz-range-thumb {
     box-sizing: border-box;
     width: 16px;
     height: 16px;
@@ -194,42 +194,42 @@
     background: currentColor;
   }
 
-  .range:enabled:hover::-moz-range-track {
+  input[type="range"]:enabled:hover::-moz-range-track {
     background: light-dark(#e5e5e5, #3b3b3b);
     border-color: light-dark(#9a9a9a, #acacac);
   }
 
-  .range:enabled:hover::-moz-range-progress {
+  input[type="range"]:enabled:hover::-moz-range-progress {
     border-color: light-dark(color-mix(in srgb, currentColor, #505050), #acacac);
   }
 
-  .range:enabled:active::-moz-range-track {
+  input[type="range"]:enabled:active::-moz-range-track {
     background: light-dark(#f5f5f5, #3b3b3b);
     border-color: light-dark(#c1c1c1, #6e6e6e);
   }
 
-  .range:enabled:active::-moz-range-progress {
+  input[type="range"]:enabled:active::-moz-range-progress {
     border-color: light-dark(color-mix(in srgb, currentColor, #8d8d8d), #6e6e6e);
   }
 
-  .range:disabled::-moz-range-track {
+  input[type="range"]:disabled::-moz-range-track {
     background: light-dark(#fafafa, #363636);
     border-color: light-dark(#d2d2d2, #626262);
   }
 
-  .range:disabled::-moz-range-progress {
+  input[type="range"]:disabled::-moz-range-progress {
     border-color: light-dark(#b1b1b1, #626262);
   }
 
-  .range:enabled::-moz-range-thumb:hover {
+  input[type="range"]:enabled::-moz-range-thumb:hover {
     color: light-dark(
       color-mix(in srgb, var(--loop-primary), black 21.5%),
       color-mix(in srgb, var(--loop-primary), white 55%)
     );
   }
 
-  .range:enabled:active::-moz-range-thumb,
-  .range:disabled::-moz-range-thumb {
+  input[type="range"]:enabled:active::-moz-range-thumb,
+  input[type="range"]:disabled::-moz-range-thumb {
     color: inherit;
   }
 
@@ -246,7 +246,7 @@
    * wrong way. If Chrome changes its timeline one day, its vertical fill will be upside down:
    * then drop range-progress-vertical.)
    */
-  .range--vertical {
+  input[type="range"].vertical {
     writing-mode: vertical-lr;
     direction: rtl;
     width: 16px;
@@ -255,7 +255,7 @@
   }
 
   @supports (font: -apple-system-body) {
-    .range--vertical {
+    input[type="range"].vertical {
       animation-name: range-progress;
     }
   }
@@ -269,7 +269,7 @@
     }
   }
 
-  .range--vertical::-webkit-slider-runnable-track {
+  input[type="range"].vertical::-webkit-slider-runnable-track {
     width: 8px;
     height: 100%;
     background-position: bottom;
@@ -280,21 +280,21 @@
       100% 100%;
   }
 
-  .range--vertical::-webkit-slider-thumb {
+  input[type="range"].vertical::-webkit-slider-thumb {
     margin-top: 0;
     /* The track's padding box is 6px wide: (6px - 16px) / 2 = -5px centers the thumb. */
     margin-left: -5px;
   }
 
-  .range--vertical::-moz-range-track,
-  .range--vertical::-moz-range-progress {
+  input[type="range"].vertical::-moz-range-track,
+  input[type="range"].vertical::-moz-range-progress {
     width: 8px;
     height: 100%;
   }
 
   /* In Windows high-contrast mode, use the browser's own slider. */
   @media (forced-colors: active) {
-    .range {
+    input[type="range"] {
       appearance: auto;
     }
   }

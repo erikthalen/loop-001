@@ -1,7 +1,7 @@
 import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
-// (displayStyles); the inputs too. The module only sets their colors (--loop-primary).
+// (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
 // The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display is a tape machine in thin lines, with two markers to cut the sound.
 export const styles = css`
@@ -26,7 +26,9 @@ export const styles = css`
 
   /*
    * The channel number, top left: a flip screen. A window one number high shows one number of a
-   * column 1 to 6. --active (0 to 5) slides the column up or down to the right number.
+   * column 1 to 6. --at (0 to 5) slides the column up or down: the script sets it to where the
+   * tape is, so the number moves with the tape and stops when the tape stops. Before the script
+   * runs, --active (the channel) places it.
    * Each number gets a full 26px row, so no part of the next number shows in the window.
    */
   .channel-number {
@@ -45,8 +47,7 @@ export const styles = css`
   .channel-strip {
     display: flex;
     flex-direction: column;
-    transform: translateY(calc(var(--active, 0) * -26px));
-    transition: transform 0.3s ease;
+    transform: translateY(calc(var(--at, var(--active, 0)) * -26px));
   }
 
   /* "● rec" or a message, top right, left of the level meter. */
@@ -58,12 +59,6 @@ export const styles = css`
     font-size: 10px;
     line-height: 1;
     pointer-events: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .channel-strip {
-      transition: none;
-    }
   }
 
   /*
@@ -138,12 +133,7 @@ export const styles = css`
 
   .channel {
     --loop-primary: var(--c);
-    display: flex;
-    align-items: center;
-    gap: 4px;
     color: var(--c);
-    font-size: 12px;
-    cursor: pointer;
 
     input {
       border-color: var(--loop-primary);
@@ -159,14 +149,10 @@ export const styles = css`
     --loop-primary: var(--red);
   }
 
-  /* Browsers do not pass text-transform on to buttons, so ask for it here. */
   /* Play: top right of the picture, above the level meter. */
   .play {
     position: absolute;
     top: 0;
     right: 0;
-    min-width: 6ch;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
   }
 `;

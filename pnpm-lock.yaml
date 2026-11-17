@@ -183,9 +183,15 @@ importers:
       '@loop/lp-filter':
         specifier: workspace:*
         version: link:../packages/lp-filter
+      '@loop/master':
+        specifier: workspace:*
+        version: link:../packages/master
       '@loop/metronome':
         specifier: workspace:*
         version: link:../packages/metronome
+      '@loop/mixer':
+        specifier: workspace:*
+        version: link:../packages/mixer
       '@loop/sampler':
         specifier: workspace:*
         version: link:../packages/sampler
@@ -231,7 +237,33 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/master:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/metronome:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/mixer:
     dependencies:
       '@loop/core':
         specifier: workspace:*
