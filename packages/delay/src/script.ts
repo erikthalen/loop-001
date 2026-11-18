@@ -49,8 +49,13 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   // The rate drum and the time's digit wheels (see picture.ts): they roll to the new value. Each
   // time wheel rolls on its own, so the higher ones roll too (see createOdometer in @loop/ui).
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
-  const targets = () => ({ drum: rateIndex(module.rate), ms: Math.round(module.seconds * 1000) })
-  let drum = targets().drum
+  // The echoes slide too: the space between them (in steps) glides to the new rate.
+  const targets = () => ({
+    drum: rateIndex(module.rate),
+    ms: Math.round(module.seconds * 1000),
+    steps: RATES[rateIndex(module.rate)]!.beats * 4,
+  })
+  let { drum, steps } = targets()
   const counter = createOdometer(MS_WHEELS, targets().ms)
 
   const draw = () => {
@@ -67,7 +72,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       {
         rateDrum: drum,
         msWheels: counter.wheels,
-        steps: RATES[rateIndex(module.rate)]!.beats * 4,
+        steps,
         dry,
         wet,
         feedback: module.feedback,
@@ -87,9 +92,11 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     const step = Math.min(1, seconds * 14)
     drum += (target.drum - drum) * step
     if (Math.abs(target.drum - drum) < 0.001) drum = target.drum
+    steps += (target.steps - steps) * step
+    if (Math.abs(target.steps - steps) < 0.001) steps = target.steps
     const rolling = counter.roll(target.ms, seconds)
     draw()
-    if (drum !== target.drum || rolling) {
+    if (drum !== target.drum || steps !== target.steps || rolling) {
       frame = requestAnimationFrame(roll)
     } else {
       frame = 0
@@ -101,6 +108,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     if (reducedMotion.matches) {
       const target = targets()
       drum = target.drum
+      steps = target.steps
       counter.jump(target.ms)
     } else if (!frame) frame = requestAnimationFrame(roll)
     draw()
