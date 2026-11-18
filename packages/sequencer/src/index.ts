@@ -7,7 +7,7 @@ import { template } from './template'
 
 export type { SequencerOptions } from './setup'
 
-/** A step sequencer: 6 channels, 16 steps, one checkbox per step. It makes no sound: it sends triggers down the chain. */
+/** A step sequencer: 6 channels, 16 steps, one checkbox per step. It makes no sound: it sends triggers to the modules plugged into it. */
 export const sequencer = defineAudioModule({
   type: 'sequencer',
   name: 'Sequencer',

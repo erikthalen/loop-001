@@ -1,7 +1,7 @@
-import { defineModuleScript, sendSourceOf } from '@loop/core'
+import { defineModuleScript } from '@loop/core'
 import { createOdometer } from '@loop/ui'
 import { drawPicture, MS_WHEELS, type PictureColors } from './picture'
-import { levelsOf, RATES, rateIndex, type Bus, type setup } from './setup'
+import { levelsOf, RATES, rateIndex, type setup } from './setup'
 
 /** A rate in words, for screen readers: '1/8d' → '1/8 dotted'. */
 const spoken = (name: string) => name.replace(/t$/, ' triplet').replace(/d$/, ' dotted')
@@ -16,14 +16,9 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const mix = root.querySelector<HTMLInputElement>('[name=mix]')!
   const feedback = root.querySelector<HTMLInputElement>('[name=feedback]')!
   const rate = root.querySelector<HTMLInputElement>('[name=rate]')!
-  const buses = [...root.querySelectorAll<HTMLInputElement>('[name=bus]')]
 
-  /** On a send bus: is there a mixer before it to take the sound from? In the main chain: yes. */
-  const connected = () => {
-    if (module.bus === null) return true
-    const order = [...core.modules.values()]
-    return sendSourceOf(order, order.indexOf(module), module.bus) >= 0
-  }
+  /** Is a cable plugged into its input? Without one, no sound comes in. */
+  const connected = () => core.cables.some((cable) => cable.to.module === module.id && cable.to.port === 'in')
 
   // The canvas cannot use CSS variables, so read the colors from the CSS.
   // A hidden element turns any CSS color (also light-dark()) into rgb().
@@ -61,11 +56,10 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const draw = () => {
     const { dry, wet } = levelsOf(module.mix)
     const isConnected = connected()
-    const where = module.bus === null ? 'in the chain' : `on send ${module.bus === 0 ? 'A' : 'B'}`
     canvas.setAttribute(
       'aria-label',
-      `Echoes over one bar: every ${spoken(module.rate)} note, ${Math.round(module.seconds * 1000)} milliseconds apart, ${where}.` +
-        (isConnected ? '' : ' No mixer before it, so no sound comes in.'),
+      `Echoes over one bar: every ${spoken(module.rate)} note, ${Math.round(module.seconds * 1000)} milliseconds apart.` +
+        (isConnected ? '' : ' Nothing is plugged into its input, so no sound comes in.'),
     )
     drawPicture(
       canvas,
@@ -135,21 +129,13 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     showRate()
     update()
   }, { signal })
-  for (const radio of buses) {
-    radio.addEventListener('change', () => {
-      module.setBus((radio.value === 'insert' ? null : Number(radio.value)) as Bus)
-      update()
-    }, { signal })
-  }
 
-  // The tempo changes the time; added, removed or moved modules can add or take away the mixer.
+  // The tempo changes the time; a cable plugged in or out can bring or take away the sound.
   on('bpmchange', () => {
     showRate()
     update()
   })
-  on('moduleadd', update)
-  on('moduleremove', update)
-  on('modulemove', update)
+  on('cablechange', update)
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     readColors()
     update()

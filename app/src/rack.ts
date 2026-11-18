@@ -1,7 +1,7 @@
 import { CollisionPriority, CollisionType, type CollisionDetector } from '@dnd-kit/abstract'
 import { DragDropManager } from '@dnd-kit/dom'
 import { isSortable, Sortable } from '@dnd-kit/dom/sortable'
-import { html, render, type Core } from '@loop/core'
+import { html, render, type AudioModule, type Core } from '@loop/core'
 
 export interface Rack {
   /** True while the rack is in remove mode. */
@@ -12,6 +12,8 @@ export interface Rack {
 export interface RackOptions {
   /** Called when remove mode turns on or off, or when modules are added or removed. */
   onChange?: (rack: Rack) => void
+  /** Called once for each new slot, with the module in it: add things to the slot (the jacks). */
+  onSlot?: (slot: HTMLElement, module: AudioModule) => void
 }
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
@@ -55,13 +57,12 @@ const passTheMiddle: CollisionDetector = ({ dragOperation, droppable }) => {
 }
 
 /**
- * Shows the core's modules in `element`, in the order of the audio chain.
+ * Shows the core's modules in `element`, in the core's order (the rack order).
  * It follows the core: `moduleadd` shows a module, `moduleremove` takes it away,
  * `modulemove` puts it in its new place.
  *
  * Sort: drag a module by its handle (or focus the handle, press Space, then the arrow keys).
- * Dropping it calls `core.move()`, so the sound flows through the modules in the new order:
- * the first module in the rack is the first in the chain.
+ * Dropping it calls `core.move()`. Only the order changes: the cables stay (see patch-lane.ts).
  * Drag and drop: dnd-kit (`@dnd-kit/dom`, the version without a framework).
  *
  * Remove mode: modules jiggle and a click on a module removes it from the core.
@@ -160,6 +161,7 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
     // The handle goes to the right of the module (after it, so Tab reaches it after the module too).
     slot.append(slot.querySelector('.drag-handle')!)
     if (removing) slot.querySelector('section')!.inert = true
+    options.onSlot?.(slot, module)
 
     // Only the handle starts a drag: the module's own sliders and buttons keep working.
     const sortable = new Sortable(

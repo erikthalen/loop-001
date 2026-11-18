@@ -38,8 +38,13 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             padding: 0.5rem;
 
             > main {
+              /* The cable lane and the jack strips sit in the left padding (see patch-lane.ts).
+                 Their width is fixed, so the modules never move sideways. */
+              --lane: 50px;
+              --strip: 10px;
               width: 275px;
               margin: auto;
+              /* padding-left: calc(var(--lane) + var(--strip) + 3px); */
             }
           }
 
@@ -94,14 +99,84 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
           }
 
           /* The app places the modules. Each module styles its own inside. */
-          #rack {
+          #patch {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: 5px;
             margin-top: 10px;
+          }
+          #rack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
             max-width: 32rem;
           }
+
+          /* ---- Cables (see patch-lane.ts) ---- */
+          /* The jack strip: left of the module, as tall as it. A ring is an input, a dot an output. */
+          .jacks {
+            position: absolute;
+            top: 0;
+            right: calc(100% + 3px);
+            box-sizing: border-box;
+            width: var(--strip);
+            height: 100%;
+            padding: 14px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            border-radius: 10px;
+
+            z-index: 3;
+          }
+          /* Master's screen starts 40px down (the reels stick out above it): so does its strip. */
+          .jacks[data-type="master"] {
+            top: 40px;
+            height: calc(100% - 40px);
+          }
+          .jack-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+          }
+          /* The jacks are the jack component of @loop/ui (components/jack.css).
+             While a cable is in your hand, the jacks it fits light up (.can), the others fade. */
+          #patch.connecting .jack:not(.can):not(.origin) {
+            opacity: 0.3;
+          }
+
+          /* The cables: over the rack, but only the lines in the lane take the pointer. */
+          .wires {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            pointer-events: none;
+            z-index: 2;
+
+            path {
+              fill: none;
+              stroke-linecap: round;
+              stroke-linejoin: round;
+            }
+            .hits path {
+              stroke: transparent;
+              stroke-width: 12;
+              pointer-events: stroke;
+              cursor: pointer;
+            }
+          }
+          body.patching,
+          body.patching * {
+            cursor: grabbing !important;
+          }
+
           #rack:not(:has(.slot))::before {
             content: "No modules yet. Click Add.";
             color: #667085;
@@ -242,29 +317,17 @@ app.get(base, (c) =>
           <div id="project-menu" popover>
             <menu>
               <li>
-                <button
-                  id="project-new"
-                  class="button small"
-                  type="button"
-                >
+                <button id="project-new" class="button small" type="button">
                   New
                 </button>
               </li>
               <li>
-                <button
-                  id="project-import"
-                  class="button small"
-                  type="button"
-                >
+                <button id="project-import" class="button small" type="button">
                   Import…
                 </button>
               </li>
               <li>
-                <button
-                  id="project-export"
-                  class="button small"
-                  type="button"
-                >
+                <button id="project-export" class="button small" type="button">
                   Export
                 </button>
                 <input id="project-file" type="file" hidden />
@@ -313,7 +376,9 @@ app.get(base, (c) =>
         <div id="module-picker" class="menu" popover>
           <menu id="module-list"></menu>
         </div>
-        <div id="rack"></div>
+        <div id="patch">
+          <div id="rack"></div>
+        </div>
       </main>`,
     ),
   ),

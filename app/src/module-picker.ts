@@ -8,6 +8,8 @@ export interface ModulePickerOptions {
   modules: readonly AnyAudioModuleDefinition[];
   /** Called when the user picks a module. */
   onPick: (definition: AnyAudioModuleDefinition) => void;
+  /** False: the module cannot be added now (for example a second Master). Its button is disabled. */
+  canAdd?: (definition: AnyAudioModuleDefinition) => boolean;
 }
 
 /**
@@ -19,6 +21,7 @@ export function createModulePicker({
   list,
   modules,
   onPick,
+  canAdd = () => true,
 }: ModulePickerOptions): void {
   render(
     html`<li><small>Add a module</small></li>
@@ -38,12 +41,21 @@ export function createModulePicker({
     list,
   );
 
+  // Each time the list opens: only the modules that can be added now are enabled.
+  popover.addEventListener("beforetoggle", (event) => {
+    if ((event as ToggleEvent).newState !== "open") return;
+    for (const button of list.querySelectorAll<HTMLButtonElement>("button[data-index]")) {
+      const definition = modules[Number(button.dataset.index)];
+      button.disabled = !definition || !canAdd(definition);
+    }
+  });
+
   list.addEventListener("click", (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>(
       "button[data-index]",
     );
     const definition = button && modules[Number(button.dataset.index)];
-    if (!definition) return;
+    if (!definition || !canAdd(definition)) return;
     onPick(definition);
     popover.hidePopover();
   });

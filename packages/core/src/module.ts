@@ -11,10 +11,10 @@ export type ScopedOn = <K extends keyof CoreEventMap & string>(
 
 /**
  * A signal between modules, like a MIDI note or a CV gate: "play channel X at this time".
- * It flows down the chain like sound: only the modules AFTER the sender get it, in order. A module
- * on the way can change it (see ctx.passTrigger), for example a mixer that makes a channel quieter.
- * For example, the sequencer sends one for each step that is on, and a sampler after it
- * plays that channel.
+ * It goes along trigger cables (see patch.ts): from the sender's trigger out to the trigger in of
+ * each module plugged into it. A module on the way can change it (see ctx.passTrigger), for
+ * example a box that makes a channel quieter. For example, the sequencer sends one for each step
+ * that is on, and the sampler plugged into it plays that channel.
  */
 export interface Trigger {
   /** Starts at 0 (0 is channel 1). */
@@ -39,60 +39,61 @@ export interface ModuleContext {
   readonly signal: AbortSignal
   /** Run a function when the module is removed. */
   onDispose(fn: () => void): void
-  /** Send a trigger down the chain. Only the modules after this one get it. */
+  /**
+   * Send a trigger out of the trigger out jack (set `triggerOutput: true` in the setup result to
+   * get one). The modules plugged into it get it.
+   */
   send(trigger: Trigger): void
-  /** Get the triggers from the modules before this one. The listener is removed when the module is removed. */
+  /**
+   * Get the triggers that come into the module's trigger in jack. Calling this (in setup) gives
+   * the module that jack. The listener is removed when the module is removed.
+   */
   onTrigger(listener: (trigger: Trigger) => void): void
   /**
-   * Change the triggers that pass this module, before the modules after it get them (like a box
-   * in a MIDI chain). Return the changed trigger, or null to stop it. Only one per module.
+   * Change the triggers that pass this module, before the modules plugged into its trigger out
+   * get them (like a box in a MIDI chain). Return the changed trigger, or null to stop it. Only
+   * one per module. Calling this (in setup) gives the module a trigger in and a trigger out jack.
    */
   passTrigger(change: (trigger: Trigger) => Trigger | null): void
   /** Tell the core that the module's saved state changed (for example, the volume). The app saves the project. */
   changed(): void
-  /**
-   * Tell the core that the module's cables changed (for example `sendEffect`: it moved from the
-   * main chain to a send bus). The core plugs all cables again.
-   */
-  replug(): void
 }
 
-/** What `setup` returns: audio nodes, plus any functions or values the module wants to offer. */
+/**
+ * What `setup` returns: audio nodes, plus any functions or values the module wants to offer.
+ * The core makes a jack (a port, see patch.ts) for each node, and the user connects the jacks
+ * with cables. A module with no cables gets no sound and sends none.
+ */
 export interface ModuleSetupResult {
-  /** The node that receives sound. Leave it out if the module has no input. */
+  /** The node that receives sound: the "In" jack. Leave it out if the module has no input. */
   input?: AudioNode
-  /** The node that sends sound out. Leave it out if the module makes no sound. */
+  /** The node that sends sound out: the "Out" jack. Leave it out if the module makes no sound. */
   output?: AudioNode
   /**
    * One output per channel (channel 1 first): the module sends each channel's sound separately,
-   * for example a sampler. A later module with `channelInputs` (a mixer) gets them; if there is
-   * none, the sound joins the main chain at this module. See planChannels in chain.ts.
+   * for example a sampler. One "Ch" jack for all of them: a channels cable carries channel k to
+   * channel k of a module with `channelInputs` (a mixer).
    */
   channelOutputs?: readonly AudioNode[]
-  /** One input per channel: the module takes in the channels of the modules before it (a mixer). */
+  /** One input per channel (a mixer): one "Ch" jack, for a channels cable. */
   channelInputs?: readonly AudioNode[]
-  /**
-   * Send buses (aux sends), bus A first: the module sends some of its sound out, for an effect
-   * after it (a mixer). See planSends in chain.ts.
-   */
+  /** Send buses (aux sends), bus A first: one "Snd A", "Snd B", ... jack each (a mixer). */
   sendOutputs?: readonly AudioNode[]
-  /** One return per send bus: where the effect on that bus plays back into the module (a mixer). */
+  /** Returns, bus A first: one "Rtn A", "Rtn B", ... jack each, where an effect plays back in (a mixer). */
   returnInputs?: readonly AudioNode[]
   /**
-   * Put the module on a send bus instead of in the main chain (an effect, for example a delay):
-   * send bus `bus` of the closest module before it that has one (a mixer) goes into `input`, and
-   * `output` plays into that module's return `bus`. The main chain then goes past the module
-   * (its `input` and `output` are not used there). Leave it out (undefined): the module is in the
-   * main chain. It can be a getter: call `ctx.replug()` when it changes.
+   * A node that plays straight into the speakers (core.output), with no jack and no cable. For the
+   * end of the sound: Master. New sound sources are patched into this module (see autoPatch).
    */
-  sendEffect?: { readonly bus: number; readonly input: AudioNode; readonly output: AudioNode }
+  speakerOutput?: AudioNode
+  /** True: the module sends triggers (`ctx.send`), so it gets a trigger out jack ("Trig"). */
+  triggerOutput?: boolean
   /**
-   * A stage after the end of the chain, before the speakers (see planStages in chain.ts): ALL the
-   * sound goes into `input`, and what comes out of `output` goes on to the speakers. For example
-   * Master: the rewind tape and the master volume. Several modules with a stage: one after the
-   * other, in chain order. The core plugs it in and out; the module connects `input` to `output`.
+   * Which input jacks reach which output jacks inside the module, as [input port id, output port
+   * id] pairs (see patch.ts for the ids). The core uses it to stop loops. Leave it out: every
+   * input reaches every output. A mixer: the returns reach "out" but not the sends.
    */
-  outputStage?: { readonly input: AudioNode; readonly output: AudioNode }
+  routes?: readonly (readonly [input: string, output: string])[]
   /**
    * Return the settings to save with the project. Must be plain JSON data.
    * When the project loads, this data is passed back to `setup` as `options`.
@@ -161,6 +162,8 @@ export interface AudioModuleDefinition<Options, Result extends ModuleSetupResult
   readonly name: string
   /** One short sentence to show to the user, for example in a list of modules. */
   readonly description?: string
+  /** True: only one of this module can be in the core at a time (Master). */
+  readonly unique?: boolean
   /** Called by `core.add()`. Make audio nodes and listen to events here. */
   readonly setup: ModuleSetup<Options, Result>
   /** Optional UI. The app shows it with `module.mount(element)`. */

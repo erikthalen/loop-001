@@ -3,8 +3,7 @@ import { MAX_FEEDBACK, RATES, rateIndex, type setup } from "./setup";
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, sr-only)
 // and styles.ts; @loop/ui also styles the sliders and the radio buttons.
-// The picture on top (picture.ts: the echoes over one bar), then three sliders, then where the
-// delay is: in the main chain (insert), or on send bus A or B of a mixer before it.
+// The picture on top (picture.ts: the echoes over one bar), then three sliders.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">
@@ -32,23 +31,6 @@ export const template = defineModuleTemplate<typeof setup>(
           <input name="rate" type="range" min="0" max="${RATES.length - 1}" step="1" value="${rateIndex(module.rate)}" />
         </label>
       </div>
-
-      <!-- Where the delay is. On a send bus, the main chain goes past it. -->
-      <fieldset class="route">
-        <legend class="sr-only">Where the delay is</legend>
-        <label class="field">
-          <input name="bus" type="radio" value="insert" ${module.bus === null ? "checked" : ""} />
-          <span>insert</span>
-        </label>
-        <label class="field">
-          <input name="bus" type="radio" value="0" ${module.bus === 0 ? "checked" : ""} />
-          <span>send a</span>
-        </label>
-        <label class="field">
-          <input name="bus" type="radio" value="1" ${module.bus === 1 ? "checked" : ""} />
-          <span>send b</span>
-        </label>
-      </fieldset>
     </section>
   `,
 );

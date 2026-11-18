@@ -10,10 +10,11 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
 /**
  * Master: start, stop and rewind the transport, record the sound to play it backwards while it
- * rewinds (the tape, see tape.ts), and set the master volume. Not in the chain: it is an output
- * stage (see `outputStage` in @loop/core), so it gets the whole sound, wherever it is in the rack.
+ * rewinds (the tape, see tape.ts), and set the master volume. It is the end of the sound: plug the
+ * whole sound into its In. It plays straight into the speakers (`speakerOutput`, no jack).
+ * Only one Master at a time (`unique` in index.ts).
  *
- *   input ─▶ tape ─▶ volume (output) ─▶ the next stage, or core.output
+ *   input ─▶ tape ─▶ volume (output) ─▶ speakers (core.output)
  */
 export const setup = defineModuleSetup((ctx, options: MasterOptions = {}) => {
   const { core, audio } = ctx
@@ -48,7 +49,8 @@ export const setup = defineModuleSetup((ctx, options: MasterOptions = {}) => {
   })
 
   return {
-    outputStage: { input, output },
+    input,
+    speakerOutput: output,
     get volume() {
       return volume
     },

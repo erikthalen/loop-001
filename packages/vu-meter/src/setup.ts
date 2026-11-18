@@ -4,8 +4,8 @@ import { defineModuleSetup } from '@loop/core'
 export const VU_REFERENCE_DBFS = -18
 
 /**
- * Audio: a stereo level meter. It only listens: in the audio chain, the sound also goes past it
- * unchanged (a module with an input and no output, see chain.ts in @loop/core).
+ * Audio: a stereo level meter. It only listens: it has an input and no output. To see a sound,
+ * plug the same output into the meter too (an output can feed many inputs).
  *
  *   input ─▶ splitter ─┬─▶ left analyser
  *                      └─▶ right analyser

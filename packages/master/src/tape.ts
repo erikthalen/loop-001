@@ -1,11 +1,11 @@
 /**
- * The tape: Master records the sound that reaches it (the whole sound, see `outputStage` in
- * @loop/core) at the transport position. When the transport goes backwards (rewind), the tape
+ * The tape: Master records the sound that reaches it (plugged into its In; usually the whole
+ * sound) at the transport position. When the transport goes backwards (rewind), the tape
  * plays that recording backwards, at the transport speed. So a rewind sounds like a real tape (or
  * vinyl) going back: the real music, backwards and fast.
  *
- *   end of the chain ─▶ tape ─▶ volume ─▶ core.output ─▶ speakers
- *                       └──── Master's output stage ────┘
+ *   (cables into In) ─▶ tape ─▶ volume ─▶ speakers (core.output)
+ *                       └──── Master ────┘
  *
  * - Speed 0 or more: the sound goes through, unchanged. While the transport moves forwards, it is
  *   also recorded at the transport position.

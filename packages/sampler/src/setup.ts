@@ -33,8 +33,8 @@ const isNumber = (value: unknown): value is number => typeof value === 'number' 
  */
 export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const { audio } = ctx
-  // One output per channel: a mixer after the sampler gets each channel on its own. Without a mixer,
-  // the core mixes them into the main chain here (see planChannels in @loop/core).
+  // One output per channel, all on one jack ("Ch 1–6"): a channels cable takes each channel on its
+  // own into a mixer.
   const channelOutputs = Array.from({ length: CHANNELS }, () => new GainNode(audio, { gain: 1 }))
   // Listens to all channels, for the level meter in the picture.
   const outputAnalyser = new AnalyserNode(audio, { fftSize: 1024 })
@@ -251,7 +251,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     update()
   }
 
-  // Triggers from modules before this one in the chain (for example a sequencer): play that channel
+  // Triggers that come into the trigger jack (for example from a sequencer): play that channel
   // at that time. The play button does not change; the picture shows it (see nowPlaying).
   // They follow the transport speed (see core.speed).
   ctx.onTrigger(({ channel, time, volume }) => void trigger(channel, time, volume, true))

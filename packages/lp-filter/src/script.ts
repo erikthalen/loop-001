@@ -1,5 +1,5 @@
-import { defineModuleScript, sendSourceOf } from '@loop/core'
-import { MAX_FREQUENCY, MIN_FREQUENCY, type Bus, type setup } from './setup'
+import { defineModuleScript } from '@loop/core'
+import { MAX_FREQUENCY, MIN_FREQUENCY, type setup } from './setup'
 import { BANDS, drawScene, type SceneColors } from './scene'
 import { FREQUENCY_STEPS } from './template'
 
@@ -14,20 +14,12 @@ function formatHz(hz: number): { value: string; unit: string } {
 }
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
-export const script = defineModuleScript<typeof setup>(({ root, module, core, on, signal }) => {
+export const script = defineModuleScript<typeof setup>(({ root, module, signal }) => {
   const display = root.querySelector<HTMLElement>('.display')!
   const frequency = root.querySelector<HTMLInputElement>('[name=frequency]')!
   const resonance = root.querySelector<HTMLInputElement>('[name=resonance]')!
   const bypass = root.querySelector<HTMLInputElement>('[name=bypass]')!
   const slopes = [...root.querySelectorAll<HTMLInputElement>('[name=slope]')]
-  const buses = [...root.querySelectorAll<HTMLInputElement>('[name=bus]')]
-
-  /** On a send bus: is there a mixer before it to take the sound from? In the main chain: yes. */
-  const connected = () => {
-    if (module.bus === null) return true
-    const order = [...core.modules.values()]
-    return sendSourceOf(order, order.indexOf(module), module.bus) >= 0
-  }
   const canvas = root.querySelector<HTMLCanvasElement>('.picture')!
 
   /** What the picture shows, in words, for screen readers. */
@@ -36,10 +28,8 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     canvas.setAttribute(
       'aria-label',
       `Music from next door: a wall between a speaker and an ear lets the low sounds through. Cutoff ${hz.value} ${hz.unit}, resonance ${module.resonance.toFixed(1)} dB, ` +
-        `${module.slope} dB per octave, ` +
-        (module.bus === null ? 'in the chain' : `on send ${module.bus === 0 ? 'A' : 'B'}`) +
-        (module.on ? '.' : '. The filter is off.') +
-        (connected() ? '' : ' No mixer before it, so no sound comes in.'),
+        `${module.slope} dB per octave` +
+        (module.on ? '.' : '. The filter is off.'),
     )
   }
 
@@ -82,16 +72,6 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     module.setOn(!bypass.checked)
     describe()
   }, { signal })
-  for (const radio of buses) {
-    radio.addEventListener('change', () => {
-      module.setBus((radio.value === 'insert' ? null : Number(radio.value)) as Bus)
-      describe()
-    }, { signal })
-  }
-  // Added, removed or moved modules can add or take away the mixer.
-  on('moduleadd', describe)
-  on('moduleremove', describe)
-  on('modulemove', describe)
 
   // The canvas cannot use CSS variables, so read the colors from the CSS.
   // A hidden element turns any CSS color (also light-dark()) into rgb().

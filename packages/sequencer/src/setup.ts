@@ -25,8 +25,8 @@ function readPattern(saved: unknown): boolean[][] {
 
 /**
  * The sequencer makes no sound. On every step of the core clock, it sends a trigger (like a MIDI
- * note) for each channel that is on. Only the modules after it in the chain get the triggers,
- * for example a sampler. The sound from before it goes past it, unchanged.
+ * note) for each channel that is on, out of its trigger jack. The modules plugged into it get
+ * them, for example a sampler.
  */
 export const setup = defineModuleSetup((ctx, options: SequencerOptions = {}) => {
   const pattern = readPattern(options.pattern)
@@ -40,6 +40,8 @@ export const setup = defineModuleSetup((ctx, options: SequencerOptions = {}) => 
   })
 
   return {
+    /** It sends triggers: it gets a trigger out jack. */
+    triggerOutput: true,
     /** Which steps are on: `pattern[channel][step]`. Change it with `setStep`. */
     get pattern(): readonly (readonly boolean[])[] {
       return pattern

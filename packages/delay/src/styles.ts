@@ -3,7 +3,7 @@ import { css } from "@loop/core";
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The rules here are outside a cascade layer, so they
 // win over @loop/ui.
-// The picture (picture.ts) on top, the three sliders in a grid (name, slider), then the route.
+// The picture (picture.ts) on top, the three sliders in a grid (name, slider).
 export const styles = css`
   :host {
     display: inline-block;
@@ -36,17 +36,5 @@ export const styles = css`
   .sliders input {
     width: 100%;
     min-width: 0;
-  }
-
-  .route {
-    display: flex;
-    justify-content: space-between;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-
-  .route input[type="radio"] {
-    --loop-primary: var(--ink);
   }
 `;

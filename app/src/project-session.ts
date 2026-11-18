@@ -33,13 +33,18 @@ export interface ProjectSessionOptions {
   definitions: readonly AnyAudioModuleDefinition[]
   /** The data of a new project. Default: no modules. */
   newProject?: ProjectData
+  /**
+   * Turn an old project into the current format before it loads, for example give a version 1
+   * project (no cables) its cables. Default: load it as it is.
+   */
+  upgrade?: (project: ProjectData) => ProjectData
   /** Wait this long (ms) after the last change before saving. Default: 400. */
   saveDelay?: number
   /** Called when the open project, its name, or the save status changes. */
   onChange?: (session: ProjectSession) => void
 }
 
-const EMPTY_PROJECT: ProjectData = { version: 1, bpm: 120, modules: [] }
+const EMPTY_PROJECT: ProjectData = { version: 2, bpm: 120, modules: [], cables: [] }
 const DEFAULT_NAME = 'Untitled project'
 
 /**
@@ -47,7 +52,7 @@ const DEFAULT_NAME = 'Untitled project'
  * Every change in the core is saved automatically, a moment later.
  */
 export function createProjectSession(options: ProjectSessionOptions): ProjectSession {
-  const { core, store, definitions, newProject = EMPTY_PROJECT, saveDelay = 400, onChange } = options
+  const { core, store, definitions, newProject = EMPTY_PROJECT, upgrade = (p) => p, saveDelay = 400, onChange } = options
 
   let current = { id: '', name: DEFAULT_NAME }
   let status: SaveStatus = 'saved'
@@ -83,7 +88,7 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     if (status !== 'saving') setStatus('saving')
   }
 
-  for (const type of ['bpmchange', 'moduleadd', 'moduleremove', 'modulemove', 'modulechange'] as const) {
+  for (const type of ['bpmchange', 'moduleadd', 'moduleremove', 'modulemove', 'modulechange', 'cablechange'] as const) {
     core.events.on(type, scheduleSave)
   }
 
@@ -101,7 +106,7 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     loading = true
     try {
       current = { id: project.id, name: project.name }
-      const { skipped } = restoreProject(core, project.data, definitions)
+      const { skipped } = restoreProject(core, upgrade(project.data), definitions)
       if (skipped.length) console.warn('Some modules could not be loaded:', skipped)
     } finally {
       loading = false

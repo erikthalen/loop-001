@@ -67,13 +67,4 @@ export const styles = css`
     padding: 0;
     border: 0;
   }
-
-  /* Where the filter is: insert, send a, send b. Spread over the width, like the delay. */
-  .route {
-    display: flex;
-    justify-content: space-between;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
 `;

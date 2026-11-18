@@ -2,10 +2,11 @@
 import { createCore } from '@loop/core'
 import { addLoopFont } from '@loop/ui'
 import { createModulePicker } from './module-picker'
-import { availableModules, newProject } from './modules'
+import { availableModules, CABLE_COLORS, newProject, upgradeProject } from './modules'
 import { connectProjectMenu } from './project-menu'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
+import { createPatchLane } from './patch-lane'
 import { createRack } from './rack'
 
 // The app's font, Italian Plate No1 Mono (all weights, from @loop/ui). Before anything shows text.
@@ -21,8 +22,13 @@ const picker = $('#module-picker')
 // The tempo is set in the metronome module (and saved with the project).
 const core = createCore()
 
-// ---- Modules: the rack shows what is in the core ----
+// ---- Modules: the rack shows what is in the core, the cables connect them ----
+const lane = createPatchLane(core, {
+  root: $('#patch'),
+  colorOf: (module) => CABLE_COLORS[module.type] ?? 'var(--ink)',
+})
 const rack = createRack(core, $('#rack'), {
+  onSlot: (slot, module) => slot.prepend(lane.jackStrip(module)),
   onChange: ({ removing }) => {
     removeButton.disabled = core.modules.size === 0
     removeButton.setAttribute('aria-pressed', String(removing))
@@ -34,8 +40,10 @@ createModulePicker({
   popover: picker,
   list: $('#module-list'),
   modules: availableModules,
+  canAdd: (definition) => core.canAdd(definition),
   onPick: (definition) => {
-    core.add(definition)
+    // The usual cables, from the modules above it (see autoPatch in @loop/core).
+    core.autoPatch(core.add(definition))
     keepStorage()
   },
 })
@@ -61,6 +69,7 @@ const session = createProjectSession({
   store,
   definitions: availableModules,
   newProject,
+  upgrade: upgradeProject,
   onChange: () => menu?.update(),
 })
 menu = connectProjectMenu(session, {

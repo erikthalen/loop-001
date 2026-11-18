@@ -23,9 +23,6 @@ export const RATES = [
 
 export type RateName = (typeof RATES)[number]['name']
 
-/** Where the delay is: in the main chain (`null`), or on send bus 0 (A) or 1 (B) of a mixer before it. */
-export type Bus = 0 | 1 | null
-
 export interface DelayOptions {
   /** Dry/wet, 0 to 1: 0 only the sound that comes in, 1 only the echoes. Default: 1. */
   mix?: number
@@ -33,8 +30,6 @@ export interface DelayOptions {
   feedback?: number
   /** The time until each echo, as a note length (see RATES). Default: '1/8d'. */
   rate?: RateName
-  /** In the main chain (null), or on send bus 0 (A) or 1 (B). Default: 0 (send A). */
-  bus?: Bus
 }
 
 /** More than this, and the echoes would get louder and louder. */
@@ -63,8 +58,8 @@ export const levelsOf = (mix: number) => ({ dry: Math.cos((mix * Math.PI) / 2), 
  * The delay line is an AudioWorklet (processor.ts), so every echo is exactly on time. It loads in
  * the background; until then only the dry sound comes through.
  *
- * It can be in the main chain, or on a send bus of a mixer before it (see `sendEffect` in
- * @loop/core): then the mixer's send goes into `input`, and `output` plays into its return.
+ * Usually on a mixer's send: a cable from the mixer's send into `input`, and one from `output`
+ * into its return. It can also go between two modules, like any effect.
  * The delay time follows the tempo: a rate of 1/8 is half a beat, at any bpm.
  */
 export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
@@ -73,7 +68,6 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
   let mix = numberOr(options.mix, 1)
   let feedback = numberOr(options.feedback, 0.4, MAX_FEEDBACK)
   let rate: RateName = RATES.some((r) => r.name === options.rate) ? options.rate! : '1/8d'
-  let bus: Bus = options.bus === null || options.bus === 0 || options.bus === 1 ? options.bus : 0
 
   /** Seconds until each echo, at the tempo now. */
   const seconds = () => Math.min(MAX_SECONDS, (RATES[rateIndex(rate)]!.beats * 60) / core.bpm)
@@ -113,10 +107,6 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
   return {
     input,
     output,
-    /** On a send bus: the core puts it between the mixer's send and return (see @loop/core). */
-    get sendEffect() {
-      return bus === null ? undefined : { bus, input, output }
-    },
     get mix() {
       return mix
     },
@@ -125,9 +115,6 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
     },
     get rate(): RateName {
       return rate
-    },
-    get bus(): Bus {
-      return bus
     },
     /** Seconds until each echo, at the tempo now. */
     get seconds() {
@@ -151,14 +138,7 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
       retime()
       ctx.changed()
     },
-    /** Move it into the main chain (null) or onto send bus 0 (A) or 1 (B). */
-    setBus(value: Bus) {
-      if (value === bus) return
-      bus = value
-      ctx.replug()
-      ctx.changed()
-    },
     /** Saved with the project. Comes back as `options` when the project loads. */
-    save: (): DelayOptions => ({ mix, feedback, rate, bus }),
+    save: (): DelayOptions => ({ mix, feedback, rate }),
   }
 })

@@ -1,11 +1,14 @@
 import {
-  planChain,
-  planChannels,
-  planSends,
-  planStages,
+  autoPatch,
+  checkCable,
   routeTrigger,
-  type ChainConnection,
-} from "./chain";
+  samePlug,
+  type Cable,
+  type CableCheck,
+  type PatchModule,
+  type Plug,
+  type Port,
+} from "./patch";
 import {
   createClock,
   type Clock,
@@ -35,12 +38,14 @@ import { render, toStyleSheet } from "./ui";
  */
 export interface CoreEventMap extends ClockEventMap {
   bpmchange: { bpm: number };
-  /** A module was added to the end of the chain. */
+  /** A module was added (at the end of the rack). */
   moduleadd: { module: AudioModule };
-  /** A module was removed from the chain. */
+  /** A module was removed (its cables first: a `cablechange` for each). */
   moduleremove: { module: AudioModule };
-  /** A module moved to a new place in the chain. `index` is its new place (0 = first). */
+  /** A module moved to a new place in the rack. `index` is its new place (0 = first). */
   modulemove: { module: AudioModule; index: number };
+  /** A cable was plugged in (`connected: true`) or taken out (false). See patch.ts. */
+  cablechange: { cable: Cable; connected: boolean };
   /** A module's saved state changed (the module called `ctx.changed()`). */
   modulechange: { module: AudioModule };
 }
@@ -70,14 +75,8 @@ export interface CoreOptions extends ClockOptions {
 export interface Core {
   readonly context: BaseAudioContext;
   /**
-   * Start of the audio chain. Sound connected here flows through every module, in order.
-   * Nothing is connected yet (later, for example, a microphone).
-   */
-  readonly input: GainNode;
-  /**
-   * Where the sound goes to the speakers: after the end of the audio chain and the output stages
-   * (see `outputStage` in module.ts; Master has one, with the master volume). The core leaves its
-   * volume at 1: it plays the sound as loud as it gets it.
+   * The speakers. A module plays into them with `speakerOutput` (Master), not with a cable. The
+   * core leaves its volume at 1: it plays the sound as loud as it gets it.
    */
   readonly output: GainNode;
   readonly events: Emitter<CoreEventMap>;
@@ -119,18 +118,36 @@ export interface Core {
    * rewinds.) Call this from a user action (like `start`).
    */
   rewind(): Promise<void>;
-  /** Set up a module and put it at the end of the audio chain (see chain.ts). */
+  /**
+   * Set up a module and put it at the end of the rack. It has no cables yet: call
+   * `autoPatch(module)` to give it the usual ones, or `connect()` your own.
+   * Throws if the definition is `unique` and one is already in the core (see `canAdd`).
+   */
   add<Options, Result extends ModuleSetupResult>(
     definition: AudioModuleDefinition<Options, Result>,
     ...options: OptionsArg<Options>
   ): AudioModule<Result>;
-  /** Take a module out of the audio chain and run its clean-up. */
+  /** False if the definition is `unique` and one is already in the core. */
+  canAdd(definition: AudioModuleDefinition<any, any>): boolean;
+  /** Take out the module's cables, then remove the module and run its clean-up. */
   remove(module: AudioModule): void;
   /**
-   * Move a module to a new place in the audio chain (0 = first). The sound then flows through
-   * the modules in the new order. `modules` follows the same order.
+   * Move a module to a new place in the rack (0 = first). `modules` follows the same order.
+   * Only the order changes: the cables stay where they are.
    */
   move(module: AudioModule, index: number): void;
+  /** The cables, in the order they were plugged in. */
+  readonly cables: readonly Cable[];
+  /** A module's jacks: inputs first, then outputs. */
+  ports(module: string): readonly Port[];
+  /** Can a cable join these two jacks? (In any order.) If not, `reason` says why, for the user. */
+  canConnect(a: Plug, b: Plug): CableCheck;
+  /** Plug in a cable between two jacks (in any order). Returns the cable, or null if it cannot be. */
+  connect(a: Plug, b: Plug): Cable | null;
+  /** Take a cable out. */
+  disconnect(cable: Cable): void;
+  /** Give a module the usual cables, from the modules above it (see autoPatch in patch.ts). */
+  autoPatch(module: AudioModule): void;
   /** Stop, remove all modules and close the audio context. */
   dispose(): Promise<void>;
 }
@@ -138,7 +155,6 @@ export interface Core {
 export function createCore(options: CoreOptions = {}): Core {
   const context =
     options.context ?? new AudioContext({ latencyHint: "interactive" });
-  const input = new GainNode(context);
   const output = new GainNode(context);
   output.connect(context.destination);
 
@@ -180,25 +196,26 @@ export function createCore(options: CoreOptions = {}): Core {
     }
   });
 
-  // The chain ends at `chainEnd`, then the output stages (see planStages), then the output.
-  const chainEnd = new GainNode(context);
-
   const modules = new Map<string, AudioModule>();
   const cleanups = new Map<string, () => void>();
 
-  // The audio chain (see chain.ts). Each module gets an out jack. The modules are in the
-  // chain in the order of `modules` (the order they were added).
-  const jacks = new Map<string, GainNode>();
-  let cables: ChainConnection<AudioNode>[] = [];
+  // The patch (see patch.ts): each module's jacks, and the cables between them.
+  const patchModules = new Map<string, PatchModule & { nodes: Map<string, readonly AudioNode[]> }>();
+  let cables: Cable[] = [];
+  let cableCount = 0;
+  /** The audio connections each cable made, to undo them when it is taken out. */
+  const wired = new Map<string, (readonly [AudioNode, AudioNode])[]>();
+  const allPatchModules = () => [...patchModules.values()];
+  const nodesOf = (plug: Plug): readonly AudioNode[] => patchModules.get(plug.module)?.nodes.get(plug.port) ?? [];
 
-  // Triggers (see Trigger in module.ts) flow down the chain like sound: a module's triggers
-  // only reach the modules after it, in order, and a module on the way can change them.
+  // Triggers (see Trigger in module.ts) go along the trigger cables, from a module's trigger out to
+  // the trigger in of each module plugged into it. A module on the way can change them.
   // Each module's trigger listeners and pass-through change, by module id.
   const triggerListeners = new Map<string, ((trigger: Trigger) => void)[]>();
   const triggerPasses = new Map<string, (trigger: Trigger) => Trigger | null>();
   const sendTrigger = (from: string, trigger: Trigger) =>
     routeTrigger(
-      [...modules.keys()],
+      cables,
       from,
       trigger,
       (id) => ({
@@ -209,60 +226,75 @@ export function createCore(options: CoreOptions = {}): Core {
       reportError,
     );
 
-  /** Unplug the old cables and plug in the new ones. Only touches cables that the core made. */
-  const rewire = () => {
-    for (const [from, to] of cables) {
+  const connect = (a: Plug, b: Plug): Cable | null => {
+    const check = checkCable(allPatchModules(), cables, a, b);
+    if (!check.ok) return null;
+    const cable: Cable = { id: `cable-${++cableCount}`, from: check.from, to: check.to };
+    // Channels: channel k to channel k. Audio: one node to one node. Triggers: no sound.
+    const from = nodesOf(cable.from);
+    const to = nodesOf(cable.to);
+    const pairs = from.slice(0, to.length).map((node, k) => [node, to[k]!] as const);
+    for (const [node, target] of pairs) node.connect(target);
+    wired.set(cable.id, pairs);
+    cables = [...cables, cable];
+    events.emit("cablechange", { cable, connected: true });
+    return cable;
+  };
+
+  const disconnect = (cable: Cable) => {
+    const found = cables.find((other) => other.id === cable.id);
+    if (!found) return;
+    for (const [node, target] of wired.get(found.id) ?? []) {
       try {
-        from.disconnect(to);
+        node.disconnect(target);
       } catch {
         // Already gone, for example a removed module disconnected its own output.
       }
     }
-    const slots = [...modules.values()].map((module) => {
-      // On a send bus (see sendEffect): not in the main chain, the sound goes past it.
-      const sendEffect = module.sendEffect;
-      return {
-        input: sendEffect ? undefined : module.input,
-        output: sendEffect ? undefined : module.output,
-        channelOutputs: module.channelOutputs,
-        channelInputs: module.channelInputs,
-        sendOutputs: module.sendOutputs,
-        returnInputs: module.returnInputs,
-        sendEffect,
-        jack: jacks.get(module.id)!,
-      };
-    });
-    const stages = [...modules.values()].flatMap((module) =>
-      module.outputStage ? [module.outputStage] : [],
-    );
-    // The main chain, the channel cables, the send cables and the output stages (see chain.ts).
-    cables = [
-      ...planChain<AudioNode>(input, slots, chainEnd),
-      ...planChannels<AudioNode>(slots),
-      ...planSends<AudioNode>(slots),
-      ...planStages<AudioNode>(chainEnd, stages, output),
-    ];
-    for (const [from, to] of cables) from.connect(to);
+    wired.delete(found.id);
+    cables = cables.filter((other) => other !== found);
+    events.emit("cablechange", { cable: found, connected: false });
   };
-  // No modules yet: the chain goes straight to the output.
-  rewire();
+
+  /** A module's jacks, from the audio nodes it has (see ModuleSetupResult in module.ts). */
+  const patchModuleOf = (id: string, result: ModuleSetupResult) => {
+    const ports: Port[] = [];
+    const nodes = new Map<string, readonly AudioNode[]>();
+    const port = (portId: string, label: string, kind: Port["kind"], direction: Port["direction"], list: readonly AudioNode[]) => {
+      ports.push({ id: portId, label, kind, direction });
+      nodes.set(portId, list);
+    };
+    const letter = (bus: number) => String.fromCharCode(97 + bus);
+    const channels = (list: readonly AudioNode[]) => `Ch 1–${list.length}`;
+    const passes = triggerPasses.has(id);
+    if (triggerListeners.has(id) || passes) port("trigger-in", "Trig", "trigger", "in", []);
+    if (result.channelInputs?.length) port("channels-in", channels(result.channelInputs), "channels", "in", result.channelInputs);
+    if (result.input) port("in", "In", "audio", "in", [result.input]);
+    result.returnInputs?.forEach((node, bus) => port(`return-${letter(bus)}`, `Rtn ${letter(bus).toUpperCase()}`, "audio", "in", [node]));
+    if (result.output) port("out", "Out", "audio", "out", [result.output]);
+    result.sendOutputs?.forEach((node, bus) => port(`send-${letter(bus)}`, `Snd ${letter(bus).toUpperCase()}`, "audio", "out", [node]));
+    if (result.channelOutputs?.length) port("channels-out", channels(result.channelOutputs), "channels", "out", result.channelOutputs);
+    if (result.triggerOutput || passes) port("trigger-out", "Trig", "trigger", "out", []);
+    return { id, ports, nodes, routes: result.routes, end: !!result.speakerOutput };
+  };
 
   const remove = (module: AudioModule) => {
     const cleanup = cleanups.get(module.id);
     if (!cleanup) return;
+    for (const cable of cables) {
+      if (cable.from.module === module.id || cable.to.module === module.id) disconnect(cable);
+    }
     modules.delete(module.id);
+    patchModules.delete(module.id);
     cleanups.delete(module.id);
-    rewire();
-    jacks.get(module.id)?.disconnect();
-    jacks.delete(module.id);
     module.output?.disconnect();
+    module.speakerOutput?.disconnect(output);
     cleanup();
     events.emit("moduleremove", { module });
   };
 
   const core: Core = {
     context,
-    input,
     output,
     events,
     clock,
@@ -303,6 +335,9 @@ export function createCore(options: CoreOptions = {}): Core {
       clock.rewind();
     },
     add(definition, ...[moduleOptions]) {
+      if (!core.canAdd(definition)) {
+        throw new Error(`Only one ${definition.name} at a time.`);
+      }
       const id = crypto.randomUUID();
       const controller = new AbortController();
       const disposers: (() => void)[] = [];
@@ -328,12 +363,9 @@ export function createCore(options: CoreOptions = {}): Core {
           if (!controller.signal.aborted) triggerPasses.set(id, change);
         },
         changed: () => {
-          // Only after setup is done and while the module is still in the chain.
+          // Only after setup is done and while the module is still in the core.
           if (modules.get(id) === module)
             events.emit("modulechange", { module });
-        },
-        replug: () => {
-          if (modules.get(id) === module) rewire();
         },
       };
 
@@ -376,9 +408,9 @@ export function createCore(options: CoreOptions = {}): Core {
         },
       });
 
-      jacks.set(id, new GainNode(context));
+      patchModules.set(id, patchModuleOf(id, result));
+      result.speakerOutput?.connect(output);
       modules.set(id, module);
-      rewire();
       cleanups.set(id, () => {
         controller.abort();
         triggerListeners.delete(id);
@@ -388,6 +420,8 @@ export function createCore(options: CoreOptions = {}): Core {
       events.emit("moduleadd", { module });
       return module;
     },
+    canAdd: (definition) =>
+      !definition.unique || ![...modules.values()].some((module) => module.type === definition.type),
     remove,
     move(module, index) {
       if (modules.get(module.id) !== module) return;
@@ -398,8 +432,23 @@ export function createCore(options: CoreOptions = {}): Core {
       // A Map keeps the order things were added in, so add them again in the new order.
       modules.clear();
       for (const other of order) modules.set(other.id, other);
-      rewire();
       events.emit("modulemove", { module, index: to });
+    },
+    get cables() {
+      return cables;
+    },
+    ports: (id) => patchModules.get(id)?.ports ?? [],
+    canConnect: (a, b) => checkCable(allPatchModules(), cables, a, b),
+    connect,
+    disconnect,
+    autoPatch(module) {
+      const order = [...modules.keys()].map((id) => patchModules.get(id)!);
+      const change = autoPatch(order, cables, module.id);
+      for (const old of change.remove) {
+        const cable = cables.find((c) => samePlug(c.from, old.from) && samePlug(c.to, old.to));
+        if (cable) disconnect(cable);
+      }
+      for (const { from, to } of change.add) connect(from, to);
     },
     async dispose() {
       clock.halt();

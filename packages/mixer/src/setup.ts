@@ -34,9 +34,9 @@ const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : []
 const booleanOr = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback)
 
 /**
- * Mixer: it takes in the 6 channels of the modules before it (for example a sampler) and mixes them:
+ * Mixer: it takes in 6 channels (one channels cable, for example from a sampler) and mixes them:
  *
- *   channel 1 ─▶ volume 1 ─┬▶ main on/off ─────────────────────────────────────────▶ mix ─▶ output (the main chain)
+ *   channel 1 ─▶ volume 1 ─┬▶ main on/off ─────────────────────────────────────────▶ mix ─▶ output
  *   ...                    ├▶ send A on/off ─▶ send bus A ─▶ (an effect on send A) ─▶ return A ─┤
  *                          └▶ send B on/off ─▶ send bus B ─▶ (an effect on send B) ─▶ return B ─┘
  *
@@ -44,10 +44,9 @@ const booleanOr = (value: unknown, fallback: boolean) => (typeof value === 'bool
  *   volume (post-fader), so a quieter channel also sends less.
  * - Main off: the channel only goes to its sends. Then only the effect (wet) is heard, not the
  *   channel itself (dry).
- * - The send buses (sendOutputs) and the returns (returnInputs): an effect module after the mixer
- *   on a send bus (for example a delay; see `sendEffect` in @loop/core) takes that bus in, and
- *   plays into its return. Without one, the return is silent.
- * The sound from before the mixer on the main chain goes past it, unchanged.
+ * - The send buses (sendOutputs: jacks Snd A, Snd B) and the returns (returnInputs: Rtn A, Rtn B):
+ *   plug a send into an effect (for example a delay), and the effect's output into the return.
+ *   Without one, the return is silent.
  */
 export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   const { audio } = ctx
@@ -96,6 +95,15 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
     sendOutputs: sendBuses as readonly AudioNode[],
     /** The returns (A, B): the effect on that send bus plays into it. */
     returnInputs: returnInputs as readonly AudioNode[],
+    /**
+     * Inside the mixer, the channels reach the output and the sends; a return only reaches the
+     * output. So send A ─▶ delay ─▶ return A is not a loop (see routes in @loop/core).
+     */
+    routes: [
+      ['channels-in', 'out'],
+      ...BUS_NAMES.map((bus) => [`return-${bus.toLowerCase()}`, 'out'] as const),
+      ...BUS_NAMES.map((bus) => ['channels-in', `send-${bus.toLowerCase()}`] as const),
+    ],
 
     /** The volume of each channel, 0 to 1. */
     get volumes(): readonly number[] {

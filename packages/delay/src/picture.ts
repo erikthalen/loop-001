@@ -10,8 +10,8 @@
  *   └───────────────────────────────────────────┘
  *
  * It is honest, not only a picture: the hit is as tall as the dry level, the first echo as the
- * wet level, and each echo after it is `feedback` times the one before. On a send bus with no
- * mixer before it, no sound comes in: it is dim, and says so.
+ * wet level, and each echo after it is `feedback` times the one before. With nothing plugged into
+ * its input, no sound comes in: it is dim, and says so.
  *
  * The rate and the time roll like a tape counter when they change: the time on digit wheels (an
  * odometer, see createOdometer in @loop/ui), the rate on one drum with all the rates printed on it,
@@ -45,7 +45,7 @@ export interface PictureState {
   dry: number
   wet: number
   feedback: number
-  /** False: on a send bus, but no mixer before it. */
+  /** False: nothing is plugged into its input. */
   connected: boolean
 }
 
@@ -165,7 +165,7 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
   g.globalAlpha = 1
 
   if (!state.connected) {
-    const text = 'NO MIXER BEFORE IT'
+    const text = 'NOTHING PLUGGED IN'
     const y = (TOP + BASE) / 2
     g.font = `500 10px ${c.font}`
     g.textAlign = 'center'

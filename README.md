@@ -4,12 +4,12 @@ pnpm monorepo.
 
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
-- `packages/master` – `@loop/master`: play / stop / rewind and the master volume; an output stage after the chain that records the sound and plays it backwards while it rewinds
+- `packages/master` – `@loop/master`: play / stop / rewind and the master volume; the end of the sound (only one at a time), it plays straight into the speakers; it records the sound and plays it backwards while it rewinds
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
-- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules after it
-- `packages/mixer` – `@loop/mixer`: mixes the 6 channels of a sampler before it: a volume and two sends (A, B) per channel, and two send buses (send and return) for effects
-- `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); in the chain, or on send A or B of a mixer before it
+- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules plugged into it
+- `packages/mixer` – `@loop/mixer`: mixes 6 channels (for example a sampler's): a volume, a main switch and two sends (A, B) per channel, and two send buses (send and return) for effects
+- `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); usually on a send and return of the mixer
 - `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
@@ -94,52 +94,40 @@ All audio runs on the page (`app/src/client.ts`). A service worker has no Web Au
 ```
 UI (client.ts) ──methods──▶ Core ──events──▶ modules (Metronome, Low pass, ...)
                              │                   │
-                         AudioContext ◀── audio nodes (the audio chain, below)
+                         AudioContext ◀── audio nodes (connected by cables, below)
 ```
 
-**The audio chain** (`packages/core/src/chain.ts`): like cables between hardware boxes. Sound flows
-through the modules in the order they were added, then to the speakers:
+**Cables** (`packages/core/src/patch.ts`): modules are connected like hardware boxes, with cables from
+an output jack of one module to an input jack of another. Nothing else connects them: a module with no
+cables gets no sound and sends none. The speakers have no jack: Master plays straight into them
+(`speakerOutput` in what `setup` returns), and only one Master can be in the core (`unique` in its definition, `core.canAdd`).
 
 ```
-core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ output stages ─▶ core.output ─▶ speakers
+sequencer ─trig─▶ sampler ═ch 1–6═▶ mixer ─out─▶ low pass ─out─▶ master ▶ speakers
+                                     │snd a      ▲rtn a
+                                     └─▶ delay ──┘
 ```
 
-| Module has       | Example    | The sound from before ...                  | The module's own sound |
-| ---------------- | ---------- | ------------------------------------------ | ---------------------- |
-| input and output | Low pass   | goes through the module                    | goes on                |
-| only output      | Metronome  | goes past the module                       | is mixed in            |
-| only input       | VU meter   | goes to the module, and also past it       | (none)                 |
+The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 
-So a filter only changes the modules that come before it. `core.move(module, index)` changes the order
-(the rack calls it when you drag a module by its handle; dnd-kit, `@dnd-kit/dom`). `core.input` is the start of the chain
-(nothing is connected to it yet; later, for example, a microphone).
+| Setup returns              | Jack(s)                   | Kind     |
+| -------------------------- | ------------------------- | -------- |
+| `input` / `output`         | In / Out                  | audio    |
+| `channelInputs` / `channelOutputs` | Ch 1–6 (one jack, all channels) | channels |
+| `sendOutputs` / `returnInputs`     | Snd A, Snd B / Rtn A, Rtn B     | audio    |
+| `ctx.onTrigger(...)` / `triggerOutput: true` | Trig in / Trig out  | trigger  |
 
-**Output stages** (`outputStage: { input, output }` in what `setup` returns): a module can also put a stage
-after the end of the chain, before `core.output`. All the sound goes through it, wherever the module is in
-the rack. Master uses one for its tape (the rewind sound) and the master volume. Several stages go one after
-the other, in chain order (`planStages` in `chain.ts`). `core.output` stays at volume 1.
-
-**Triggers** flow down the chain too, like MIDI or CV cables. A trigger says "play channel X at time T".
-A module sends one with `ctx.send({ channel, time })`. Only the modules **after** it get it, with
-`ctx.onTrigger(listener)`. Example: the sequencer sends a trigger for each step that is on, and a sampler
-after it plays that channel. A sampler before the sequencer gets nothing.
-A trigger can carry a `volume` (0 to 1, like MIDI velocity). A module on the way can change the triggers
-that pass it with `ctx.passTrigger(change)` (return null to stop one).
-
-**Channels** are separate sound cables next to the main chain. A module can send its sound per channel
-(`channelOutputs`, for example the sampler), and a later module can take them in (`channelInputs`, the
-mixer): channel 1 to channel 1, and so on. If no module after it takes them, the channels join the main
-chain at the module that sent them, so they are still heard. See `planChannels` in `packages/core/src/chain.ts`.
-
-**Sends** work like the aux sends of a hardware mixer. A module can offer send buses (`sendOutputs`, and
-`returnInputs` for the way back; the mixer has A and B). An effect after it can sit on a send bus instead of
-in the main chain (`sendEffect: { bus, input, output }`, for example the delay): send bus k of the closest
-module before it with one goes into the effect, and the effect plays into that module's return k. The main
-chain goes past the effect. An effect that changes its bus calls `ctx.replug()`. See `planSends` in `chain.ts`.
+- `core.connect(a, b)`, `core.disconnect(cable)`, `core.cables`, and the `cablechange` event.
+- A cable only joins an output to an input of the same kind. An output can feed many inputs; an input can take many outputs (they add up).
+- **No loops** (`core.canConnect` says why not): Web Audio makes a loop silent. A module says which inputs reach which outputs (`routes`; default: all of them). The mixer's returns only reach its output, so send → delay → return is fine.
+- **Triggers** ("play channel X at time T", like MIDI or CV) go along trigger cables: `ctx.send({ channel, time })` reaches every module plugged into the sender's trigger out, with `ctx.onTrigger(listener)`. A module on the way can change them with `ctx.passTrigger(change)` (return null to stop one).
+- **Channels**: a channels cable carries channel 1 to channel 1, and so on (sampler → mixer).
+- `core.autoPatch(module)` gives a new module the usual cables, from the modules above it in the rack: an effect goes in after the module above it, a meter listens to it, a sound source plays into Master. The app calls it when you add a module.
+- `core.move(module, index)` only changes the rack order. The cables stay.
 
 - **Commands go in as function calls:** `core.start()`, `core.stop()`, `core.setBpm(90)`, `core.add(module)`.
 - **News goes out as events:** `core.events.on('beat', ...)`. The event bus (`createEmitter` in `packages/core/src/events.ts`) is a typed wrapper around the browser's `EventTarget` + `CustomEvent`.
-- **Events:** `start`, `stop`, `bpmchange`, `step` (every 16th note), `beat`, `moduleadd`, `moduleremove`, `modulemove`, `modulechange`.
+- **Events:** `start`, `stop`, `bpmchange`, `step` (every 16th note), `beat`, `moduleadd`, `moduleremove`, `modulemove`, `modulechange`, `cablechange`.
 
 ### The app: adding and removing modules
 
@@ -147,11 +135,12 @@ chain goes past the effect. An effect that changes its bus calls `ctx.replug()`.
 | --------------------------- | -------------------------------------------------------------------- |
 | `app/src/modules.ts`        | The list of modules a user can add. **Add new modules here.**        |
 | `app/src/module-picker.ts`  | The "Add" list. A native popover (`popovertarget` on the Add button). |
-| `app/src/rack.ts`           | Shows the core's modules in chain order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it in the chain. |
+| `app/src/rack.ts`           | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it. |
+| `app/src/patch-lane.ts`     | The jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
 | `app/src/client.ts`         | Connects the buttons, the core, the picker and the rack.             |
 
-The core owns the chain. The page only shows it:
-Add → `core.add(definition)` → core sends `moduleadd` → the rack mounts the UI.
+The core owns the modules and the cables. The page only shows them:
+Add → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the lane draws the cables.
 Remove → `module.remove()` → core sends `moduleremove` → the rack takes the UI away.
 
 Remove mode: modules jiggle and show a "−" badge. A full-size button lies over each module, so a click removes it.
@@ -169,7 +158,7 @@ Everything is saved in the browser. There is no server.
 | `app/src/project-menu.ts`    | The "Projects" menu: New, Import, Export, open, delete. And the name and "Saved" status. |
 | `packages/core/src/project.ts` | `serializeProject(core)`, `parseProject(data)`, `restoreProject(core, data, modules)`. |
 
-Saved data (`ProjectData`): `{ version: 1, bpm, modules: [{ type, state }] }`. If the format changes, raise `version` and convert old data in `parseProject`.
+Saved data (`ProjectData`): `{ version: 2, bpm, modules: [{ type, state }], cables: [{ from: { module, port }, to: { module, port } }] }`. A cable's `module` is its place in `modules`. A version 1 project (from before cables) reads without `cables`; the app gives it cables that sound like its old chain (`upgradeProject` in `app/src/modules.ts`). If the format changes, raise `version` and convert old data in `parseProject`.
 
 **A module saves its own settings:**
 
