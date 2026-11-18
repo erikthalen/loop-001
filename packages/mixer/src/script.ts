@@ -30,6 +30,12 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     slider(input, (value) => module.setReturnLevel(bus, value), () => module.returnLevels[bus]!)
   }
 
+  // The main checkboxes: this channel goes to the mixer's output, or only to its sends.
+  for (const input of all('[name=main]')) {
+    const channel = Number(input.dataset.channel)
+    input.addEventListener('change', () => module.setMain(channel, input.checked), { signal })
+  }
+
   // The send checkboxes: send this channel to this send bus, or not.
   for (const input of all('[name=send]')) {
     const bus = Number(input.dataset.bus)

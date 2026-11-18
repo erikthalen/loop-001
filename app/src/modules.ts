@@ -14,10 +14,11 @@ export const availableModules: readonly AnyAudioModuleDefinition[] = [master, me
 /**
  * A new project starts with this chain: Master (play / stop and the volume), the sequencer sends
  * triggers to the sampler, the mixer mixes the sampler's channels (a volume and a send each), the
- * sound goes through the low pass filter, and the VU meter shows it.
+ * delay echoes on the mixer's send A, the sound goes through the low pass filter, and the VU meter
+ * shows it.
  */
 export const newProject: ProjectData = {
   version: 1,
   bpm: 120,
-  modules: [master, sequencer, sampler, mixer, lpFilter, vuMeter].map(({ type }) => ({ type })),
+  modules: [master, sequencer, sampler, mixer, delay, lpFilter, vuMeter].map(({ type }) => ({ type })),
 }

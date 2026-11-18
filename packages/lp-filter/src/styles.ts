@@ -11,6 +11,8 @@ export const styles = css`
 
   .display {
     --loop-primary: var(--blue);
+
+    gap: 8px;
   }
 
   /*
@@ -61,6 +63,15 @@ export const styles = css`
   .slope {
     display: flex;
     gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Where the filter is: insert, send a, send b. Spread over the width, like the delay. */
+  .route {
+    display: flex;
+    justify-content: space-between;
     margin: 0;
     padding: 0;
     border: 0;

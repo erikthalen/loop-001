@@ -62,6 +62,22 @@ export const template = defineModuleTemplate<typeof setup>(
         />
       </div>
 
+      <!-- Where the filter is. On a send bus, the main chain goes past it. -->
+      <fieldset class="route">
+        <legend class="sr-only">Where the filter is</legend>
+        <label class="field">
+          <input name="bus" type="radio" value="insert" ${module.bus === null ? "checked" : ""} />
+          <span>insert</span>
+        </label>
+        <label class="field">
+          <input name="bus" type="radio" value="0" ${module.bus === 0 ? "checked" : ""} />
+          <span>send a</span>
+        </label>
+        <label class="field">
+          <input name="bus" type="radio" value="1" ${module.bus === 1 ? "checked" : ""} />
+          <span>send b</span>
+        </label>
+      </fieldset>
     </section>
   `,
 );

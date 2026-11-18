@@ -10,6 +10,8 @@ export const BUS_NAMES = ['A', 'B'] as const
 export interface MixerOptions {
   /** One volume per channel (channel 1 first), 0 to 1. Default: all 1. */
   volumes?: number[]
+  /** Per channel: does the channel go to the mixer's output? Off: only to its sends. Default: all on. */
+  mains?: boolean[]
   /** Per send bus, per channel: is the channel sent to that bus? Default: all off. */
   sends?: boolean[][]
   /** Per send bus: how much of the sent channels goes to it, 0 to 1. Default: all 1. */
@@ -29,16 +31,19 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value))
 const numberOr = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? clamp(value) : fallback
 const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
+const booleanOr = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback)
 
 /**
  * Mixer: it takes in the 6 channels of the modules before it (for example a sampler) and mixes them:
  *
- *   channel 1 ─▶ volume 1 ─┬───────────────────────────────────────────▶ mix ─▶ output (the main chain)
+ *   channel 1 ─▶ volume 1 ─┬▶ main on/off ─────────────────────────────────────────▶ mix ─▶ output (the main chain)
  *   ...                    ├▶ send A on/off ─▶ send bus A ─▶ (an effect on send A) ─▶ return A ─┤
  *                          └▶ send B on/off ─▶ send bus B ─▶ (an effect on send B) ─▶ return B ─┘
  *
- * - Each channel has a volume, and a send switch per bus. The sends are after the volume
- *   (post-fader), so a quieter channel also sends less.
+ * - Each channel has a volume, a main switch, and a send switch per bus. The sends are after the
+ *   volume (post-fader), so a quieter channel also sends less.
+ * - Main off: the channel only goes to its sends. Then only the effect (wet) is heard, not the
+ *   channel itself (dry).
  * - The send buses (sendOutputs) and the returns (returnInputs): an effect module after the mixer
  *   on a send bus (for example a delay; see `sendEffect` in @loop/core) takes that bus in, and
  *   plays into its return. Without one, the return is silent.
@@ -57,6 +62,8 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   const savedReturnLevels = Array.isArray(options.returnLevels) ? options.returnLevels : [old.return]
 
   const volumes = Array.from({ length: CHANNELS }, (_, i) => numberOr(savedVolumes[i], 1))
+  const savedMains = listOf(options.mains)
+  const mains = Array.from({ length: CHANNELS }, (_, i) => booleanOr(savedMains[i], true))
   const sends = Array.from({ length: BUSES }, (_, bus) =>
     Array.from({ length: CHANNELS }, (_, i) => savedSends[bus]?.[i] === true),
   )
@@ -68,11 +75,12 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   const sendBuses = sendLevels.map((level) => new GainNode(audio, { gain: level }))
   const returnInputs = returnLevels.map((level) => new GainNode(audio, { gain: level }))
   for (const input of returnInputs) input.connect(mix)
-  // Per channel: its volume (the input), then the mix, and a send switch to each send bus.
+  // Per channel: its volume (the input), then a main switch to the mix, and a send switch to each send bus.
   const channelInputs = volumes.map((volume) => new GainNode(audio, { gain: volume }))
+  const mainSwitches = mains.map((on) => new GainNode(audio, { gain: on ? 1 : 0 }))
   const sendSwitches = sends.map((bus) => bus.map((on) => new GainNode(audio, { gain: on ? 1 : 0 })))
   channelInputs.forEach((input, i) => {
-    input.connect(mix)
+    input.connect(mainSwitches[i]!).connect(mix)
     sendSwitches.forEach((switches, bus) => input.connect(switches[i]!).connect(sendBuses[bus]!))
   })
 
@@ -97,6 +105,16 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
       if (!isChannel(channel)) return
       volumes[channel] = clamp(value)
       glide(channelInputs[channel]!.gain, volumes[channel]!)
+      ctx.changed()
+    },
+    /** Per channel: does the channel go to the mixer's output? */
+    get mains(): readonly boolean[] {
+      return mains
+    },
+    setMain(channel: number, on: boolean) {
+      if (!isChannel(channel)) return
+      mains[channel] = on
+      glide(mainSwitches[channel]!.gain, on ? 1 : 0)
       ctx.changed()
     },
     /** Per bus, per channel: is the channel sent to that bus? */
@@ -132,6 +150,7 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
     /** Saved with the project. Comes back as `options` when the project loads. */
     save: (): MixerOptions => ({
       volumes: [...volumes],
+      mains: [...mains],
       sends: sends.map((bus) => [...bus]),
       sendLevels: [...sendLevels],
       returnLevels: [...returnLevels],

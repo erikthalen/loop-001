@@ -42,4 +42,8 @@ export const styles = css`
     width: 0;
     min-width: 0;
   }
+
+  .rewind {
+    --loop-primary: var(--red);
+  }
 `;

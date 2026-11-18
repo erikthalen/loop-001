@@ -31,7 +31,7 @@ export const template = defineModuleTemplate<typeof setup>(
           />
         </label>
         <button
-          class="button small"
+          class="rewind button small"
           name="rewind"
           type="button"
           aria-pressed="${core.rewinding}"

@@ -10,16 +10,20 @@ export const styles = css`
     display: inline-block;
   }
 
+  .display {
+    padding-bottom: 9px;
+  }
+
   .strips {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    grid-template-rows: auto auto auto auto;
+    grid-template-columns: repeat(11, 1fr);
+    grid-template-rows: auto auto auto auto auto;
     gap: 3px 0px;
   }
 
   .strip {
     --loop-primary: var(--c);
-    grid-row: 1 / span 4;
+    grid-row: 1 / span 5;
     display: grid;
     grid-template-rows: subgrid;
     justify-items: center;
@@ -31,22 +35,40 @@ export const styles = css`
 
   /* A send bus: only the slider and the name. A line before each bus (A, B). */
   .strip.bus {
-    --c: var(--color-neutral-300);
+    --c: var(--color-neutral-700);
 
     color: var(--ink);
 
     text-transform: uppercase;
 
+    grid-column: span 2;
+    grid-template-columns: 1fr 1fr;
+
+    /* In line with the channel sliders (rows 1 to 3 are the channel checkboxes). */
     input[type="range"] {
-      grid-row: span 2;
-      height: 111px;
+      grid-row: 2 / span 3;
+      height: 127px;
     }
 
     .name {
       font-size: 9px;
-      letter-spacing: 0.05em;
       font-weight: 600;
     }
+
+    .bus-name {
+      grid-column: span 2;
+      text-align: center;
+    }
+  }
+
+  .name {
+    text-box: trim-both cap alphabetic;
+  }
+
+  .master-name {
+    font-size: 9px;
+    font-weight: 600;
+    text-box: trim-both cap alphabetic;
   }
 
   /* The name of a bus: in the row of its checkboxes, under its two sliders. */
@@ -58,10 +80,6 @@ export const styles = css`
 
   input[type="range"].vertical {
     height: 95px;
-  }
-
-  .name {
-    line-height: 13px;
   }
 
   /* The send checkboxes: in the channel's color. */

@@ -15,7 +15,8 @@
  *
  * The rate and the time roll like a tape counter when they change: the time on digit wheels (an
  * odometer, see createOdometer in @loop/ui), the rate on one drum with all the rates printed on it,
- * in order. The script turns them (they glide to the new value).
+ * in order. Only the end of the rate that changes rolls ("1/" stays). The script turns them (they
+ * glide to the new value).
  */
 
 import type { OdometerWheel } from '@loop/ui'
@@ -101,8 +102,20 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
   const drum = Math.min(RATES.length - 1, Math.max(0, state.rateDrum))
   const shown = Math.floor(drum)
   const turn = drum - shown
-  g.fillText(RATES[shown]!.name.toUpperCase(), 0, TEXT_Y - turn * ROW)
-  if (turn > 0) g.fillText(RATES[shown + 1]!.name.toUpperCase(), 0, TEXT_Y + (1 - turn) * ROW)
+  const from = RATES[shown]!.name.toUpperCase()
+  if (turn > 0) {
+    // Only the end that changes rolls: from 1/16 to 1/8T, "1/" stays and "16" rolls to "8T".
+    const to = RATES[shown + 1]!.name.toUpperCase()
+    let same = 0
+    while (same < from.length && from[same] === to[same]) same++
+    const still = from.slice(0, same)
+    const x = g.measureText(still).width
+    g.fillText(still, 0, TEXT_Y)
+    g.fillText(from.slice(same), x, TEXT_Y - turn * ROW)
+    g.fillText(to.slice(same), x, TEXT_Y + (1 - turn) * ROW)
+  } else {
+    g.fillText(from, 0, TEXT_Y)
+  }
   // The time: "MS" on the right, the digit wheels before it.
   g.textAlign = 'center'
   const charWidth = g.measureText('0').width

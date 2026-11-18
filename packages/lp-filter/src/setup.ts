@@ -9,9 +9,14 @@ export interface LowPassOptions {
   on?: boolean
   /** How steep the filter is, in dB per octave: 12 or 24. Default: 12. */
   slope?: Slope
+  /** In the main chain (null), or on send bus 0 (A) or 1 (B) of a mixer before it. Default: null. */
+  bus?: Bus
 }
 
 export type Slope = 12 | 24
+
+/** Where the filter is: in the main chain (`null`), or on send bus 0 (A) or 1 (B) of a mixer before it. */
+export type Bus = 0 | 1 | null
 
 export const MIN_FREQUENCY = 20
 export const MAX_FREQUENCY = 20_000
@@ -39,6 +44,9 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
  * On: wet is open, dry is closed. Off (bypass): the other way around.
  * 12 dB/oct: `second` is an all pass filter (it does not change the loudness).
  * 24 dB/oct: `second` is a low pass filter too. Two 12 dB/oct filters in a row make 24 dB/oct.
+ *
+ * It can be in the main chain, or on a send bus of a mixer before it (see `sendEffect` in
+ * @loop/core): then the mixer's send goes into `input`, and `output` plays into its return.
  */
 export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
   const { audio } = ctx
@@ -48,6 +56,7 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
   let resonance = typeof options.resonance === 'number' ? clamp(options.resonance, 0, MAX_RESONANCE) : 0
   let on = typeof options.on === 'boolean' ? options.on : true
   let slope: Slope = options.slope === 24 ? 24 : 12
+  let bus: Bus = options.bus === 0 || options.bus === 1 ? options.bus : null
 
   const input = new GainNode(audio)
   // For a low pass filter, Web Audio's Q is the resonance in dB.
@@ -86,6 +95,13 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
     inputAnalyser,
     /** The sound after the filter (or the bypass). */
     outputAnalyser,
+    /** On a send bus: the core puts it between the mixer's send and return (see @loop/core). */
+    get sendEffect() {
+      return bus === null ? undefined : { bus, input, output }
+    },
+    get bus(): Bus {
+      return bus
+    },
     get frequency() {
       return frequency
     },
@@ -120,6 +136,13 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
       dry.gain.setTargetAtTime(on ? 0 : 1, audio.currentTime, SMOOTHING)
       ctx.changed()
     },
+    /** Move it into the main chain (null) or onto send bus 0 (A) or 1 (B). */
+    setBus(value: Bus) {
+      if (value === bus) return
+      bus = value
+      ctx.replug()
+      ctx.changed()
+    },
     /**
      * The filter's curve: how loud each frequency comes out (1 = unchanged).
      * Fills `magnitudes` for the frequencies (Hz) in `frequencies`.
@@ -135,6 +158,6 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
       for (let i = 0; i < magnitudes.length; i++) magnitudes[i]! *= secondMagnitudes[i]!
     },
     /** Saved with the project. Comes back as `options` when the project loads. */
-    save: (): LowPassOptions => ({ frequency, resonance, on, slope }),
+    save: (): LowPassOptions => ({ frequency, resonance, on, slope, bus }),
   }
 })

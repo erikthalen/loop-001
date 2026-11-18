@@ -5,7 +5,7 @@ import { setup } from './setup'
 import { styles } from './styles'
 import { template } from './template'
 
-export type { LowPassOptions } from './setup'
+export type { Bus, LowPassOptions } from './setup'
 
 /** A low pass filter: lets the low sounds through and takes away the high ones. Shows the sound. */
 export const lpFilter = defineAudioModule({
