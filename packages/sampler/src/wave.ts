@@ -4,8 +4,8 @@
  *   ┌───────────────────────────────────────────┐
  *   │ 3 ● rec    0:00:48              [ PLAY ] │   channel, status, time counter, play button
  *   │            ////////                     │ │   level ticks; level meter on the right (●)
- *   │   ( reel )      ▶ / ■ / ●     ( reel )    │   reels: hub, notches, spokes, the tape on them
- *   │      •──○────── [head] ──────○──•         │   tape path: rollers and the tape head
+ *   │   ( reel )      ▶ / ■ / ●     ( reel )    │   reels: hub, spokes, rim ticks, the tape on them
+ *   │      ○──○────── [head] ──────○──○         │   tape path: rollers (they turn) and the tape head
  *   │ | | | | | | | | | | | | | | | | | | | | | | │   ticks: orange inside the cut, light outside it
  *   │ ▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪ │   the sound (cells)
  *   │ ───────────────────────────────────────── │   6 tracks: each channel's cut, in its color
@@ -52,9 +52,16 @@ const REEL_RING = 28
 /** The hub (light disc) and the tape on the reel, from the hub out to (almost) the ring. */
 const HUB = 12
 const MAX_TAPE = 14
-/** The tape head, in the middle under the reels. */
+/** The tape head, in the middle under the reels. Its top is where the tape runs over it. */
 const HEAD_X = WIDTH / 2
 const HEAD_Y = 62
+/** How far the tape runs outside a roller's line (it lies on the roller's edge), in px. */
+const ROLLER_TAPE = 1
+/**
+ * How fast the rollers turn, compared to the tape: slower than real, so the ticks are easy to
+ * follow (1 would be real speed).
+ */
+const ROLLER_SPIN = 0.25
 /** The ticks (they show the cut), the sound and the 6 tracks, from top to bottom. */
 const CUT_Y = 85
 /** Space between two ticks, in px. */
@@ -119,8 +126,13 @@ export interface WaveState {
   tape: number
   /** How far each reel has turned, in radians. */
   turns: readonly [left: number, right: number]
-  /** The time counter, in seconds. Not rounded: between two values, the digit wheels are turning. */
-  counter: number
+  /** How far the tape has moved past the rollers, in px (they turn with it). */
+  travel: number
+  /**
+   * The time counter's digit wheels (COUNTER_WHEELS, see createOdometer in @loop/ui): each one 0 to
+   * its size. Between two whole numbers, a wheel is turning.
+   */
+  counter: readonly number[]
   /** The level meter and the ticks under the counter: 0 to 1. */
   level: number
   /** The time in seconds (the rec dot blinks). */
@@ -141,6 +153,8 @@ const WHEELS: ({ unit: number; size: number } | null)[] = [
   { unit: 10, size: 10 },
   { unit: 1, size: 10 },
 ]
+/** The counter's wheels without the colons, in hundredths: for createOdometer in @loop/ui. */
+export const COUNTER_WHEELS = WHEELS.filter((wheel) => wheel !== null)
 /** The counter's digit height (one step of a wheel), in px. */
 const COUNTER_ROW = 15
 const COUNTER_Y = 10
@@ -174,9 +188,8 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   g.textAlign = 'center'
   g.textBaseline = 'middle'
   g.fillStyle = c.ink
-  // Like an odometer: the last wheel turns all the time. A wheel to its left only turns while all
-  // the wheels to its right roll over from 9 to 0, and then it moves on by one.
-  const hundredths = Math.max(0, state.counter * 100)
+  // Each wheel's place comes from the script (an odometer, see createOdometer in @loop/ui).
+  let wheelIndex = 0
   const charWidth = g.measureText('0').width
   let x = HEAD_X - (WHEELS.length * charWidth) / 2 + charWidth / 2
   g.save()
@@ -187,10 +200,9 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
     if (!wheel) {
       g.fillText(':', x, COUNTER_Y)
     } else {
-      const steps = hundredths / wheel.unit
-      const digit = Math.floor(steps) % wheel.size
-      const below = hundredths % wheel.unit
-      const turn = wheel.unit === 1 ? steps % 1 : Math.max(0, below - (wheel.unit - 1))
+      const place = state.counter[wheelIndex++] ?? 0
+      const digit = Math.floor(place) % wheel.size
+      const turn = place % 1
       // The digit moves up, and the next one comes in from below.
       g.fillText(String(digit), x, COUNTER_Y - turn * COUNTER_ROW)
       if (turn > 0) g.fillText(String((digit + 1) % wheel.size), x, COUNTER_Y + (1 - turn) * COUNTER_ROW)
@@ -219,25 +231,60 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   /** One reel. `mass` is how much tape is on it (0 to 1). Returns the tape's radius. */
   const reel = (x: number, mass: number, turn: number) => {
     const tape = tapeRadius(mass)
-    // The outer ring, and the tape wound on the reel.
+    /** A point on the reel: at an angle, at a distance from its middle. */
+    const at = (angle: number, r: number) => [x + Math.cos(angle) * r, REEL_Y + Math.sin(angle) * r] as const
+    // The tape wound on the reel. Faint rings: the windings.
+    g.fillStyle = c.line
+    circle(x, REEL_Y, tape)
+    g.fill()
+    g.strokeStyle = c.dim
+    g.lineWidth = 0.35
+    for (let r = HUB + 3; r < tape - 0.5; r += 2.5) {
+      circle(x, REEL_Y, r)
+      g.stroke()
+    }
+    g.lineWidth = 0.6
+    circle(x, REEL_Y, tape)
+    g.stroke()
+    // The flange: the outer ring, a thin ring inside it, and ticks between them that turn with the
+    // reel (a longer one every 3).
     g.strokeStyle = c.ink
     g.lineWidth = 1.2
     circle(x, REEL_Y, REEL_RING)
     g.stroke()
-    g.fillStyle = c.line
-    circle(x, REEL_Y, tape)
-    g.fill()
-    // Two spokes across the tape, that turn with the reel.
-    g.strokeStyle = c.ink
-    g.lineWidth = 1
-    for (const side of [0, Math.PI]) {
-      const angle = turn + side + Math.PI / 6
-      line(
-        x + Math.cos(angle) * (HUB + 2), REEL_Y + Math.sin(angle) * (HUB + 2),
-        x + Math.cos(angle) * (REEL_RING - 2), REEL_Y + Math.sin(angle) * (REEL_RING - 2),
-      )
+    g.strokeStyle = c.dim
+    g.lineWidth = 0.5
+    circle(x, REEL_Y, REEL_RING - 2.5)
+    g.stroke()
+    for (let i = 0; i < 36; i++) {
+      const angle = turn + (i * Math.PI * 2) / 36
+      const long = i % 3 === 0
+      g.strokeStyle = long ? c.muted : c.dim
+      line(...at(angle, REEL_RING - 0.9), ...at(angle, long ? REEL_RING - 2.5 : REEL_RING - 1.8))
     }
-    // The hub: a light disc, a dark ring with 3 notches, and a dot in the middle.
+    // Two spokes across the tape, that turn with the reel, each with a rivet at its end (one
+    // red: you can see the reel turn even when the tape hides the rest).
+    g.lineWidth = 1
+    ;[c.ink, c.rec].forEach((rivet, k) => {
+      const angle = turn + k * Math.PI + Math.PI / 6
+      g.strokeStyle = c.ink
+      line(...at(angle, HUB + 2), ...at(angle, REEL_RING - 3))
+      g.fillStyle = rivet
+      circle(...at(angle, REEL_RING - 5), 1.3)
+      g.fill()
+    })
+    // Two small screws between the spokes, near the hub.
+    g.fillStyle = c.screen
+    g.strokeStyle = c.muted
+    g.lineWidth = 0.6
+    for (const side of [0, Math.PI]) {
+      const [sx, sy] = at(turn + side + Math.PI * (2 / 3), HUB + 4)
+      circle(sx, sy, 1.2)
+      g.fill()
+      g.stroke()
+      line(sx - 0.7, sy, sx + 0.7, sy)
+    }
+    // The hub: a dark ring with 3 notches, a light disc, a thin ring, and the spindle with 3 keys.
     g.fillStyle = c.ink
     circle(x, REEL_Y, HUB)
     g.fill()
@@ -245,47 +292,122 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
     circle(x, REEL_Y, 7)
     g.fill()
     for (let k = 0; k < 3; k++) {
-      const angle = turn + (k * 2 * Math.PI) / 3
-      circle(x + Math.cos(angle) * 7.5, REEL_Y + Math.sin(angle) * 7.5, 1.6)
+      circle(...at(turn + (k * 2 * Math.PI) / 3, 7.5), 1.6)
       g.fill()
     }
+    g.strokeStyle = c.dim
+    g.lineWidth = 0.6
+    circle(x, REEL_Y, 4.6)
+    g.stroke()
     g.fillStyle = c.ink
-    circle(x, REEL_Y, 1.8)
+    circle(x, REEL_Y, 2.4)
+    g.fill()
+    g.strokeStyle = c.ink
+    g.lineWidth = 0.8
+    for (let k = 0; k < 3; k++) {
+      const angle = turn + (k * 2 * Math.PI) / 3 + Math.PI / 3
+      line(...at(angle, 2.2), ...at(angle, 3.6))
+    }
+    g.fillStyle = c.screen
+    circle(x, REEL_Y, 0.8)
     g.fill()
     return tape
   }
   const left = reel(REELS[0], 1 - state.tape, state.turns[0])
   const right = reel(REELS[1], state.tape, state.turns[1])
 
-  // ——— The tape path: from the reels, over rollers, past the head ———
-  // The tape leaves each reel at the bottom, on the side of the head.
-  const from = [REELS[0] + Math.cos(Math.PI * 0.42) * left, REEL_Y + Math.sin(Math.PI * 0.42) * left] as const
-  const to = [REELS[1] + Math.cos(Math.PI * 0.58) * right, REEL_Y + Math.sin(Math.PI * 0.58) * right] as const
-  const path: [number, number][] = [[...from], [66, 75], [92, 66], [HEAD_X, 66], [155, 66], [181, 75], [...to]]
+  // ——— The tape path: from the reels, around the rollers, over the head ———
+  // The tape is pulled tight around the rollers: straight lines that touch each roller (tangents),
+  // and arcs along the rollers' edges. `side`: where the roller is, seen from the tape: -1 above it
+  // (the tape runs under it), 1 below it (the tape runs over it).
+  interface Wheel { x: number; y: number; r: number; side: 1 | -1 }
+  const tension: [Wheel, Wheel] = [{ x: 68, y: 77, r: 3, side: -1 }, { x: 179, y: 77, r: 3, side: -1 }]
+  const guides: [Wheel, Wheel] = [{ x: 92, y: 66, r: 3.5, side: 1 }, { x: 155, y: 66, r: 3.5, side: 1 }]
+  /** The tape lies on the roller's edge, so it runs just outside the roller's line. */
+  const onEdge = (wheel: Wheel): Wheel => ({ ...wheel, r: wheel.r + ROLLER_TAPE })
+  /**
+   * The straight piece of tape from wheel `a` to wheel `b`: where it leaves `a` and where it
+   * reaches `b`. (In complex numbers: the direction is (b - a) / (along + i·k).)
+   */
+  const tangent = (a: Wheel, b: Wheel) => {
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const square = dx * dx + dy * dy
+    const k = b.side * b.r - a.side * a.r
+    const along = Math.sqrt(Math.max(0, square - k * k))
+    const tx = (dx * along + dy * k) / square
+    const ty = (dy * along - dx * k) / square
+    // The normal (the tape direction turned a quarter): from the tape towards a wheel below it.
+    const [nx, ny] = [-ty, tx]
+    return {
+      leave: [a.x - a.side * a.r * nx, a.y - a.side * a.r * ny] as const,
+      reach: [b.x - b.side * b.r * nx, b.y - b.side * b.r * ny] as const,
+    }
+  }
+  // The reels: the tape comes off the bottom of each pack (the pack is above the tape).
+  const packs: [Wheel, Wheel] = [{ x: REELS[0], y: REEL_Y, r: left, side: -1 }, { x: REELS[1], y: REEL_Y, r: right, side: -1 }]
+  const wheels = [packs[0], ...[tension[0], guides[0], guides[1], tension[1]].map(onEdge), packs[1]]
+  const pieces = wheels.slice(1).map((wheel, i) => tangent(wheels[i]!, wheel))
+
+  /** A roller: an open circle with a tick that turns with the tape, slower than the tape (like Master's). */
+  const roller = ({ x, y, r, side }: Wheel) => {
+    g.fillStyle = c.screen
+    g.strokeStyle = c.ink
+    g.lineWidth = 1.1
+    circle(x, y, r)
+    g.fill()
+    g.stroke()
+    g.lineWidth = 0.8
+    // A roller under the tape turns one way, a roller over it the other way.
+    const angle = (side * state.travel * ROLLER_SPIN) / r
+    line(x, y, x + Math.cos(angle) * (r - 1.2), y + Math.sin(angle) * (r - 1.2))
+    g.fillStyle = c.ink
+    circle(x, y, 0.8)
+    g.fill()
+  }
+  // The tension rollers by the reels (small), and the guides by the head.
+  for (const wheel of [...tension, ...guides]) roller(wheel)
+
+  // The tape, over the rollers: straight pieces, and an arc around each roller between them.
   g.strokeStyle = c.muted
   g.lineWidth = 1
   g.beginPath()
-  path.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)))
+  g.moveTo(...pieces[0]!.leave)
+  pieces.forEach((piece, i) => {
+    g.lineTo(...piece.reach)
+    const next = pieces[i + 1]
+    const wheel = wheels[i + 1]!
+    if (!next) return
+    const from = Math.atan2(piece.reach[1] - wheel.y, piece.reach[0] - wheel.x)
+    const to = Math.atan2(next.leave[1] - wheel.y, next.leave[0] - wheel.x)
+    // Under a roller the tape goes around it one way, over a roller the other way.
+    g.arc(wheel.x, wheel.y, wheel.r, from, to, wheel.side === -1)
+  })
   g.stroke()
-  // Rollers: small light dots by the reels, open circles by the head.
-  for (const [x, y] of [path[1]!, path[5]!]) {
-    g.fillStyle = c.ink
-    circle(x, y, 2.2)
-    g.fill()
-  }
-  for (const [x, y] of [path[2]!, path[4]!]) {
-    g.fillStyle = c.screen
-    g.strokeStyle = c.ink
-    g.lineWidth = 1.2
-    circle(x, y, 3.5)
-    g.fill()
-    g.stroke()
-  }
-  // The head: a light block with a slot.
+
+  // ——— The tape head, under the tape ———
+  // The plate it stands on.
+  g.fillStyle = c.line
+  g.strokeStyle = c.ink
+  g.lineWidth = 0.8
+  g.beginPath()
+  g.roundRect(HEAD_X - 7.5, HEAD_Y + 7, 15, 3, 1)
+  g.fill()
+  g.stroke()
+  // Two pins, one on each side, that keep the tape on the head.
   g.fillStyle = c.ink
-  g.fillRect(HEAD_X - 6, HEAD_Y, 12, 9)
-  g.fillStyle = c.screen
-  g.fillRect(HEAD_X - 1, HEAD_Y, 2, 4)
+  for (const dx of [-7, 7]) {
+    circle(HEAD_X + dx, HEAD_Y + 1, 0.9)
+    g.fill()
+  }
+  // The head: a block with a rounded top (the tape only touches it in the middle), and the gap
+  // at the top, where it reads the tape.
+  g.beginPath()
+  g.roundRect(HEAD_X - 4.5, HEAD_Y, 9, 7.5, [3, 3, 0, 0])
+  g.fill()
+  g.strokeStyle = c.screen
+  g.lineWidth = 0.6
+  line(HEAD_X, HEAD_Y + 0.4, HEAD_X, HEAD_Y + 2.8)
 
   // ——— Rec (a blinking dot), play (a triangle), or stop (a square) ———
   if (state.recorded) {

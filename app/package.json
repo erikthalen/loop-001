@@ -13,6 +13,7 @@
     "@dnd-kit/dom": "0.5.3",
     "@hono/service-worker": "^1.0.1",
     "@loop/core": "workspace:*",
+    "@loop/delay": "workspace:*",
     "@loop/lp-filter": "workspace:*",
     "@loop/master": "workspace:*",
     "@loop/metronome": "workspace:*",

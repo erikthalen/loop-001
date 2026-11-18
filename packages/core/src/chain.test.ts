@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { modulesAfter, planChain, planChannels, planStages, routeTrigger } from './chain'
+import { modulesAfter, planChain, planChannels, planSends, planStages, routeTrigger, sendSourceOf } from './chain'
 
 // Nodes are plain strings here: the plan does not need real audio nodes.
 const names = (connections: readonly (readonly [string, string])[]) => connections.map(([from, to]) => `${from}>${to}`)
@@ -55,6 +55,32 @@ describe('planStages', () => {
   it('puts the stages in a row, in order (two Masters: one after the other)', () => {
     const plan = planStages('end', [{ input: 'a.in', output: 'a.out' }, { input: 'b.in', output: 'b.out' }], 'out')
     expect(names(plan)).toEqual(['end>a.in', 'a.out>b.in', 'b.out>out'])
+  })
+})
+
+describe('planSends', () => {
+  const mixer = { sendOutputs: ['sendA', 'sendB'], returnInputs: ['returnA', 'returnB'] }
+  const delay = (bus: number) => ({ sendEffect: { bus, input: `delay${bus}.in`, output: `delay${bus}.out` } })
+
+  it('puts an effect between the send bus and the return of the mixer before it', () => {
+    expect(names(planSends([mixer, delay(0)]))).toEqual(['sendA>delay0.in', 'delay0.out>returnA'])
+    expect(names(planSends([mixer, delay(1)]))).toEqual(['sendB>delay1.in', 'delay1.out>returnB'])
+  })
+
+  it('gives an effect nothing when no mixer is before it', () => {
+    expect(planSends([delay(0), mixer])).toEqual([])
+  })
+
+  it('takes the closest mixer before it', () => {
+    const other = { sendOutputs: ['otherA'], returnInputs: ['otherReturnA'] }
+    expect(names(planSends([mixer, other, delay(0)]))).toEqual(['otherA>delay0.in', 'delay0.out>otherReturnA'])
+    expect(sendSourceOf([mixer, other, delay(1)], 2, 1)).toBe(0)
+  })
+
+  it('gives two effects on the same bus the same send', () => {
+    expect(names(planSends([mixer, delay(0), delay(0)]))).toEqual([
+      'sendA>delay0.in', 'delay0.out>returnA', 'sendA>delay0.in', 'delay0.out>returnA',
+    ])
   })
 })
 

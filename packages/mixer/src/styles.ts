@@ -31,7 +31,9 @@ export const styles = css`
 
   /* A send bus: only the slider and the name. A line before each bus (A, B). */
   .strip.bus {
-    --c: var(--ink);
+    --c: var(--color-neutral-300);
+
+    color: var(--ink);
 
     text-transform: uppercase;
 

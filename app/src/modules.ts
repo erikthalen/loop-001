@@ -1,4 +1,5 @@
 import type { AnyAudioModuleDefinition, ProjectData } from '@loop/core'
+import { delay } from '@loop/delay'
 import { lpFilter } from '@loop/lp-filter'
 import { master } from '@loop/master'
 import { metronome } from '@loop/metronome'
@@ -8,7 +9,7 @@ import { sequencer } from '@loop/sequencer'
 import { vuMeter } from '@loop/vu-meter'
 
 /** The modules a user can add. Add new modules here. */
-export const availableModules: readonly AnyAudioModuleDefinition[] = [master, metronome, sequencer, sampler, mixer, lpFilter, vuMeter]
+export const availableModules: readonly AnyAudioModuleDefinition[] = [master, metronome, sequencer, sampler, mixer, delay, lpFilter, vuMeter]
 
 /**
  * A new project starts with this chain: Master (play / stop and the volume), the sequencer sends

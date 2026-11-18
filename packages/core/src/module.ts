@@ -50,6 +50,11 @@ export interface ModuleContext {
   passTrigger(change: (trigger: Trigger) => Trigger | null): void
   /** Tell the core that the module's saved state changed (for example, the volume). The app saves the project. */
   changed(): void
+  /**
+   * Tell the core that the module's cables changed (for example `sendEffect`: it moved from the
+   * main chain to a send bus). The core plugs all cables again.
+   */
+  replug(): void
 }
 
 /** What `setup` returns: audio nodes, plus any functions or values the module wants to offer. */
@@ -66,6 +71,21 @@ export interface ModuleSetupResult {
   channelOutputs?: readonly AudioNode[]
   /** One input per channel: the module takes in the channels of the modules before it (a mixer). */
   channelInputs?: readonly AudioNode[]
+  /**
+   * Send buses (aux sends), bus A first: the module sends some of its sound out, for an effect
+   * after it (a mixer). See planSends in chain.ts.
+   */
+  sendOutputs?: readonly AudioNode[]
+  /** One return per send bus: where the effect on that bus plays back into the module (a mixer). */
+  returnInputs?: readonly AudioNode[]
+  /**
+   * Put the module on a send bus instead of in the main chain (an effect, for example a delay):
+   * send bus `bus` of the closest module before it that has one (a mixer) goes into `input`, and
+   * `output` plays into that module's return `bus`. The main chain then goes past the module
+   * (its `input` and `output` are not used there). Leave it out (undefined): the module is in the
+   * main chain. It can be a getter: call `ctx.replug()` when it changes.
+   */
+  sendEffect?: { readonly bus: number; readonly input: AudioNode; readonly output: AudioNode }
   /**
    * A stage after the end of the chain, before the speakers (see planStages in chain.ts): ALL the
    * sound goes into `input`, and what comes out of `output` goes on to the speakers. For example

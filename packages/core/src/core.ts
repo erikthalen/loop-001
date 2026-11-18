@@ -1,6 +1,7 @@
 import {
   planChain,
   planChannels,
+  planSends,
   planStages,
   routeTrigger,
   type ChainConnection,
@@ -217,20 +218,28 @@ export function createCore(options: CoreOptions = {}): Core {
         // Already gone, for example a removed module disconnected its own output.
       }
     }
-    const slots = [...modules.values()].map((module) => ({
-      input: module.input,
-      output: module.output,
-      channelOutputs: module.channelOutputs,
-      channelInputs: module.channelInputs,
-      jack: jacks.get(module.id)!,
-    }));
+    const slots = [...modules.values()].map((module) => {
+      // On a send bus (see sendEffect): not in the main chain, the sound goes past it.
+      const sendEffect = module.sendEffect;
+      return {
+        input: sendEffect ? undefined : module.input,
+        output: sendEffect ? undefined : module.output,
+        channelOutputs: module.channelOutputs,
+        channelInputs: module.channelInputs,
+        sendOutputs: module.sendOutputs,
+        returnInputs: module.returnInputs,
+        sendEffect,
+        jack: jacks.get(module.id)!,
+      };
+    });
     const stages = [...modules.values()].flatMap((module) =>
       module.outputStage ? [module.outputStage] : [],
     );
-    // The main chain, the channel cables and the output stages (see chain.ts).
+    // The main chain, the channel cables, the send cables and the output stages (see chain.ts).
     cables = [
       ...planChain<AudioNode>(input, slots, chainEnd),
       ...planChannels<AudioNode>(slots),
+      ...planSends<AudioNode>(slots),
       ...planStages<AudioNode>(chainEnd, stages, output),
     ];
     for (const [from, to] of cables) from.connect(to);
@@ -322,6 +331,9 @@ export function createCore(options: CoreOptions = {}): Core {
           // Only after setup is done and while the module is still in the chain.
           if (modules.get(id) === module)
             events.emit("modulechange", { module });
+        },
+        replug: () => {
+          if (modules.get(id) === module) rewire();
         },
       };
 

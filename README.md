@@ -8,7 +8,8 @@ pnpm monorepo.
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
 - `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules after it
-- `packages/mixer` – `@loop/mixer`: mixes the 6 channels of a sampler before it: a volume and two sends (A, B) per channel, and two send buses (send and return) ready for effects
+- `packages/mixer` – `@loop/mixer`: mixes the 6 channels of a sampler before it: a volume and two sends (A, B) per channel, and two send buses (send and return) for effects
+- `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); in the chain, or on send A or B of a mixer before it
 - `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
@@ -129,6 +130,12 @@ that pass it with `ctx.passTrigger(change)` (return null to stop one).
 (`channelOutputs`, for example the sampler), and a later module can take them in (`channelInputs`, the
 mixer): channel 1 to channel 1, and so on. If no module after it takes them, the channels join the main
 chain at the module that sent them, so they are still heard. See `planChannels` in `packages/core/src/chain.ts`.
+
+**Sends** work like the aux sends of a hardware mixer. A module can offer send buses (`sendOutputs`, and
+`returnInputs` for the way back; the mixer has A and B). An effect after it can sit on a send bus instead of
+in the main chain (`sendEffect: { bus, input, output }`, for example the delay): send bus k of the closest
+module before it with one goes into the effect, and the effect plays into that module's return k. The main
+chain goes past the effect. An effect that changes its bus calls `ctx.replug()`. See `planSends` in `chain.ts`.
 
 - **Commands go in as function calls:** `core.start()`, `core.stop()`, `core.setBpm(90)`, `core.add(module)`.
 - **News goes out as events:** `core.events.on('beat', ...)`. The event bus (`createEmitter` in `packages/core/src/events.ts`) is a typed wrapper around the browser's `EventTarget` + `CustomEvent`.

@@ -33,14 +33,15 @@ const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : []
 /**
  * Mixer: it takes in the 6 channels of the modules before it (for example a sampler) and mixes them:
  *
- *   channel 1 ─▶ volume 1 ─┬──────────────────────────────────────▶ mix ─▶ output (the main chain)
- *   ...                    ├▶ send A on/off ─▶ send bus A ─▶ (an effect, later) ─▶ return A ─┤
- *                          └▶ send B on/off ─▶ send bus B ─▶ (an effect, later) ─▶ return B ─┘
+ *   channel 1 ─▶ volume 1 ─┬───────────────────────────────────────────▶ mix ─▶ output (the main chain)
+ *   ...                    ├▶ send A on/off ─▶ send bus A ─▶ (an effect on send A) ─▶ return A ─┤
+ *                          └▶ send B on/off ─▶ send bus B ─▶ (an effect on send B) ─▶ return B ─┘
  *
  * - Each channel has a volume, and a send switch per bus. The sends are after the volume
  *   (post-fader), so a quieter channel also sends less.
- * - The send buses (sendOutputs) and the returns (returnInputs) are ready for effect modules later:
- *   an effect takes a send bus in, and plays into its return. Until then, the returns are silent.
+ * - The send buses (sendOutputs) and the returns (returnInputs): an effect module after the mixer
+ *   on a send bus (for example a delay; see `sendEffect` in @loop/core) takes that bus in, and
+ *   plays into its return. Without one, the return is silent.
  * The sound from before the mixer on the main chain goes past it, unchanged.
  */
 export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
@@ -83,9 +84,9 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   return {
     output: mix,
     channelInputs,
-    /** The send buses (A, B): an effect takes one in (later). */
+    /** The send buses (A, B): an effect on a send bus after the mixer takes one in. */
     sendOutputs: sendBuses as readonly AudioNode[],
-    /** The returns (A, B): an effect plays into one (later). */
+    /** The returns (A, B): the effect on that send bus plays into it. */
     returnInputs: returnInputs as readonly AudioNode[],
 
     /** The volume of each channel, 0 to 1. */

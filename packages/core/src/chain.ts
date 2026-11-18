@@ -80,6 +80,49 @@ export function planChannels<N>(slots: readonly ChannelSlot<N>[]): ChainConnecti
   return connections
 }
 
+/** One module, as the send cables see it (see planSends). */
+export interface SendSlot<N> {
+  /** One send bus per bus (bus A first): the module sends some of its sound out (a mixer). */
+  readonly sendOutputs?: readonly N[]
+  /** One return per bus: where the effect on that bus plays back into the module (a mixer). */
+  readonly returnInputs?: readonly N[]
+  /** The module is an effect on a send bus (a delay): which bus, and its input and output. */
+  readonly sendEffect?: { readonly bus: number; readonly input: N; readonly output: N }
+}
+
+/**
+ * The index of the module whose send bus `bus` an effect at `index` takes: the closest module
+ * before it that has that bus (a mixer). -1: none.
+ */
+export function sendSourceOf<N>(slots: readonly SendSlot<N>[], index: number, bus: number): number {
+  for (let i = index - 1; i >= 0; i--) if (slots[i]?.sendOutputs?.[bus]) return i
+  return -1
+}
+
+/**
+ * The send cables, like the aux sends of a hardware mixer: an effect on send bus k (a delay) takes
+ * send bus k of the closest module before it that has one (a mixer), and plays into that module's
+ * return k:
+ *
+ *   mixer: send A ─▶ delay (on send A) ─▶ mixer: return A
+ *
+ * An effect with no mixer before it gets no sound. Several effects on the same bus each get it.
+ */
+export function planSends<N>(slots: readonly SendSlot<N>[]): ChainConnection<N>[] {
+  const connections: ChainConnection<N>[] = []
+  slots.forEach((slot, index) => {
+    const effect = slot.sendEffect
+    if (!effect) return
+    const source = slots[sendSourceOf(slots, index, effect.bus)]
+    const send = source?.sendOutputs?.[effect.bus]
+    if (!send) return
+    connections.push([send, effect.input])
+    const back = source.returnInputs?.[effect.bus]
+    if (back) connections.push([effect.output, back])
+  })
+  return connections
+}
+
 /** One module's output stage, as the cables see it (see planStages). */
 export interface StageSlot<N> {
   readonly input: N

@@ -10,7 +10,8 @@ export const styles = css`
   }
 
   .display {
-    /* @loop/ui colors its inputs (and the focus ring) with --loop-primary. Here that is orange. */
+    /* @loop/ui colors its inputs (and the focus ring) with --loop-primary: the app's dodgerblue here.
+       The picture's dot, cross and accent use it too. */
     
 
     gap: 8px;

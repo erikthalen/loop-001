@@ -65,7 +65,12 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   let frame = 0
   const slide = () => {
     const steps = Math.max(0, core.clock.stepsAt(core.context.currentTime))
-    const value = ((steps % STEPS) / STEPS) * progress.max
+    // How far into the bar. The clock's position is a sum of speed ramps, so it can come out a
+    // hair under a bar line where it should be exactly on it (for example at the end of a rewind:
+    // 15.9999999 instead of 16). That counts as the bar line: empty, not full for a frame.
+    let inBar = steps % STEPS
+    if (STEPS - inBar < 1e-6) inBar = 0
+    const value = (inBar / STEPS) * progress.max
     if (value !== progress.value) progress.value = value
     frame = requestAnimationFrame(slide)
   }

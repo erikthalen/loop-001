@@ -1,7 +1,7 @@
 import { defineModuleScript } from '@loop/core'
-import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNEL_COLORS, createOdometer } from '@loop/ui'
 import { CHANNELS, MAX_SECONDS, type setup } from './setup'
-import { COLUMNS, columnsOf, drawWave, tapeRadius, type WaveColors } from './wave'
+import { COLUMNS, columnsOf, COUNTER_WHEELS, drawWave, tapeRadius, type WaveColors } from './wave'
 
 const seconds = (value: number) => `${value.toFixed(2)} s`
 
@@ -178,10 +178,13 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
   let strip = 0
   let tape = placeOnTape(wind)
   const turns: [number, number] = [0, 0]
+  // How far the tape has moved past the rollers, in px (they turn with it).
+  let travel = 0
   // The level meter: jumps up, falls back slowly.
   let level = 0
-  // The time counter, in seconds (it turns towards the right time).
-  let counter = 0
+  // The time counter, in hundredths: digit wheels that roll towards the right time. Each wheel
+  // rolls on its own, so the higher ones roll too (see createOdometer in @loop/ui).
+  const counter = createOdometer(COUNTER_WHEELS)
   let last = 0
   let frame = 0
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
@@ -220,6 +223,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     // Both reels turn by the same length of tape. A small reel turns faster than a big one.
     turns[0] -= (moved * TAPE_LENGTH) / tapeRadius(1 - tape)
     turns[1] -= (moved * TAPE_LENGTH) / tapeRadius(tape)
+    travel += moved * TAPE_LENGTH
     // The level: the microphone while recording, else the sampler's own sound.
     level = Math.max(recorded ? module.level() : module.outputLevel(), level - seconds * 1.2)
     // The counter: the recorded time, the place in the sound that plays, or the cut's start.
@@ -231,9 +235,9 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
     if (recorded) target = module.recordedSeconds
     else if (playhead !== null) target = playhead * duration
     // Whole hundredths, so the wheels stop on a full digit when the time stands still.
-    target = Math.round(target * 100) / 100
-    counter = reducedMotion.matches ? target : counter + (target - counter) * Math.min(1, seconds * 14)
-    if (Math.abs(target - counter) < 0.0005) counter = target
+    const hundredths = Math.round(target * 100)
+    if (reducedMotion.matches) counter.jump(hundredths)
+    else counter.roll(hundredths, seconds)
     drawWave(
       canvas,
       {
@@ -248,7 +252,8 @@ export const script = defineModuleScript<typeof setup>(({ root, module, signal }
         recorded,
         tape,
         turns,
-        counter,
+        travel,
+        counter: counter.wheels,
         level,
         time: now / 1000,
       },

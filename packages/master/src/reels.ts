@@ -15,8 +15,10 @@
  *   smaller and the right one bigger. The reels turn with the tape: a small pack turns faster.
  * - The counter, over the head: steps on digit wheels. It counts from where the last rewind went
  *   to, so a rewind rolls it back to 0.
- * - The transport sign, under the counter: ▶ playing, ◀◀ rewinding, ■ still.
+ * - The transport sign, under the counter: ▶ playing, ◀◀ rewinding, ■ still (red).
  */
+
+import type { OdometerWheel } from '@loop/ui'
 
 export interface ReelColors {
   screen: string
@@ -24,8 +26,10 @@ export interface ReelColors {
   line: string
   dim: string
   muted: string
-  /** The module's main color (--loop-primary): the transport sign. */
+  /** The module's main color (--loop-primary): the transport sign while it plays or rewinds. */
   primary: string
+  /** The transport sign while it stands still (the stop square). */
+  red: string
   font: string
 }
 
@@ -38,7 +42,7 @@ export interface ReelState {
   travel: number
   /**
    * The counter's 4 digit wheels (thousands first): where each one is, 0 to 10. 2.5 is halfway
-   * from 2 to 3. See `odometer`.
+   * from 2 to 3. See COUNTER_WHEELS (the script rolls them with createOdometer in @loop/ui).
    */
   wheels: readonly number[]
   /** What the tape does. */
@@ -71,16 +75,8 @@ const HEAD_X = WIDTH / 2
 /** The counter, between the reels. */
 const COUNTER_Y = TAPE_Y - 33
 const COUNTER_ROW = 15
-/** The counter's wheels for a number of steps, like an odometer: the last wheel turns all the
- * time; a wheel to its left only turns while all the wheels to its right roll over from 9 to 0. */
-export const odometer = (steps: number) => {
-  const value = Math.max(0, steps)
-  return [1000, 100, 10, 1].map((unit) => {
-    const whole = value / unit
-    const turn = unit === 1 ? whole % 1 : Math.max(0, (value % unit) - (unit - 1))
-    return (Math.floor(whole) % 10) + turn
-  })
-}
+/** The counter's 4 digit wheels (thousands first), in steps: for createOdometer in @loop/ui. */
+export const COUNTER_WHEELS: readonly OdometerWheel[] = [1000, 100, 10, 1].map((unit) => ({ unit }))
 
 /** The tape on a reel: its radius, in px. `mass`: how much of the tape is on it, 0 to 1. */
 export const packRadius = (mass: number) => HUB + 2 + (PACK_MAX - HUB - 2) * Math.min(1, Math.max(0, mass))
@@ -283,9 +279,7 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
     const x = left + charWidth * (i + 0.5)
     const digit = Math.floor(wheel) % 10
     const turn = wheel % 1
-    // Leading zeros are dim, like an unlit display.
-    const leading = i < state.wheels.length - 1 && state.wheels.slice(0, i + 1).every((w) => w < 0.5)
-    g.fillStyle = leading ? c.dim : c.ink
+    g.fillStyle = c.ink
     g.fillText(String(digit), x, COUNTER_Y - turn * COUNTER_ROW)
     if (turn > 0) g.fillText(String((digit + 1) % 10), x, COUNTER_Y + (1 - turn) * COUNTER_ROW)
   })
@@ -295,10 +289,10 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
   g.lineWidth = 0.6
   line(left - 1, COUNTER_Y + 8.5, left + charWidth * 4 + 1, COUNTER_Y + 8.5)
 
-  // ——— The transport sign, under the counter: ▶ play, ◀◀ rewind (both in the main color), ■ still ———
+  // ——— The transport sign, under the counter: ▶ play, ◀◀ rewind (both in the main color), ■ still (red) ———
   const signY = COUNTER_Y + 16
   const signX = HEAD_X
-  g.fillStyle = state.transport === 'still' ? c.muted : c.primary
+  g.fillStyle = state.transport === 'still' ? c.red : c.primary
   g.beginPath()
   if (state.transport === 'play') {
     g.moveTo(signX - 3, signY - 3.5)

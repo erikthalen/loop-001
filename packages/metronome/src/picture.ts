@@ -10,21 +10,28 @@
  * The ∞ (a lemniscate of Gerono): the dot goes once around it every two beats. It passes the
  * crossing in the middle exactly on each beat, then goes around one loop (fast in the middle,
  * slow at the end), and back to the middle on the next beat, then around the other loop.
- * - The path has fine ticks, and small marks at both ends. An orange cross marks the middle.
- * - The dot (orange) draws a trail behind it, about half a beat long: thick and bright at the dot,
+ * - The path has fine ticks, and small marks at both ends. A blue cross marks the middle.
+ * - The dot (blue) draws a trail behind it, about half a beat long: thick and bright at the dot,
  *   thin and faint at its end, with a soft glow.
- * - On each beat the middle flashes (orange on the first beat of the bar).
+ * - On each beat the middle flashes (blue on the first beat of the bar).
  *
  * The tempo: digit wheels and "BPM" in the same size, on one base line. A jump in tempo rolls the
- * wheels to it, like an analog counter. A leading zero (for example the 0 in "090") is dim.
+ * wheels to it, like an analog counter (the script rolls them, see createOdometer in @loop/ui).
+ * A leading zero (for example the 0 in "090") is dim.
  */
+
+import type { OdometerWheel } from '@loop/ui'
+
+/** The tempo's 3 digit wheels (hundreds first), in bpm: for createOdometer in @loop/ui. */
+export const BPM_WHEELS: readonly OdometerWheel[] = [100, 10, 1].map((unit) => ({ unit }))
 
 export interface PictureColors {
   screen: string
   ink: string
   dim: string
   muted: string
-  orange: string
+  /** The module's main color (--loop-primary, the app's dodgerblue): the dot, the cross, the accent. */
+  primary: string
   font: string
 }
 
@@ -36,11 +43,11 @@ export interface PictureState {
   phase: number
   /** Where the dot's trail starts (behind the dot, along the path). The same as phase: no trail. */
   trail: number
-  /** The tempo. Not rounded: between two values, the digit wheels are turning. */
-  bpm: number
+  /** The tempo's digit wheels (BPM_WHEELS): each one 0 to 10. 2.5 is halfway from 2 to 3. */
+  bpmWheels: readonly number[]
   /** The beat flash: 1 just on a beat, down to 0. */
   flash: number
-  /** True if the last beat was the first one of the bar (an orange flash). */
+  /** True if the last beat was the first one of the bar (a blue flash). */
   accent: boolean
 }
 
@@ -146,14 +153,14 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
     line(x, cy - 2.5, x, cy + 2.5)
   }
 
-  // The middle: an orange cross. On each beat it flashes, and a ring grows from it.
-  g.strokeStyle = c.orange
+  // The middle: a blue cross. On each beat it flashes, and a ring grows from it.
+  g.strokeStyle = c.primary
   g.lineWidth = 0.8
   line(cx - 1.8, cy - 1.8, cx + 1.8, cy + 1.8)
   line(cx - 1.8, cy + 1.8, cx + 1.8, cy - 1.8)
   if (state.flash > 0) {
     g.globalAlpha = state.flash
-    g.strokeStyle = state.accent ? c.orange : c.ink
+    g.strokeStyle = state.accent ? c.primary : c.ink
     g.beginPath()
     g.arc(cx, cy, 2.5 + (1 - state.flash) * 4, 0, Math.PI * 2)
     g.stroke()
@@ -162,7 +169,7 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
 
   // ——— The dot, with its trail: from faint and thin (its end) to bright and thick (at the dot) ———
   const trailSteps = 24
-  g.strokeStyle = c.orange
+  g.strokeStyle = c.primary
   for (let i = 0; i < trailSteps; i++) {
     const from = state.trail + ((state.phase - state.trail) * i) / trailSteps
     const to = state.trail + ((state.phase - state.trail) * (i + 1)) / trailSteps
@@ -178,7 +185,7 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
   }
   g.globalAlpha = 1
   const [dx, dy] = at(state.phase)
-  g.fillStyle = c.orange
+  g.fillStyle = c.primary
   g.beginPath()
   g.arc(dx, dy, 2.2, 0, Math.PI * 2)
   g.fill()
@@ -187,22 +194,22 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
   g.stroke()
 
   // ——— The tempo: 3 digit wheels, then "BPM" in the same size ———
-  // Like an odometer: the last wheel turns; a wheel to its left only turns while the wheels to its
-  // right roll over from 9 to 0. The window: from the top of the digits to just under the line.
+  // Each wheel's place comes from the script. The window: from the top of the digits to just under
+  // the line.
   g.textAlign = 'center'
   const row = TEXT_SIZE * 1.05
-  const bpm = Math.max(0, state.bpm)
+  const wheels = state.bpmWheels
   g.save()
   g.beginPath()
   g.rect(textLeft - 1, top - 2, charWidth * 3 + 2, capHeight + 4)
   g.clip()
-  ;[100, 10, 1].forEach((unit, i) => {
+  wheels.forEach((wheel, i) => {
     const x = textLeft + charWidth * (i + 0.5)
-    const steps = bpm / unit
-    const digit = Math.floor(steps) % 10
-    const turn = unit === 1 ? steps % 1 : Math.max(0, (bpm % unit) - (unit - 1))
-    // A leading zero is dim, like an unlit display.
-    g.fillStyle = unit > 1 && bpm < unit ? c.dim : c.ink
+    const digit = Math.floor(wheel) % 10
+    const turn = wheel % 1
+    // A leading zero is dim, like an unlit display (this wheel and all before it show 0).
+    const leading = i < wheels.length - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
+    g.fillStyle = leading ? c.dim : c.ink
     g.fillText(String(digit), x, BASE_Y - turn * row)
     if (turn > 0) g.fillText(String((digit + 1) % 10), x, BASE_Y + (1 - turn) * row)
   })

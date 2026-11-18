@@ -189,6 +189,9 @@ importers:
       '@loop/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@loop/delay':
+        specifier: workspace:*
+        version: link:../packages/delay
       '@loop/lp-filter':
         specifier: workspace:*
         version: link:../packages/lp-filter
@@ -232,6 +235,19 @@ importers:
       vitest:
         specifier: ^5.1.0
         version: 5.1.0(vite@8.3.8)
+
+  packages/delay:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/lp-filter:
     dependencies:

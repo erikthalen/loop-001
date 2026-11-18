@@ -1,5 +1,6 @@
 import { defineModuleScript } from '@loop/core'
-import { drawReels, odometer, packRadius, type ReelColors } from './reels'
+import { createOdometer } from '@loop/ui'
+import { COUNTER_WHEELS, drawReels, packRadius, type ReelColors } from './reels'
 import type { setup } from './setup'
 
 /** How much tape a full reel holds, in seconds at full speed (the packs change size slowly). */
@@ -84,6 +85,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       dim: resolve('var(--dim)'),
       muted: resolve('var(--muted)'),
       primary: resolve('var(--loop-primary)'),
+      red: resolve('var(--red)'),
       font: getComputedStyle(display).fontFamily,
     }
   }
@@ -96,18 +98,25 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   let travel = 0
   let last = core.context.currentTime
   let said = ''
-  // The counter counts from where the last rewind went to. When a rewind starts, each digit wheel
-  // slides back to 0 in RESET_MS (ease-out), like a counter's reset button; it stays at 0 until
-  // the rewind is over. (It does not follow the tape on the way back: this looks better.)
+  // The counter counts steps from where the last rewind went to, on digit wheels that roll (see
+  // createOdometer in @loop/ui: the higher wheels roll too, not only the last one). When a rewind
+  // starts, each wheel slides back to 0 in RESET_MS (ease-out), like a counter's reset button; it
+  // stays at 0 until the rewind is over. (It does not follow the tape on the way back: this looks
+  // better.) Then it rolls on from 0. Less motion: the wheels show the steps as they are.
   let origin = 0
-  let wheels = odometer(0)
-  let reset: { from: number[]; start: number } | null = null
+  const counter = createOdometer(COUNTER_WHEELS)
+  let wheels: readonly number[] = counter.wheels
+  let reset: { from: readonly number[]; start: number } | null = null
+  let lastFrame = performance.now()
   on('rewind', ({ step }) => {
     origin = step
     reset = { from: [...wheels], start: performance.now() }
   })
   let frame = 0
   const draw = () => {
+    const frameTime = performance.now()
+    const seconds = Math.min(0.05, (frameTime - lastFrame) / 1000)
+    lastFrame = frameTime
     const now = core.context.currentTime
     const position = core.clock.positionAt(now)
     const tape = Math.min(1, Math.max(0, position / REEL_SECONDS))
@@ -123,10 +132,16 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       const t = reducedMotion.matches ? 1 : Math.min(1, (performance.now() - reset.start) / RESET_MS)
       const eased = 1 - (1 - t) ** 3
       wheels = reset.from.map((wheel) => wheel * (1 - eased))
-      // Back to counting when the slide is done and the rewind is over (or was stopped).
-      if (t === 1 && !core.rewinding) reset = null
+      // Back to counting (from 0) when the slide is done and the rewind is over (or was stopped).
+      if (t === 1 && !core.rewinding) {
+        reset = null
+        counter.jump(0)
+      }
     } else {
-      wheels = odometer(core.clock.stepsAt(now) - origin)
+      const steps = core.clock.stepsAt(now) - origin
+      if (reducedMotion.matches) counter.jump(steps)
+      else counter.roll(steps, seconds)
+      wheels = counter.wheels
     }
     drawReels(canvas, { turns, tape, travel, wheels, transport }, colors)
     // For screen readers: what the tape does, in words (only when it changes).

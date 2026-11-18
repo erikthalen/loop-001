@@ -1,5 +1,6 @@
 import { defineModuleScript } from '@loop/core'
-import { drawPicture, REST, TRAIL, type PictureColors } from './picture'
+import { createOdometer } from '@loop/ui'
+import { BPM_WHEELS, drawPicture, REST, TRAIL, type PictureColors } from './picture'
 import type { setup } from './setup'
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
@@ -27,7 +28,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
       ink: resolve('var(--ink)'),
       dim: resolve('var(--dim)'),
       muted: resolve('var(--muted)'),
-      orange: resolve('var(--orange)'),
+      primary: resolve('var(--loop-primary)'),
       font: getComputedStyle(display).fontFamily,
     }
   }
@@ -65,7 +66,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const swings: { time: number; beat: number; accent: boolean }[] = []
 
   on('beat', ({ beat, beatInBar, time }) => {
-    // The middle flashes on each beat (orange on the first beat of the bar, when the accent is on).
+    // The middle flashes on each beat (blue on the first beat of the bar, when the accent is on).
     swings.push({ time, beat, accent: module.accent && beatInBar === 0 })
   })
 
@@ -82,8 +83,9 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   // drawn; and it grows from the middle the first time.
   let trail = REST
   let lastTime = core.context.currentTime
-  // The tempo on the digit wheels: it turns towards the real tempo. Less motion: jump there.
-  let bpm = core.bpm
+  // The tempo on the digit wheels: they roll towards the real tempo, each wheel on its own, so the
+  // higher ones roll too (see createOdometer in @loop/ui). Less motion: jump there.
+  const tempoWheels = createOdometer(BPM_WHEELS, Math.round(core.bpm))
   let last = 0
   let frame = 0
   const draw = (now: number) => {
@@ -113,14 +115,13 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     // The beat flash: bright on the beat, gone after 0.25 s.
     const flash = core.playing && current && current.time <= time ? Math.max(0, 1 - (time - current.time) / 0.25) : 0
 
-    const target = Math.round(core.bpm)
-    bpm = reducedMotion.matches ? target : bpm + (target - bpm) * Math.min(1, seconds * 14)
-    if (Math.abs(target - bpm) < 0.005) bpm = target
+    if (reducedMotion.matches) tempoWheels.jump(Math.round(core.bpm))
+    else tempoWheels.roll(Math.round(core.bpm), seconds)
 
     // The canvas is as wide as the module, so read its width.
     drawPicture(
       canvas,
-      { phase, trail, bpm, flash, accent: current?.accent ?? false },
+      { phase, trail, bpmWheels: tempoWheels.wheels, flash, accent: current?.accent ?? false },
       colors,
       canvas.clientWidth,
     )
