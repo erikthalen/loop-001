@@ -10,7 +10,7 @@ export const styles = css`
   }
 
   .display {
-    --loop-primary: var(--orange);
+    --loop-primary: var(--red);
   }
 
   /* The picture, with the channel number, the status and the two markers on top of it. */

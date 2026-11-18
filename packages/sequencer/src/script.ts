@@ -35,8 +35,8 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const progress = root.querySelector<HTMLProgressElement>('.steps')!
   const showStep = (step: number) => {
     if (step === shown) return
-    // The progress bar: the step that plays (or played last), 1 to 16. At the start of the transport: 0.
-    progress.value = step + 1
+    // For screen readers: the step that plays (or played last), not the bar's fine position.
+    progress.setAttribute('aria-valuetext', step >= 0 ? `Step ${step + 1} of ${STEPS}` : 'Start')
     for (let row = 0; row < CHANNELS; row++) {
       if (shown >= 0) boxAt(row, shown)?.classList.remove('now')
       if (step >= 0) boxAt(row, step)?.classList.add('now')
@@ -58,4 +58,17 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   // Rewind: the transport goes back past the steps, so the progress bar goes back too. A rewind ends
   // exactly at the first step of the sequence: then the bar is empty, like at the start.
   on('rewindstep', ({ step, time }) => at(time, () => showStep(step % STEPS === 0 ? -1 : stepBefore(step))))
+
+  // The progress bar slides with the transport: each frame, where it really is in the bar (with
+  // the speed ramps, and backwards while it rewinds). Empty at the first step, full at the end of
+  // the last one. When the transport stands still, the bar does too.
+  let frame = 0
+  const slide = () => {
+    const steps = Math.max(0, core.clock.stepsAt(core.context.currentTime))
+    const value = ((steps % STEPS) / STEPS) * progress.max
+    if (value !== progress.value) progress.value = value
+    frame = requestAnimationFrame(slide)
+  }
+  slide()
+  signal.addEventListener('abort', () => cancelAnimationFrame(frame))
 })

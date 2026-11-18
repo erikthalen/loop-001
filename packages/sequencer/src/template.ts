@@ -2,6 +2,9 @@ import { defineModuleTemplate, html } from "@loop/core";
 import { CHANNEL_COLORS } from "@loop/ui";
 import { CHANNELS, STEPS, type setup } from "./setup";
 
+/** The progress bar's resolution: 20 per step, so it slides smoothly (the script moves it). */
+const PROGRESS_STEPS = STEPS * 20;
+
 // HTML: made once, when the UI is mounted. A grid of checkboxes: one row per channel (1 to 6), one column per step.
 // The classes come from @loop/ui (display); it also styles the progress bar and the checkboxes.
 // Each row has its channel's color (--c). The script turns steps on and off and shows the
@@ -10,8 +13,8 @@ export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">
       <h2 class="sr-only">${module.name}</h2>
-      <!-- How far the bar has played: 1 to 16 (the step that plays), 0 when stopped. -->
-      <progress class="steps" max="${STEPS}" value="0" aria-label="Step"></progress>
+      <!-- How far the transport is in the bar: 0 at the first step, full at the end of step 16. -->
+      <progress class="steps" max="${PROGRESS_STEPS}" value="0" aria-label="Step"></progress>
       <div class="grid">
         ${Array.from({ length: CHANNELS }, (_, row) =>
           Array.from(
