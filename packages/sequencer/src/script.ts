@@ -35,7 +35,7 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
   const progress = root.querySelector<HTMLProgressElement>('.steps')!
   const showStep = (step: number) => {
     if (step === shown) return
-    // The progress bar: the step that plays (or played last), 1 to 16. At the start of the tape: 0.
+    // The progress bar: the step that plays (or played last), 1 to 16. At the start of the transport: 0.
     progress.value = step + 1
     for (let row = 0; row < CHANNELS; row++) {
       if (shown >= 0) boxAt(row, shown)?.classList.remove('now')
@@ -44,18 +44,18 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     shown = step
   }
 
-  // The step the tape is on, from the next step it plays: the one before it (none at the start).
+  // The step the transport is on, from the next step it plays: the one before it (none at the start).
   // It keeps its place when the core stops, so the progress bar does too.
   const stepBefore = (next: number) => (next > 0 ? (next - 1) % STEPS : -1)
   showStep(stepBefore(core.clock.step))
 
-  // Events arrive early (the clock schedules ahead), so wait until the tape really gets there.
+  // Events arrive early (the clock schedules ahead), so wait until the transport really gets there.
   const at = (time: number, show: () => void) => {
     const delay = Math.max(0, (time - core.context.currentTime) * 1000)
     setTimeout(() => signal.aborted || show(), delay)
   }
   on('step', ({ step, time }) => at(time, () => showStep(step % STEPS)))
-  // Rewind: the tape goes back past the steps, so the progress bar goes back too. A rewind ends
+  // Rewind: the transport goes back past the steps, so the progress bar goes back too. A rewind ends
   // exactly at the first step of the sequence: then the bar is empty, like at the start.
   on('rewindstep', ({ step, time }) => at(time, () => showStep(step % STEPS === 0 ? -1 : stepBefore(step))))
 })

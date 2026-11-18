@@ -1,18 +1,20 @@
 /**
- * The tape: the end of the audio chain records onto it, at the tape position (see clock.ts).
- * When the tape goes backwards (rewind), it plays that recording backwards, at the tape speed.
- * So a rewind sounds like a real tape (or vinyl) going back: the real music, backwards and fast.
+ * The tape: Master records the sound that reaches it (the whole sound, see `outputStage` in
+ * @loop/core) at the transport position. When the transport goes backwards (rewind), the tape
+ * plays that recording backwards, at the transport speed. So a rewind sounds like a real tape (or
+ * vinyl) going back: the real music, backwards and fast.
  *
- *   chain ─▶ tape ─▶ core.output (the master volume) ─▶ speakers
+ *   end of the chain ─▶ tape ─▶ volume ─▶ core.output ─▶ speakers
+ *                       └──── Master's output stage ────┘
  *
- * - Speed 0 or more: the sound of the chain goes through, unchanged. While the tape moves forwards,
- *   it is also recorded at the tape position.
- * - Speed below 0: the chain is silent here; the tape plays its recording backwards instead. A
- *   slow tape is quieter (like a real tape head), so it does not click when it turns around.
+ * - Speed 0 or more: the sound goes through, unchanged. While the transport moves forwards, it is
+ *   also recorded at the transport position.
+ * - Speed below 0: the sound coming in is silent here; the tape plays its recording backwards
+ *   instead. A slow tape is quieter (like a real tape head), so it does not click when it turns around.
  *
- * It keeps only a short piece: the last TAPE_SECONDS of tape. A rewind goes back at most one bar
- * (see clock.ts), so that is enough. Further back the tape is blank (silent).
- * The speed comes in as a sound signal (core.speedSignal), so it follows the clock exactly.
+ * It keeps only a short piece: the last TAPE_SECONDS. A rewind goes back at most one bar (see
+ * clock.ts in @loop/core), so that is enough. Further back the tape is blank (silent).
+ * The speed comes in as a sound signal (core.speedSignal), so it follows the transport exactly.
  */
 
 /**
@@ -96,26 +98,35 @@ registerProcessor('${PROCESSOR}', Tape)
 `
 
 export interface Tape {
+  /** The tape's audio node: sound in, sound out. */
+  readonly node: AudioWorkletNode
   /** Put the tape at a place (seconds at full speed), for example 0 after a rewind. */
   setPosition(seconds: number): void
+  /** Unplug the tape (also from the speed signal). */
+  dispose(): void
 }
 
 /**
- * Put the tape between `from` (the end of the chain) and `to` (the master output). Until the tape
- * is loaded (it loads in the background), `from` goes straight to `to`.
+ * The tape code is added once per audio context: a second time would register the same processor
+ * name again, and that fails. So two Masters share the code (each still has its own tape).
  */
-export async function createTape(
-  context: BaseAudioContext,
-  from: AudioNode,
-  to: AudioNode,
-  speedSignal: AudioNode,
-): Promise<Tape> {
-  const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
-  try {
-    await context.audioWorklet.addModule(url)
-  } finally {
-    URL.revokeObjectURL(url)
+const loaded = new WeakMap<BaseAudioContext, Promise<void>>()
+
+const load = (context: BaseAudioContext) => {
+  let loading = loaded.get(context)
+  if (!loading) {
+    const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
+    loading = context.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url))
+    // It failed: try again next time.
+    loading.catch(() => loaded.delete(context))
+    loaded.set(context, loading)
   }
+  return loading
+}
+
+/** Make a tape that follows `speedSignal` (core.speedSignal). It loads in the background. */
+export async function createTape(context: BaseAudioContext, speedSignal: AudioNode): Promise<Tape> {
+  await load(context)
   const node = new AudioWorkletNode(context, PROCESSOR, {
     numberOfInputs: 1,
     numberOfOutputs: 1,
@@ -125,7 +136,13 @@ export async function createTape(
   const speed = node.parameters.get('speed')!
   speed.value = 0
   speedSignal.connect(speed)
-  from.connect(node).connect(to)
-  from.disconnect(to)
-  return { setPosition: (seconds) => node.port.postMessage({ position: seconds }) }
+  return {
+    node,
+    setPosition: (seconds) => node.port.postMessage({ position: seconds }),
+    dispose() {
+      speedSignal.disconnect(speed)
+      node.disconnect()
+      node.port.close()
+    },
+  }
 }

@@ -3,10 +3,12 @@ export {
   modulesAfter,
   planChain,
   planChannels,
+  planStages,
   routeTrigger,
   type ChainConnection,
   type ChainSlot,
   type ChannelSlot,
+  type StageSlot,
   type TriggerStop,
 } from './chain'
 export {

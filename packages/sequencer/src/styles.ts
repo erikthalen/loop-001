@@ -23,7 +23,7 @@ export const styles = css`
     display: grid;
     grid-template-columns: repeat(16, auto);
     justify-content: start;
-    gap: 4px 2px;
+    gap: 2px 2px;
   }
 
   .grid input[type="checkbox"]:nth-child(4n + 1):not(:nth-child(16n + 1)) {

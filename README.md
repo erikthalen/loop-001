@@ -4,7 +4,7 @@ pnpm monorepo.
 
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
-- `packages/master` – `@loop/master`: play / stop and the master volume, HTML only; it makes no sound
+- `packages/master` – `@loop/master`: play / stop / rewind and the master volume; an output stage after the chain that records the sound and plays it backwards while it rewinds
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
 - `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules after it
@@ -100,7 +100,7 @@ UI (client.ts) ──methods──▶ Core ──events──▶ modules (Metron
 through the modules in the order they were added, then to the speakers:
 
 ```
-core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ core.output ─▶ speakers
+core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ output stages ─▶ core.output ─▶ speakers
 ```
 
 | Module has       | Example    | The sound from before ...                  | The module's own sound |
@@ -112,6 +112,11 @@ core.input ─▶ module 1 ─▶ module 2 ─▶ ... ─▶ core.output ─▶ 
 So a filter only changes the modules that come before it. `core.move(module, index)` changes the order
 (the rack calls it when you drag a module by its handle; dnd-kit, `@dnd-kit/dom`). `core.input` is the start of the chain
 (nothing is connected to it yet; later, for example, a microphone).
+
+**Output stages** (`outputStage: { input, output }` in what `setup` returns): a module can also put a stage
+after the end of the chain, before `core.output`. All the sound goes through it, wherever the module is in
+the rack. Master uses one for its tape (the rewind sound) and the master volume. Several stages go one after
+the other, in chain order (`planStages` in `chain.ts`). `core.output` stays at volume 1.
 
 **Triggers** flow down the chain too, like MIDI or CV cables. A trigger says "play channel X at time T".
 A module sends one with `ctx.send({ channel, time })`. Only the modules **after** it get it, with
@@ -175,9 +180,9 @@ To sync the screen to the sound, wait `time - context.currentTime` seconds (see 
 
 **Never** make a sound "now" inside an event listener. Always use the event's `time`.
 
-### Tape speed: start and stop like a tape machine
+### The transport: start and stop like a tape machine
 
-The clock runs like a tape. On start the tape speeds up from 0 to 1 (`SPIN_UP`, 0.4 s). On stop it slows down
+The clock runs like the transport of a tape machine. On start the transport speeds up from 0 to 1 (`SPIN_UP`, 0.4 s). On stop it slows down
 to 0 (`SPIN_DOWN`, 0.9 s), then the `stop` event comes. The steps and beats follow the speed, so all modules
 get slower or faster triggers by themselves. Click play while it slows down: it speeds up again from there.
 
@@ -185,16 +190,17 @@ get slower or faster triggers by themselves. Click play while it slows down: it 
 - The `speedchange` event: the speed starts to change (`{ plan }`: points in time, straight lines between them).
 - `core.speedSignal`: the speed as a sound signal. Connect it to an AudioParam to follow it.
   The sampler connects it to `playbackRate` (speed and pitch), the metronome to its tick's frequency.
-- `core.clock.travel(from, to)`: how far the tape moved between two times (seconds at full speed).
+- `core.clock.travel(from, to)`: how far the transport moved between two times (seconds at full speed).
 
-The tape keeps its place: stop, then start, and it goes on from the next step (`core.clock.step`).
+The transport keeps its place: stop, then start, and it goes on from the next step (`core.clock.step`).
 
-**Rewind** (`core.rewind()`, the "rew" button in Master): the tape goes backwards to the first step of the
-bar it is in (the start of the sequence), no further. It ramps up to `REWIND_BPM` (130 bpm, backwards) in
-`REWIND_RAMP` (0.2 s), and ramps down at the end. No steps play; `rewindstep` events tell where the tape is,
-and `rewindend` comes at the end. The sound is real: the end of the chain records onto a short tape (the last
-13 s, one bar at the slowest tempo; see `packages/core/src/tape.ts`, an AudioWorklet), and a rewind plays it
-backwards. The tape is before `core.output`, so the master volume works on it too.
+**Rewind** (`core.rewind()`, the "rew" button in Master): the transport goes backwards to the first step of the
+bar it is in (the start of the sequence), no further. It ramps up to `REWIND_BPM` (200 bpm, backwards) in
+`REWIND_RAMP` (0.6 s), and ramps down at the end. No steps play; `rewindstep` events tell where the transport is,
+and `rewindend` comes at the end. The sound is real: Master records the whole sound onto a short tape (the last
+13 s, one bar at the slowest tempo; see `packages/master/src/tape.ts`, an AudioWorklet), and a rewind plays it
+backwards. The tape is before Master's volume, so the master volume works on it too. Without a Master there is
+no rewind sound.
 
 ### Write a module
 

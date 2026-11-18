@@ -167,21 +167,21 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // ——— Playing ———
 
-  /** `tape`: it follows the core's tape speed (a trigger from the clock), see core.speed. */
-  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number; tape: boolean }
+  /** `transport`: it follows the core's transport speed (a trigger from the clock), see core.speed. */
+  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number; transport: boolean }
   /** The sound from the play button (it says "stop" while this plays). */
   let pressed: Playing | null = null
   /** The newest sound of each channel, from the play button or a trigger: the picture shows it. */
   const latest: (Playing | null)[] = Array.from({ length: CHANNELS }, () => null)
 
-  /** The sounds that follow the tape speed now. When the tape has stopped, they stop. */
-  const onTape = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>()
+  /** The sounds that follow the transport speed now. When the transport has stopped, they stop. */
+  const onTransport = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>()
 
   /**
    * Play a channel from its start marker to its end marker, at an exact audio time and a volume
-   * (0 to 1). `tape`: follow the core's tape speed (speed and pitch), like a sound on the tape.
+   * (0 to 1). `transport`: follow the core's transport speed (speed and pitch), like a sound on a tape.
    */
-  const trigger = (channel: number, time = audio.currentTime, volume = 1, tape = false): Playing | null => {
+  const trigger = (channel: number, time = audio.currentTime, volume = 1, transport = false): Playing | null => {
     const { buffer, start, end } = channels[channel] ?? {}
     if (!buffer || start === undefined || end === undefined) return null
     const source = new AudioBufferSourceNode(audio, { buffer })
@@ -189,27 +189,27 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     const gain = new GainNode(audio, { gain: Math.max(0, volume) })
     source.connect(gain).connect(channelOutputs[channel]!)
     const sound = { source, gain }
-    if (tape) {
-      // The speed signal sets the playback rate: at half tape speed, half speed and an octave lower.
+    if (transport) {
+      // The speed signal sets the playback rate: at half transport speed, half speed and an octave lower.
       source.playbackRate.value = 0
       ctx.core.speedSignal.connect(source.playbackRate)
-      onTape.add(sound)
+      onTransport.add(sound)
     }
     const offset = start * buffer.duration
     const length = Math.max(0.01, (end - start) * buffer.duration)
     source.start(time, offset, length)
-    const started = { source, began: time, offset, length, channel, tape }
+    const started = { source, began: time, offset, length, channel, transport }
     latest[channel] = started
     source.onended = () => {
       // Chrome may already have taken this cable away when the sound ended: then it throws.
-      if (tape) {
+      if (transport) {
         try {
           ctx.core.speedSignal.disconnect(source.playbackRate)
         } catch {
           // Already gone.
         }
       }
-      onTape.delete(sound)
+      onTransport.delete(sound)
       source.disconnect()
       gain.disconnect()
       if (latest[channel] === started) latest[channel] = null
@@ -217,10 +217,10 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     return started
   }
 
-  // The tape has stopped: the sounds on it are frozen (speed 0). Fade them out fast, then stop them.
+  // The transport has stopped: the sounds that follow it are frozen (speed 0). Fade them out fast, then stop them.
   ctx.on('stop', () => {
     const now = audio.currentTime
-    for (const { source, gain } of onTape) {
+    for (const { source, gain } of onTransport) {
       gain.gain.setTargetAtTime(0, now, 0.005)
       source.stop(now + 0.05)
     }
@@ -253,7 +253,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // Triggers from modules before this one in the chain (for example a sequencer): play that channel
   // at that time. The play button does not change; the picture shows it (see nowPlaying).
-  // They are on the tape: they follow its speed (see core.speed).
+  // They follow the transport speed (see core.speed).
   ctx.onTrigger(({ channel, time, volume }) => void trigger(channel, time, volume, true))
 
   ctx.onDispose(() => {
@@ -338,8 +338,8 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       const sound = latest[active]
       if (!sound || audio.currentTime < sound.began) return null
       const duration = sound.source.buffer!.duration
-      // A sound on the tape plays as far as the tape has moved.
-      const seconds = sound.tape ? ctx.core.clock.travel(sound.began, audio.currentTime) : audio.currentTime - sound.began
+      // A sound that follows the transport plays as far as the transport has moved.
+      const seconds = sound.transport ? ctx.core.clock.travel(sound.began, audio.currentTime) : audio.currentTime - sound.began
       const played = clamp(seconds, 0, sound.length)
       return { at: (sound.offset + played) / duration, progress: played / sound.length }
     },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { modulesAfter, planChain, planChannels, routeTrigger } from './chain'
+import { modulesAfter, planChain, planChannels, planStages, routeTrigger } from './chain'
 
 // Nodes are plain strings here: the plan does not need real audio nodes.
 const names = (connections: readonly (readonly [string, string])[]) => connections.map(([from, to]) => `${from}>${to}`)
@@ -44,6 +44,17 @@ describe('planChain', () => {
       'filter.out>filter.jack',
       'filter.jack>out',
     ])
+  })
+})
+
+describe('planStages', () => {
+  it('connects the end of the chain to the output when no module has a stage', () => {
+    expect(names(planStages('end', [], 'out'))).toEqual(['end>out'])
+  })
+
+  it('puts the stages in a row, in order (two Masters: one after the other)', () => {
+    const plan = planStages('end', [{ input: 'a.in', output: 'a.out' }, { input: 'b.in', output: 'b.out' }], 'out')
+    expect(names(plan)).toEqual(['end>a.in', 'a.out>b.in', 'b.out>out'])
   })
 })
 

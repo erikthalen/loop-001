@@ -20,7 +20,7 @@ export const setup = defineModuleSetup((ctx, options: MetronomeOptions = {}) => 
 
   /** Schedule one tick at an exact audio time. */
   const tick = (time: number, high: boolean) => {
-    // It follows the tape speed (see core.speed): a slow tape plays the tick lower and longer.
+    // It follows the transport speed (see core.speed): a slow transport plays the tick lower and longer.
     // The pitch follows the speed signal all the time; the length is set by the speed at the start.
     const speed = Math.max(0.2, ctx.core.speedAt(time))
     const decay = 0.05 / speed

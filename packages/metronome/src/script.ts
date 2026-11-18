@@ -75,10 +75,10 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
 
   // ——— The picture, about 60 times a second ———
   // Where the dot is on the ∞ (see picture.ts): one beat is half of the way around.
-  // It keeps its place when the core stops (like the tape), and goes back while it rewinds.
+  // It keeps its place when the core stops (like a tape machine), and goes back while it rewinds.
   let phase = REST
   // Where the trail behind the dot starts. It follows the dot, at most TRAIL behind it (ahead of
-  // it while the tape goes backwards). It stays where it is when the dot stops, so the path stays
+  // it while the transport goes backwards). It stays where it is when the dot stops, so the path stays
   // drawn; and it grows from the middle the first time.
   let trail = REST
   let lastTime = core.context.currentTime
@@ -95,14 +95,14 @@ export const script = defineModuleScript<typeof setup>(({ root, module, core, on
     const current = swings[0]
     if (core.playing && current && current.time <= time) {
       // Less motion: the dot only jumps to the end of each loop.
-      // How far into the beat: how far the tape has moved since the beat, in beats. So the dot
-      // follows the tape speed exactly (also while it speeds up or slows down), and never goes back.
+      // How far into the beat: how far the transport has moved since the beat, in beats. So the dot
+      // follows the transport speed exactly (also while it speeds up or slows down), and never goes back.
       const moved = core.clock.travel(current.time, time) / (60 / core.bpm)
       const progress = reducedMotion.matches ? 0.5 : Math.min(1, Math.max(0, moved))
       // Even beats: the left loop; odd beats: the right loop.
       phase = Math.PI * (current.beat + progress + 1)
     } else if (!reducedMotion.matches) {
-      // Stopped, rewinding, or not at the first beat yet: the dot moves as far as the tape (back
+      // Stopped, rewinding, or not at the first beat yet: the dot moves as far as the transport (back
       // while it rewinds; not at all while it stands still).
       phase += (Math.PI * core.clock.travel(lastTime, time)) / (60 / core.bpm)
     }

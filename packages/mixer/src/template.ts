@@ -18,18 +18,6 @@ export const template = defineModuleTemplate<typeof setup>(
           { length: CHANNELS },
           (_, i) => html`
             <div class="strip" style="--c: ${CHANNEL_COLORS[i]}">
-              <input
-                class="vertical"
-                name="volume"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value="${Math.round(module.volumes[i]! * 100)}"
-                data-channel="${i}"
-                aria-label="Channel ${i + 1} volume"
-              />
-              <span class="name" aria-hidden="true">${i + 1}</span>
               ${BUS_NAMES.map(
                 (bus, b) => html`
                   <input
@@ -42,6 +30,18 @@ export const template = defineModuleTemplate<typeof setup>(
                   />
                 `,
               )}
+              <input
+                class="vertical"
+                name="volume"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="${Math.round(module.volumes[i]! * 100)}"
+                data-channel="${i}"
+                aria-label="Channel ${i + 1} volume"
+              />
+              <span class="name" aria-hidden="true">${i + 1}</span>
             </div>
           `,
         )}
@@ -49,6 +49,7 @@ export const template = defineModuleTemplate<typeof setup>(
           (bus, b) => html`
             <!-- Send bus ${bus}: how much goes to the effect, and how much comes back. -->
             <div class="strip bus">
+              <span class="name" aria-hidden="true">snd</span>
               <input
                 class="vertical"
                 name="send-level"
@@ -60,9 +61,11 @@ export const template = defineModuleTemplate<typeof setup>(
                 data-bus="${b}"
                 aria-label="Send ${bus}"
               />
-              <span class="name" aria-hidden="true">snd</span>
+              <span class="bus-name" aria-hidden="true">${bus}</span>
             </div>
+
             <div class="strip bus">
+              <span class="name" aria-hidden="true">rtn</span>
               <input
                 class="vertical"
                 name="return-level"
@@ -74,9 +77,8 @@ export const template = defineModuleTemplate<typeof setup>(
                 data-bus="${b}"
                 aria-label="Return ${bus}"
               />
-              <span class="name" aria-hidden="true">rtn</span>
+              <span class="bus-name" aria-hidden="true">${bus}</span>
             </div>
-            <span class="bus-name" aria-hidden="true">${bus}</span>
           `,
         )}
       </div>

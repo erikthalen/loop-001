@@ -80,6 +80,32 @@ export function planChannels<N>(slots: readonly ChannelSlot<N>[]): ChainConnecti
   return connections
 }
 
+/** One module's output stage, as the cables see it (see planStages). */
+export interface StageSlot<N> {
+  readonly input: N
+  readonly output: N
+}
+
+/**
+ * The output stage: after the end of the chain, before the speakers. The modules that have one
+ * (for example Master: the rewind tape and the volume) are put in a row, in chain order:
+ *
+ *   end of the chain ─▶ stage 1 ─▶ stage 2 ─▶ ... ─▶ core.output ─▶ speakers
+ *
+ * So the whole sound goes through every stage, and where a module is in the chain only sets the
+ * order of the stages. No stages: the end of the chain goes straight to `end`.
+ */
+export function planStages<N>(start: N, stages: readonly StageSlot<N>[], end: N): ChainConnection<N>[] {
+  const connections: ChainConnection<N>[] = []
+  let previous = start
+  for (const stage of stages) {
+    connections.push([previous, stage.input])
+    previous = stage.output
+  }
+  connections.push([previous, end])
+  return connections
+}
+
 /**
  * The ids after `from` in the chain order: the modules that get `from`'s triggers.
  * Empty if `from` is not in the chain.

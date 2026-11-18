@@ -99,7 +99,7 @@ describe('createClock', () => {
     expect(clock.running).toBe(false)
   })
 
-  describe('tape speed', () => {
+  describe('transport speed', () => {
     const run = (source: { currentTime: number }, until: number) => {
       for (let t = source.currentTime; t <= until; t += 0.005) {
         source.currentTime = t
@@ -125,9 +125,9 @@ describe('createClock', () => {
       // While it speeds up, each gap is shorter than the one before; at full speed: 0.125 s.
       expect(gaps[1]).toBeLessThan(gaps[0]!)
       expect(gaps.at(-1)).toBeCloseTo(0.125, 9)
-      // The second step is where the tape has moved one step: t²/2 = 0.125, so t = 0.5.
+      // The second step is where the transport has moved one step: t²/2 = 0.125, so t = 0.5.
       expect(times[1]).toBeCloseTo(0.5, 9)
-      // The tape travel matches the steps.
+      // The transport travel matches the steps.
       expect(clock.travel(0, times[4]!)).toBeCloseTo(4 * 0.125, 9)
     })
 
@@ -142,12 +142,12 @@ describe('createClock', () => {
       run(source, 3)
       expect(clock.running).toBe(false)
       expect(of('stop')).toEqual([{ time: expect.closeTo(2, 2) }])
-      // Steps after the stop: further and further apart, and none after the tape has stopped.
+      // Steps after the stop: further and further apart, and none after the transport has stopped.
       const late = of('step').map((s) => s.time).filter((t) => t > 1.1)
       expect(late.length).toBeGreaterThan(1)
       expect(late[1]! - late[0]!).toBeGreaterThan(0.125)
       expect(late.every((t) => t <= 2)).toBe(true)
-      // The tape moved 0.5 s while it slowed down (half of 1 s at speed 1 to 0).
+      // The transport moved 0.5 s while it slowed down (half of 1 s at speed 1 to 0).
       expect(clock.travel(1, 2)).toBeCloseTo(0.5, 2)
     })
 
@@ -169,7 +169,7 @@ describe('createClock', () => {
       expect(clock.speed).toBe(1)
     })
 
-    it('after a stop, the next start goes on from the place on the tape', () => {
+    it('after a stop, the next start goes on from the place on the transport', () => {
       const { clock, source, of } = setup({ bpm: 120, spinDown: 1 })
       clock.start(0)
       run(source, 1)
@@ -177,7 +177,7 @@ describe('createClock', () => {
       run(source, 2.5)
       const position = clock.positionAt(2.5)
       const next = clock.step
-      // The tape stopped between two steps: the next step is a bit further on.
+      // The transport stopped between two steps: the next step is a bit further on.
       expect(position).toBeLessThan(next * 0.125)
       clock.start(3)
       run(source, 3.5)
@@ -319,7 +319,7 @@ describe('createClock', () => {
       vi.advanceTimersByTime(25)
     }
     const after = of('step').slice(played.length)
-    // The tape stopped between two steps: the next step comes when the tape gets there.
+    // The transport stopped between two steps: the next step comes when the transport gets there.
     expect(after[0]).toMatchObject({ step: next, stepInBar: next % 16 })
     expect(after[0]!.time).toBeCloseTo(5 + next * 0.125 - position, 9)
   })

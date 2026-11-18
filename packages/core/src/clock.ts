@@ -10,11 +10,11 @@
  *
  * Result: events arrive a little EARLY, but the sound plays exactly on time.
  *
- * Tape: the clock works like a tape machine. The tape has a position (seconds at full speed) and
- * a speed (1 is full speed, 0 is stopped, below 0 is backwards). Each step has its place on the
- * tape; a step plays when the tape gets to it. So the steps follow the speed: at half speed they
- * come half as often.
- * - Start: the tape speeds up from 0 to 1 (`spinUp` seconds).
+ * Transport: the clock works like the transport of a tape machine. It has a position (seconds at
+ * full speed) and a speed (1 is full speed, 0 is stopped, below 0 is backwards). Each step has its
+ * place on the timeline; a step plays when the transport gets to it. So the steps follow the speed:
+ * at half speed they come half as often.
+ * - Start: the transport speeds up from 0 to 1 (`spinUp` seconds).
  * - Stop: it slows down to 0 (`spinDown` seconds). It keeps its place.
  * - Rewind: it goes backwards (at the tempo `rewindBpm`) to the first step of the bar it is in
  *   (the start of the sequence), with short ramps (`rewindRamp`). No steps play; `rewindstep`
@@ -28,35 +28,35 @@ export interface TimeSource {
 }
 
 export interface StepEvent {
-  /** Step number since the start of the tape: 0, 1, 2, ... */
+  /** Step number since the start of the transport: 0, 1, 2, ... */
   step: number
   /** Step position in the bar: 0 to (stepsPerBeat * beatsPerBar - 1). */
   stepInBar: number
   /** Audio time (seconds, AudioContext clock) when this step plays. */
   time: number
-  /** Seconds (audio time) until the next step: longer while the tape is slow. */
+  /** Seconds (audio time) until the next step: longer while the transport is slow. */
   duration: number
 }
 
-/** The tape speed at an audio time. */
+/** The transport speed at an audio time. */
 export interface SpeedPoint {
   time: number
   speed: number
 }
 
 /**
- * How the tape speed changes: it goes in straight lines from point to point. Before the first
+ * How the transport speed changes: it goes in straight lines from point to point. Before the first
  * point the speed is the first point's speed; after the last point, the last point's speed.
  * Two points at the same time: the speed jumps there.
  */
 export type SpeedPlan = readonly SpeedPoint[]
 
 export interface BeatEvent {
-  /** Beat number since the start of the tape: 0, 1, 2, ... */
+  /** Beat number since the start of the transport: 0, 1, 2, ... */
   beat: number
   /** Beat position in the bar: 0 to (beatsPerBar - 1). 0 is the first beat of a bar. */
   beatInBar: number
-  /** Bar number since the start of the tape: 0, 1, 2, ... */
+  /** Bar number since the start of the transport: 0, 1, 2, ... */
   bar: number
   /** Audio time (seconds, AudioContext clock) when this beat plays. */
   time: number
@@ -64,24 +64,24 @@ export interface BeatEvent {
 
 export interface ClockEventMap {
   /**
-   * The tape starts to play. It then speeds up: see `speedchange`.
+   * The transport starts to play. It then speeds up: see `speedchange`.
    * `step`: the next step it plays, where it stopped last time (0 the first time).
    */
   start: { time: number; step: number }
-  /** The tape has stopped playing (after it slowed down, or when a rewind turned it around). */
+  /** The transport has stopped playing (after it slowed down, or when a rewind turned it around). */
   stop: { time: number }
-  /** The tape speed starts to change (start, stop, rewind). `plan`: how, from now on. */
+  /** The transport speed starts to change (start, stop, rewind). `plan`: how, from now on. */
   speedchange: { plan: SpeedPlan }
   step: StepEvent
   beat: BeatEvent
-  /** A rewind starts: the tape goes back to `step` (the first step of a bar). */
+  /** A rewind starts: the transport goes back to `step` (the first step of a bar). */
   rewind: { time: number; step: number }
   /**
-   * While it rewinds: the tape goes back past a step. `step` is the next step it plays from
-   * there (the same as `clock.step`). It is 0 when the tape is back at the start.
+   * While it rewinds: the transport goes back past a step. `step` is the next step it plays from
+   * there (the same as `clock.step`). It is 0 when the transport is back at the start.
    */
   rewindstep: { step: number; time: number }
-  /** The rewind is over: the tape is still (at the start, or where the rewind was stopped). */
+  /** The rewind is over: the transport is still (at the start, or where the rewind was stopped). */
   rewindend: { time: number }
 }
 
@@ -96,16 +96,16 @@ export interface ClockOptions {
   lookahead?: number
   /** How often (milliseconds) the JS timer wakes up. Default: 25. */
   interval?: number
-  /** Seconds the tape takes to speed up from 0 to 1 on start. 0: at once. Default: 0. */
+  /** Seconds the transport takes to speed up from 0 to 1 on start. 0: at once. Default: 0. */
   spinUp?: number
-  /** Seconds the tape takes to slow down from 1 to 0 on stop. 0: at once. Default: 0. */
+  /** Seconds the transport takes to slow down from 1 to 0 on stop. 0: at once. Default: 0. */
   spinDown?: number
   /**
-   * How fast the tape goes backwards when it rewinds, as a tempo: the steps go by backwards at
+   * How fast the transport goes backwards when it rewinds, as a tempo: the steps go by backwards at
    * this bpm. Default: 130.
    */
   rewindBpm?: number
-  /** Seconds the tape takes to get from 0 to the full rewind speed (and back to 0). Default: 0.2. */
+  /** Seconds the transport takes to get from 0 to the full rewind speed (and back to 0). Default: 0.2. */
   rewindRamp?: number
 }
 
@@ -113,13 +113,13 @@ export type ClockEmit = <K extends keyof ClockEventMap>(type: K, detail: ClockEv
 
 export interface Clock {
   readonly bpm: number
-  /** True while the tape plays: from start until it has stopped (also while it slows down). */
+  /** True while the transport plays: from start until it has stopped (also while it slows down). */
   readonly running: boolean
   /** True while it slows down to stop. */
   readonly stopping: boolean
   /** True while it rewinds to the start (not when the rewind was stopped and it slows down). */
   readonly rewinding: boolean
-  /** The tape speed now: 1 is full speed, 0 is stopped, below 0 is backwards. */
+  /** The transport speed now: 1 is full speed, 0 is stopped, below 0 is backwards. */
   readonly speed: number
   /** How the speed changes from now on. */
   readonly plan: SpeedPlan
@@ -132,36 +132,36 @@ export interface Clock {
   readonly lookahead: number
   /** The next step it plays: 0, 1, 2, ... It keeps its value when the clock stops. */
   readonly step: number
-  /** The tape speed at an audio time (as far as it is known now). */
+  /** The transport speed at an audio time (as far as it is known now). */
   speedAt(time: number): number
   /**
-   * How far the tape moves between two audio times, in seconds at full speed (negative:
-   * backwards). Example: a sound started at `from` with the tape speed has played
+   * How far the transport moves between two audio times, in seconds at full speed (negative:
+   * backwards). Example: a sound started at `from` with the transport speed has played
    * `travel(from, now)` seconds of itself.
    */
   travel(from: number, to: number): number
-  /** Where the tape is at an audio time, in seconds at full speed from its start. */
+  /** Where the transport is at an audio time, in seconds at full speed from its start. */
   positionAt(time: number): number
   /**
-   * Where the tape is at an audio time, in steps (not rounded): 16 is exactly at step 16, 16.5
+   * Where the transport is at an audio time, in steps (not rounded): 16 is exactly at step 16, 16.5
    * halfway to the next step. It follows the steps, also after a tempo change.
    */
   stepsAt(time: number): number
   /** Change the tempo. Steps that are already announced keep their time. */
   setBpm(bpm: number): void
   /**
-   * Start, and speed the tape up. It goes on from where it is (like a tape, it keeps its place);
-   * the first time, from step 0. While it slows down to stop: speed up again from there. While
+   * Start, and speed the transport up. It goes on from where it is (like a tape machine, it keeps
+   * its place); the first time, from step 0. While it slows down to stop: speed up again from there. While
    * it rewinds: stop the rewind fast, then play from there.
    * @param time Audio time when it starts. Default: a little after now,
    * so the first step is not already late when it is scheduled.
    */
   start(time?: number): void
-  /** Slow the tape down, then stop (the `stop` event comes when it has stopped). While it rewinds: stop the rewind. */
+  /** Slow the transport down, then stop (the `stop` event comes when it has stopped). While it rewinds: stop the rewind. */
   stop(): void
   /**
-   * Rewind to the first step of the bar the tape is in (the start of the sequence): backwards,
-   * like a tape. While it plays, it turns around. At the first step already: nothing happens.
+   * Rewind to the first step of the bar the transport is in (the start of the sequence): backwards,
+   * like a tape machine. While it plays, it turns around. At the first step already: nothing happens.
    */
   rewind(): void
   /** Stop at once: no slow-down and no events. For clean-up. */
@@ -190,14 +190,14 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
   let mode: Mode = 'stopped'
   /** The next step it plays. */
   let step = 0
-  /** The place of one step on the tape: step `base.step` is at `base.position` (see stepPosition). */
+  /** The place of one step on the timeline: step `base.step` is at `base.position` (see stepPosition). */
   let base = { step: 0, position: 0 }
-  /** Where the tape is at one time; positionAt adds how far it moved from there. */
+  /** Where the transport is at one time; positionAt adds how far it moved from there. */
   let anchor = { time: 0, position: 0 }
   let plan: SpeedPoint[] = [{ time: 0, speed: 0 }]
   /** Look for the next step (or the next rewind step) from this time on. */
   let cursor = 0
-  /** A rewind turned the playing tape around: the `stop` event comes at this time. */
+  /** A rewind turned the playing transport around: the `stop` event comes at this time. */
   let stopAt: number | null = null
   /** The step a rewind goes back to (the first step of a bar). */
   let rewindTo = 0
@@ -245,7 +245,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
 
   const positionAt = (time: number) => anchor.position + travel(anchor.time, time)
 
-  /** The first audio time from `from` on when the tape is at `target`. Infinity: never. */
+  /** The first audio time from `from` on when the transport is at `target`. Infinity: never. */
   const timeAt = (target: number, from: number) => {
     let left = target - positionAt(from)
     if (Math.abs(left) < 1e-12) return from
@@ -255,7 +255,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       const [a, b] = [points[i - 1]!, points[i]!]
       const [sa, sb] = [speedAt(a), speedAt(b, true)]
       const area = ((sa + sb) / 2) * (b - a)
-      // Between two corners the speed has one direction, so the tape gets to `left` at most once.
+      // Between two corners the speed has one direction, so the transport gets to `left` at most once.
       if (area !== 0 && Math.sign(area) === Math.sign(left) && Math.abs(left) <= Math.abs(area)) {
         const slope = (sb - sa) / (b - a)
         if (Math.abs(slope) < 1e-12) return a + left / sa
@@ -270,7 +270,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     return speed !== 0 && Math.sign(speed) === Math.sign(left) ? Math.max(from, last.time) + left / speed : Infinity
   }
 
-  /** Use a new speed plan from now on. The tape keeps its place. */
+  /** Use a new speed plan from now on. The transport keeps its place. */
   const setPlan = (points: SpeedPoint[]) => {
     const now = source.currentTime
     anchor = { time: now, position: positionAt(now) }
@@ -286,7 +286,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     timer = undefined
   }
 
-  /** Announce the steps the tape gets to before `until`. */
+  /** Announce the steps the transport gets to before `until`. */
   const playSteps = (now: number) => {
     let time = timeAt(stepPosition(step), cursor)
     // A step that is a little late still plays (Web Audio plays it at once).
@@ -312,7 +312,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     }
   }
 
-  /** While it rewinds: announce each step the tape goes back past, before `until`. */
+  /** While it rewinds: announce each step the transport goes back past, before `until`. */
   const rewindSteps = (until: number) => {
     while (step > rewindTo) {
       const time = timeAt(stepPosition(step - 1), cursor)
@@ -323,7 +323,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     }
   }
 
-  /** The rewind is over at `time`. At the end: the tape is exactly at the first step of the bar. */
+  /** The rewind is over at `time`. At the end: the transport is exactly at the first step of the bar. */
   const endRewind = (time: number, atEnd: boolean) => {
     if (atEnd) {
       if (step !== rewindTo) {
@@ -347,7 +347,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     const end = plan.at(-1)!.time
     if (mode === 'playing' || mode === 'stopping') {
       playSteps(now)
-      // Slowing down: when the tape has stopped, the clock stops.
+      // Slowing down: when the transport has stopped, the clock stops.
       if (mode === 'stopping' && now >= end) {
         mode = 'stopped'
         stopTimer()
@@ -364,7 +364,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     }
   }
 
-  /** Stop a rewind: slow down fast to 0. Returns the time when the tape is still. */
+  /** Stop a rewind: slow down fast to 0. Returns the time when the transport is still. */
   const brake = () => {
     const now = source.currentTime
     const speed = speedAt(now)
@@ -409,7 +409,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     stepsAt: (time) => base.step + (positionAt(time) - base.position) / stepDuration(),
     setBpm(value) {
       const next = validBpm(value)
-      // The next step keeps its place on the tape; the steps after it use the new tempo.
+      // The next step keeps its place on the timeline; the steps after it use the new tempo.
       base = { step, position: stepPosition(step) }
       bpm = next
     },
@@ -425,7 +425,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
         return
       }
       if (mode === 'rewinding' || mode === 'braking') {
-        // Stop the rewind fast, then play from where the tape is then.
+        // Stop the rewind fast, then play from where the transport is then.
         const still = brake()
         sendStop()
         rewindSteps(still + 1e-9)
@@ -438,7 +438,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
         startTimer()
         return
       }
-      // Stopped: go on from where the tape is. (Before `time` it stays still.)
+      // Stopped: go on from where the transport is. (Before `time` it stays still.)
       mode = 'playing'
       cursor = time
       setPlan([
@@ -459,7 +459,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       if (mode !== 'playing') return
       const now = source.currentTime
       const speed = speedAt(now)
-      // It slows down from the speed it has now: a tape that just started stops sooner.
+      // It slows down from the speed it has now: a transport that just started stops sooner.
       const length = spinDown * speed
       if (length <= 0) {
         setPlan([{ time: now, speed: 0 }])
@@ -476,7 +476,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       const now = source.currentTime
       const position = positionAt(now)
       const speed = speedAt(now)
-      // The step the tape is on: the last one it got to (steps announced ahead of it don't count;
+      // The step the transport is on: the last one it got to (steps announced ahead of it don't count;
       // exactly at the first step of a bar, that is the one).
       let on = step
       while (on > 0 && stepPosition(on) > position + 1e-9) on--

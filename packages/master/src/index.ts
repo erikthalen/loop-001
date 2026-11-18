@@ -7,11 +7,14 @@ import { template } from './template'
 
 export type { MasterOptions } from './setup'
 
-/** Starts and stops the core, and sets the master volume. HTML only. */
+/**
+ * Starts, stops and rewinds the transport, records the sound to play it backwards while it rewinds,
+ * and sets the master volume. An output stage: it gets the whole sound, after the chain.
+ */
 export const master = defineAudioModule({
   type: 'master',
   name: 'Master',
-  description: 'Play and stop, and the master volume.',
+  description: 'Play, stop and rewind, and the master volume.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
   ui: { styles: [uiStyles, styles], template, script },

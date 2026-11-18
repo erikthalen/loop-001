@@ -67,6 +67,13 @@ export interface ModuleSetupResult {
   /** One input per channel: the module takes in the channels of the modules before it (a mixer). */
   channelInputs?: readonly AudioNode[]
   /**
+   * A stage after the end of the chain, before the speakers (see planStages in chain.ts): ALL the
+   * sound goes into `input`, and what comes out of `output` goes on to the speakers. For example
+   * Master: the rewind tape and the master volume. Several modules with a stage: one after the
+   * other, in chain order. The core plugs it in and out; the module connects `input` to `output`.
+   */
+  outputStage?: { readonly input: AudioNode; readonly output: AudioNode }
+  /**
    * Return the settings to save with the project. Must be plain JSON data.
    * When the project loads, this data is passed back to `setup` as `options`.
    * Call `ctx.changed()` when the data changes.
