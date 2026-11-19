@@ -1,10 +1,12 @@
 import { html, render, type AudioModule, type Core, type Plug, type Port, type PortKind } from '@loop/core'
 
-export interface PatchMatrixOptions {
-  /** Where the tables go (the patch popover). */
+export interface MatrixOptions {
+  /** Where the tables go (in the patchbay). */
   root: HTMLElement
   /** The color of the cables out of a module: its row's checkboxes are in that color. */
   colorOf: (module: AudioModule) => string
+  /** Stop following the core when this aborts (the patchbay is unmounted). */
+  signal: AbortSignal
 }
 
 /** The kinds of cable, in the order their tables show. A table only shows when it has a row and a column. */
@@ -36,8 +38,8 @@ const keyOf = (plug: Plug) => `${plug.module}\n${plug.port}`
  * Only native HTML: the matrix component of @loop/ui (components/matrix.css), a <table> of
  * checkboxes, each row in the color of the output's module (--loop-primary).
  */
-export function createPatchMatrix(core: Core, options: PatchMatrixOptions): void {
-  const { root, colorOf } = options
+export function showMatrix(core: Core, options: MatrixOptions): void {
+  const { root, colorOf, signal } = options
 
   /** Every jack of every module, in rack order. */
   function jacks(direction: Port['direction'], kind: PortKind): Jack[] {
@@ -111,20 +113,24 @@ export function createPatchMatrix(core: Core, options: PatchMatrixOptions): void
     }
   }
 
-  root.addEventListener('change', (event) => {
-    const box = event.target as HTMLInputElement
-    const { from, to } = box.dataset as { from?: string; to?: string }
-    if (!from || !to) return
-    if (box.checked) core.connect(plugOf(from), plugOf(to))
-    else {
-      const cable = cableBetween(from, to)
-      if (cable) core.disconnect(cable)
-    }
-    // A cable that could not be made: the box goes back. Other boxes may be (dis)allowed now.
-    update()
-  })
+  root.addEventListener(
+    'change',
+    (event) => {
+      const box = event.target as HTMLInputElement
+      const { from, to } = box.dataset as { from?: string; to?: string }
+      if (!from || !to) return
+      if (box.checked) core.connect(plugOf(from), plugOf(to))
+      else {
+        const cable = cableBetween(from, to)
+        if (cable) core.disconnect(cable)
+      }
+      // A cable that could not be made: the box goes back. Other boxes may be (dis)allowed now.
+      update()
+    },
+    { signal },
+  )
 
-  for (const type of ['moduleadd', 'moduleremove', 'modulemove'] as const) core.events.on(type, build)
-  core.events.on('cablechange', update)
+  for (const type of ['moduleadd', 'moduleremove', 'modulemove'] as const) core.events.on(type, build, { signal })
+  core.events.on('cablechange', update, { signal })
   build()
 }

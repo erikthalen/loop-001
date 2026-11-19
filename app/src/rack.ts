@@ -7,11 +7,11 @@ export interface Rack {
   /** True while the rack is in remove mode. */
   readonly removing: boolean
   setRemoving(value: boolean): void
+  /** Call `listener` when remove mode turns on or off, or when modules are added or removed. */
+  onChange(listener: () => void, options?: { signal?: AbortSignal }): void
 }
 
 export interface RackOptions {
-  /** Called when remove mode turns on or off, or when modules are added or removed. */
-  onChange?: (rack: Rack) => void
   /** Called once for each new slot, with the module in it: add things to the slot (the jacks). */
   onSlot?: (slot: HTMLElement, module: AudioModule) => void
 }
@@ -72,6 +72,10 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
   const sortables = new Map<string, Sortable>()
   const manager = new DragDropManager()
   let removing = false
+  const changes = new EventTarget()
+  const notify = () => {
+    changes.dispatchEvent(new Event('change'))
+  }
 
   /** Put the slots in the core's order, and tell each sortable its place. */
   const followCore = () => {
@@ -137,8 +141,9 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
         if (ui) ui.inert = removing
       }
       for (const sortable of sortables.values()) sortable.disabled = removing
-      options.onChange?.(rack)
+      notify()
     },
+    onChange: (listener, listenOptions) => changes.addEventListener('change', listener, listenOptions),
   }
 
   core.events.on('moduleadd', ({ module }) => {
@@ -176,7 +181,7 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
     )
     sortable.disabled = removing
     sortables.set(module.id, sortable)
-    options.onChange?.(rack)
+    notify()
   })
 
   core.events.on('modulemove', followCore)
@@ -188,7 +193,7 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
     sortables.get(module.id)?.destroy()
     sortables.delete(module.id)
     if (slots.size === 0) rack.setRemoving(false)
-    else options.onChange?.(rack)
+    else notify()
 
     if (!reducedMotion.matches) {
       await slot.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.85 }], { duration: 150, easing: 'ease-in' })

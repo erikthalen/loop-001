@@ -1,0 +1,59 @@
+/*
+ * Dialog: every native <dialog>. Open it with showModal(): it sits in the middle of the screen,
+ * over a dimmed page, and the rest of the page cannot be used until it closes. Esc closes it.
+ * A <form method="dialog"> in it closes it too: the button you click is its returnValue.
+ *   <dialog>
+ *     <form method="dialog">
+ *       <h3>Erase "My song"?</h3>
+ *       <p>This cannot be undone.</p>
+ *       <footer>
+ *         <button class="button small" value="keep" autofocus>keep</button>
+ *         <button class="button small primary" value="erase">erase</button>
+ *       </footer>
+ *     </form>
+ *   </dialog>
+ *
+ * It looks like a display (the screen of a module). <h3>: the question, in small capitals.
+ * <footer>: the buttons, on the right.
+ */
+@layer ui {
+  dialog {
+    /* In the middle of the screen (base.css sets every margin to 0, so set it back). */
+    margin: auto;
+    box-sizing: border-box;
+    width: min(275px, calc(100vw - 2rem));
+    padding: 14px;
+    color: var(--ink);
+    background: var(--screen);
+    border: 1px solid var(--color-neutral-300);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+    font-family: var(--loop-font);
+    font-size: 11px;
+    line-height: 1.4;
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      color: var(--muted);
+    }
+
+    footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 14px;
+    }
+  }
+
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.25);
+  }
+}

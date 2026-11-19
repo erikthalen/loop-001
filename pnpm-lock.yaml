@@ -192,6 +192,9 @@ importers:
       '@loop/delay':
         specifier: workspace:*
         version: link:../packages/delay
+      '@loop/library':
+        specifier: workspace:*
+        version: link:../packages/library
       '@loop/lp-filter':
         specifier: workspace:*
         version: link:../packages/lp-filter
@@ -204,6 +207,9 @@ importers:
       '@loop/mixer':
         specifier: workspace:*
         version: link:../packages/mixer
+      '@loop/patchbay':
+        specifier: workspace:*
+        version: link:../packages/patchbay
       '@loop/sampler':
         specifier: workspace:*
         version: link:../packages/sampler
@@ -237,6 +243,19 @@ importers:
         version: 5.1.0(vite@8.3.8)
 
   packages/delay:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/library:
     dependencies:
       '@loop/core':
         specifier: workspace:*
@@ -289,6 +308,19 @@ importers:
         version: 7.0.2
 
   packages/mixer:
+    dependencies:
+      '@loop/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loop/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/patchbay:
     dependencies:
       '@loop/core':
         specifier: workspace:*

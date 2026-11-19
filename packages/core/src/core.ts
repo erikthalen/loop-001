@@ -25,7 +25,7 @@ import type {
   ScopedOn,
   Trigger,
 } from "./module";
-import { render, toStyleSheet } from "./ui";
+import { html, mountView } from "./ui";
 
 /**
  * All events the core sends. Modules listen with `ctx.on(...)` or `core.events.on(...)`.
@@ -379,32 +379,19 @@ export function createCore(options: CoreOptions = {}): Core {
         name: definition.name,
         remove: () => remove(module),
         mount(parent: Element) {
-          // The UI gets its own Shadow DOM: its CSS cannot leak out, and page CSS cannot leak in.
-          const host = document.createElement("section");
-          host.dataset.module = id;
-          host.setAttribute("aria-label", definition.name);
-          const root = host.attachShadow({ mode: "open" });
-
-          // Unmount when the UI is removed OR when the module is removed.
-          const mounted = new AbortController();
-          const signal = AbortSignal.any([mounted.signal, controller.signal]);
-          const unmount = () => {
-            mounted.abort();
-            host.remove();
-          };
-          controller.signal.addEventListener("abort", unmount, {
-            signal: mounted.signal,
-          });
-
+          // In its own Shadow DOM (see mountView in ui.ts). Unmounted when the module is removed too.
           const ui = definition.ui;
-          if (ui) {
-            const styles = ui.styles ? [ui.styles].flat() : [];
-            root.adoptedStyleSheets = styles.map(toStyleSheet);
-            render(ui.template({ module, core }), root);
-          }
-          parent.append(host);
-          ui?.script?.({ module, core, root, signal, on: scopedOn(signal) });
-          return unmount;
+          const script = ui?.script;
+          return mountView(
+            parent,
+            {
+              label: definition.name,
+              styles: ui?.styles,
+              template: ui ? ui.template({ module, core }) : html``,
+              script: script && ((root, signal) => script({ module, core, root, signal, on: scopedOn(signal) })),
+            },
+            { signal: controller.signal, attributes: { "data-module": id } },
+          );
         },
       });
 

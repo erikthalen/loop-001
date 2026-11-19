@@ -24,6 +24,8 @@ export interface ProjectSession {
   flush(): Promise<void>
   /** The open project's data, as it is right now. */
   snapshot(): ProjectData
+  /** Call `listener` when the open project, its name, the save status or the list of projects changes. */
+  onChange(listener: () => void, options?: { signal?: AbortSignal }): void
 }
 
 export interface ProjectSessionOptions {
@@ -40,8 +42,6 @@ export interface ProjectSessionOptions {
   upgrade?: (project: ProjectData) => ProjectData
   /** Wait this long (ms) after the last change before saving. Default: 400. */
   saveDelay?: number
-  /** Called when the open project, its name, or the save status changes. */
-  onChange?: (session: ProjectSession) => void
 }
 
 const EMPTY_PROJECT: ProjectData = { version: 2, bpm: 120, modules: [], cables: [] }
@@ -52,7 +52,7 @@ const DEFAULT_NAME = 'Untitled project'
  * Every change in the core is saved automatically, a moment later.
  */
 export function createProjectSession(options: ProjectSessionOptions): ProjectSession {
-  const { core, store, definitions, newProject = EMPTY_PROJECT, upgrade = (p) => p, saveDelay = 400, onChange } = options
+  const { core, store, definitions, newProject = EMPTY_PROJECT, upgrade = (p) => p, saveDelay = 400 } = options
 
   let current = { id: '', name: DEFAULT_NAME }
   let status: SaveStatus = 'saved'
@@ -60,7 +60,10 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
   /** True while a project is being loaded into the core: its events are not changes. */
   let loading = false
 
-  const notify = () => onChange?.(session)
+  const changes = new EventTarget()
+  const notify = () => {
+    changes.dispatchEvent(new Event('change'))
+  }
 
   const setStatus = (value: SaveStatus) => {
     status = value
@@ -168,6 +171,7 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
       if (timer) await saveNow()
     },
     snapshot: () => serializeProject(core),
+    onChange: (listener, options) => changes.addEventListener('change', listener, options),
   }
 
   return session

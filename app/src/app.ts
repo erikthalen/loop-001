@@ -48,56 +48,6 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             }
           }
 
-          /* Project bar */
-          .project-bar {
-            margin-bottom: 0.5rem;
-          }
-
-          #project-name {
-            width: 100%;
-          }
-
-          #save-status[data-status="error"] {
-            color: #cc0000;
-            font-weight: 500;
-          }
-
-          /* Popovers place themselves under their button (see popover.css in @loop/ui). */
-          #project-menu {
-            min-width: 20rem;
-          }
-          .menu-actions {
-            padding: 0.25rem;
-          }
-          #project-list {
-            max-height: 50vh;
-            overflow: auto;
-
-            ul {
-              display: contents;
-            }
-
-            li {
-              display: flex;
-              align-items: stretch;
-            }
-
-            small {
-              color: var(--color-neutral-500);
-            }
-
-            [data-action="delete"] {
-              font-size: 1.25rem;
-              color: #667085;
-            }
-
-            .button[aria-current="true"] strong::after {
-              content: " (open)";
-              font-weight: 300;
-              color: #667085;
-            }
-          }
-
           /* The app places the modules. Each module styles its own inside. */
           #patch {
             position: relative;
@@ -177,16 +127,8 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             cursor: grabbing !important;
           }
 
-          /* ---- The patch as a grid of checkboxes (see patch-matrix.ts). The matrix itself is
-             styled by @loop/ui (components/matrix.css); here only the popover it sits in. ---- */
-          #patch-matrix {
-            padding: 8px 10px;
-            max-width: calc(100vw - 1rem);
-            overflow: auto;
-          }
-
           #rack:not(:has(.slot))::before {
-            content: "No modules yet. Click Add.";
+            content: "No modules yet. Click add in the patchbay below.";
             color: #667085;
           }
 
@@ -313,88 +255,14 @@ app.get(base, (c) =>
       html`<main>
         <h1 class="sr-only">Loop 001</h1>
 
-        <div class="row">
-          <button
-            id="project-menu-button"
-            class="button small"
-            type="button"
-            popovertarget="project-menu"
-          >
-            Projects
-          </button>
-          <div id="project-menu" popover>
-            <menu>
-              <li>
-                <button id="project-new" class="button small" type="button">
-                  New
-                </button>
-              </li>
-              <li>
-                <button id="project-import" class="button small" type="button">
-                  Import…
-                </button>
-              </li>
-              <li>
-                <button id="project-export" class="button small" type="button">
-                  Export
-                </button>
-                <input id="project-file" type="file" hidden />
-              </li>
-              <li><hr /></li>
-              <li><small>Projects</small></li>
-              <ul id="project-list"></ul>
-            </menu>
-
-            <div class="menu-actions row" style="gap: 0.5rem"></div>
-          </div>
-        </div>
-        <div class="row">
-          <input
-            id="project-name"
-            type="text"
-            aria-label="Project name"
-            autocomplete="off"
-          />
-          <span
-            id="save-status"
-            class="text-muted text-small sr-only"
-            role="status"
-          ></span>
-        </div>
-        <div class="row">
-          <button
-            id="add"
-            class="button small"
-            type="button"
-            popovertarget="module-picker"
-          >
-            Add
-          </button>
-          <button
-            id="remove"
-            class="button small"
-            type="button"
-            aria-pressed="false"
-            disabled
-          >
-            Remove
-          </button>
-          <!-- Not with ?lane in the URL: then the cables are in a lane left of the rack (see client.ts). -->
-          <button
-            id="patch-button"
-            class="button small"
-            type="button"
-            popovertarget="patch-matrix"
-          >
-            Patch
-          </button>
-        </div>
-        <div id="module-picker" class="menu" popover>
-          <menu id="module-list"></menu>
-        </div>
-        <div id="patch-matrix" popover></div>
         <div id="patch">
           <div id="rack"></div>
+          <!-- The patchbay module: add, remove, and the cables (see @loop/patchbay). Under the
+               last module, not in the rack: it cannot be moved, removed or patched. -->
+          <div id="patchbay"></div>
+          <!-- The library module: the projects, under the last module (see library.ts and
+               @loop/library). Not in the rack: it cannot be moved, removed or patched. -->
+          <div id="library"></div>
         </div>
       </main>`,
     ),

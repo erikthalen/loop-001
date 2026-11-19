@@ -12,6 +12,8 @@ pnpm monorepo.
 - `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); usually on a send and return of the mixer
 - `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
+- `packages/patchbay` – `@loop/patchbay`: where the studio is wired: add a module (a list in a popover), remove mode, and the cables as a matrix (a grid of checkboxes, an output per row, an input per column, one table per kind of cable; a box that cannot be checked is disabled and says why). It works on the core directly, but it is not in the core either (it would be saved in every project, and gone when one opens): the app shows it under the last module, above the library
+- `packages/library` – `@loop/library`: the projects, as tapes on a shelf: name the tape on the machine (the open project), put another one on, new, erase, import and export. It looks like a module, but it is not in the core: a project is the modules in the core, so the library that holds the projects cannot be inside one. The app shows it last, under the patchbay (not in the rack: it cannot be moved, removed or patched) and does the work behind it (the `Library` interface, `app/src/library.ts`)
 - `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
 
 ## Commands (run from the repo root)
@@ -134,14 +136,12 @@ The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 | File                        | Job                                                                  |
 | --------------------------- | -------------------------------------------------------------------- |
 | `app/src/modules.ts`        | The list of modules a user can add. **Add new modules here.**        |
-| `app/src/module-picker.ts`  | The "Add" list. A native popover (`popovertarget` on the Add button). |
 | `app/src/rack.ts`           | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it. |
-| `app/src/patch-matrix.ts`   | The patch as a grid of checkboxes (the matrix component of `@loop/ui`), in the Patch popover: an output per row, an input per column, one table per kind of cable. Check a box to plug in a cable, uncheck it to take it out. A box that cannot be checked is disabled, and its title says why. The default. |
-| `app/src/patch-lane.ts`     | The other way to patch, with `?lane` in the URL: the jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
+| `app/src/patch-lane.ts`     | The other way to see the cables, with `?lane` in the URL (then the patchbay has no matrix): the jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
 | `app/src/client.ts`         | Connects the buttons, the core, the picker and the rack.             |
 
 The core owns the modules and the cables. The page only shows them:
-Add → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patch matrix (or the lane, with `?lane`) shows the cables.
+Add (in the patchbay) → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patchbay's matrix (or the lane, with `?lane`) shows the cables.
 Remove → `module.remove()` → core sends `moduleremove` → the rack takes the UI away.
 
 Remove mode: modules jiggle and show a "−" badge. A full-size button lies over each module, so a click removes it.
@@ -156,7 +156,7 @@ Everything is saved in the browser. There is no server.
 | `app/src/project-store.ts`   | Keeps projects in **IndexedDB** (a native browser database). The only file that knows about storage. |
 | `app/src/project-session.ts` | The open project. Saves it automatically ~0.4 s after each change, and when the page is hidden. |
 | `app/src/project-file.ts`    | Export / import format: a `.loop.json` file.                              |
-| `app/src/project-menu.ts`    | The "Projects" menu: New, Import, Export, open, delete. And the name and "Saved" status. |
+| `app/src/library.ts`         | The work behind the library module (`@loop/library`): its tapes are these projects. The module only shows them and passes on what you do. |
 | `packages/core/src/project.ts` | `serializeProject(core)`, `parseProject(data)`, `restoreProject(core, data, modules)`. |
 
 Saved data (`ProjectData`): `{ version: 2, bpm, modules: [{ type, state }], cables: [{ from: { module, port }, to: { module, port } }] }`. A cable's `module` is its place in `modules`. A version 1 project (from before cables) reads without `cables`; the app gives it cables that sound like its old chain (`upgradeProject` in `app/src/modules.ts`). If the format changes, raise `version` and convert old data in `parseProject`.
@@ -281,7 +281,7 @@ src/
 `typeof setup` tells the template and the script what the module offers, for example `module.setVolume`.
 Use `import type { setup } from './setup'`: it only imports the type, not the code.
 
-- **Scoped CSS:** each UI lives in its own **Shadow DOM**. Module CSS cannot leak out. App CSS cannot leak in.
+- **Scoped CSS:** each UI lives in its own **Shadow DOM**. Module CSS cannot leak out. App CSS cannot leak in. `mountView(parent, view)` (in `@loop/core`'s UI helpers) does this; `module.mount` uses it, and so does a UI that is not a module (the library).
 - **Theme:** the shared CSS variables are in `packages/ui/src/tokens.css`: `--loop-primary` (main color), `--loop-font`, and the display colors (`--screen`, `--ink`, `--blue`, ...). They pass into the Shadow DOM. The font (Italian Plate No1 Mono, `packages/ui/src/fonts/Italian Plate/`, added with `addLoopFont()`) has weights 100 to 900, upright and italic.
 - **Layout:** the app places modules (`#rack`). The module styles its own box with `:host`. App CSS on the host element (`#rack > section`) wins over `:host`.
 - **Clean-up:** use `signal` for DOM listeners and `on` for core events. Both are removed when the UI unmounts or the module is removed.

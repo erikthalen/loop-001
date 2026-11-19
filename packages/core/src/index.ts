@@ -48,7 +48,7 @@ export {
   type ScopedOn,
   type SetupResultOf,
 } from './module'
-export { css, html, render, toStyleSheet, type CSSTemplate, type HTMLTemplate } from './ui'
+export { css, html, mountView, render, toStyleSheet, type CSSTemplate, type HTMLTemplate, type MountViewOptions, type View } from './ui'
 export {
   parseProject,
   restoreProject,
