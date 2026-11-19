@@ -1,4 +1,4 @@
-import { css } from '@loop/core'
+import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the buttons, the menu and the matrix too. The rules here are outside
@@ -21,4 +21,16 @@ export const styles = css`
   .matrices {
     overflow-x: auto;
   }
-`
+
+  button[name="add"] {
+    border: none;
+    background-color: var(--green);
+    color: var(--color-neutral-0);
+  }
+
+  button[name="remove"] {
+    border: none;
+    background-color: var(--red);
+    color: var(--color-neutral-0);
+  }
+`;

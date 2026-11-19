@@ -118,18 +118,16 @@ export function upgradeProject(project: ProjectData): ProjectData {
   const cables: ProjectCable[] = []
   type Source = { module: number; port: string }
   const plugInto = (sources: Source[], module: number, port: string) =>
-    sources.forEach((source) =>
-      cables.push(cable(source.module, source.port, module, port)),
-    )
+    sources.forEach((source) => {
+      cables.push(cable(source.module, source.port, module, port))
+    })
 
   old.forEach((sender, i) => {
     if (sender.triggerOut)
-      old.forEach(
-        (m, j) =>
-          j > i &&
-          m.triggerIn &&
-          cables.push(cable(i, 'trigger-out', j, 'trigger-in')),
-      )
+      old.forEach((m, j) => {
+        if (j > i && m.triggerIn)
+          cables.push(cable(i, 'trigger-out', j, 'trigger-in'))
+      })
     if (sender.channelsOut) {
       const j = old.findIndex((m, j) => j > i && m.channelsIn)
       if (j >= 0) cables.push(cable(i, 'channels-out', j, 'channels-in'))

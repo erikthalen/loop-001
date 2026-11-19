@@ -126,6 +126,7 @@ export interface ModuleUIScriptContext<Result extends ModuleSetupResult>
 
 /** Audio part of a module. Called by `core.add()`. Make audio nodes and listen to events here. */
 export type ModuleSetup<
+  // biome-ignore lint/suspicious/noExplicitAny: default so `extends ModuleSetup` matches any options
   Options = any,
   Result extends ModuleSetupResult = ModuleSetupResult,
 > = (ctx: ModuleContext, options: Options) => Result
@@ -176,6 +177,7 @@ export interface AudioModuleDefinition<
 }
 
 /** Any module definition. Use it for lists of modules, for example the modules a user can add. */
+// biome-ignore lint/suspicious/noExplicitAny: Options and Result are invariant, so only `any` accepts every definition
 export type AnyAudioModuleDefinition = AudioModuleDefinition<any, any>
 
 /** A module that was added to a core: the setup result, plus the fields below. */
@@ -264,6 +266,7 @@ export function defineModuleScript<Setup extends ModuleSetup>(
  */
 export type OptionsArg<Options> = undefined extends Options
   ? [options?: Options]
-  : {} extends Options
+  : // biome-ignore lint/complexity/noBannedTypes: `{} extends Options` is true when every option is optional
+    {} extends Options
     ? [options?: Options]
     : [options: Options]

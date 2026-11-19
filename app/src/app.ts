@@ -137,6 +137,8 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             position: relative;
             display: flex;
             gap: 0.25rem;
+            /* Each slot has its own view-transition-name (set in rack.ts, from the module id). */
+            view-transition-class: module;
 
             /* While you drag it, dnd-kit makes the slot a popover (so it floats above the page).
                @loop/ui gives popovers a frame (border, shadow, round corners): not here. */
@@ -229,6 +231,39 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
               rotate: 0.6deg;
             }
           }
+
+          /* The patchbay and the library are under the rack: they move when a module goes,
+             so they take part in the view transition too (the same class as the modules). */
+          #patchbay {
+            view-transition-name: patchbay;
+            view-transition-class: module;
+          }
+          #library {
+            view-transition-name: library;
+            view-transition-class: module;
+          }
+
+          /* A module is added or removed (view transition, see rack.ts): the modules, the
+             patchbay and the library slide into their new place. */
+          html:active-view-transition-type(add-module, remove-module)::view-transition-group(.module) {
+            animation-duration: 0.3s;
+            animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+          }
+          /* The removed module (only in the old picture) shrinks away. */
+          html:active-view-transition-type(remove-module)::view-transition-old(.module):only-child {
+            animation: module-out 0.15s ease-in both;
+          }
+          /* The added module (only in the new picture) grows in, once there is room for it. */
+          html:active-view-transition-type(add-module)::view-transition-new(.module):only-child {
+            animation: module-out 0.2s ease-out 0.1s reverse both;
+          }
+          @keyframes module-out {
+            to {
+              opacity: 0;
+              scale: 0.85;
+            }
+          }
+
           @media (prefers-reduced-motion: reduce) {
             #rack[data-removing] .slot {
               animation: none;

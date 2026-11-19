@@ -44,6 +44,7 @@ mountPatchbay($('#patchbay'), core, {
   rack,
   matrix: !useLane,
   onAdd: keepStorage,
+  transition: rack.transition,
 })
 
 // ---- Transport ----

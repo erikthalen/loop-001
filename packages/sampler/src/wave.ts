@@ -503,7 +503,9 @@ export function drawWave(
     }
     g.lineCap = 'round'
     if (channel === state.active && state.recorded) {
-      state.recorded.forEach((level, i) => column(i, level * 1.4, c.rec))
+      state.recorded.forEach((level, i) => {
+        column(i, level * 1.4, c.rec)
+      })
     } else if (!tape.columns) {
       g.font = `400 10px ${c.font}`
       g.fillStyle = c.muted

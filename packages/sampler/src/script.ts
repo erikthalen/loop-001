@@ -77,7 +77,10 @@ export const script = defineModuleScript<typeof setup>(
     const columnCache = new WeakMap<AudioBuffer, Float32Array>()
     const columnsFor = (buffer: AudioBuffer) => {
       let columns = columnCache.get(buffer)
-      if (!columns) columnCache.set(buffer, (columns = columnsOf(buffer)))
+      if (!columns) {
+        columns = columnsOf(buffer)
+        columnCache.set(buffer, columns)
+      }
       return columns
     }
 

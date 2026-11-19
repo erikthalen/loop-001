@@ -10,7 +10,7 @@ const status = document.querySelector('#status')
 
 function showError(message: string) {
   if (!status) return
-  status.textContent = message + ' '
+  status.textContent = `${message} `
   const button = Object.assign(document.createElement('button'), {
     type: 'button',
     textContent: 'Reload',

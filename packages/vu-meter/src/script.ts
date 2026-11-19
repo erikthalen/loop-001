@@ -50,7 +50,9 @@ export const script = defineModuleScript<typeof setup>(
       last = now
       meter.update(module.levels(), seconds)
       // The <meter>s show each channel's fast level.
-      meter.bars.forEach((bar, i) => (levels[i]!.value = bar))
+      meter.bars.forEach((bar, i) => {
+        levels[i]!.value = bar
+      })
       frame = requestAnimationFrame(draw)
     }
     frame = requestAnimationFrame(draw)

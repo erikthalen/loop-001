@@ -23,17 +23,45 @@
  * - A disabled box (a pair that cannot connect) is faint. Put the reason in its title.
  * - The row you point at lights up, so you can follow it to the box.
  * Two matrices in a row get a gap between them.
+ *
+ * Layout: the <table> is a CSS grid (one column per input, then a column of names), and <thead>,
+ * <tbody> and every <tr> are subgrids of it, so all cells line up across rows. Set --columns
+ * on the <table> to the number of checkbox columns: <table class="matrix" style="--columns: 2">
+ * The row names come first in the HTML (so screen readers read them first), but show to the
+ * right of the checkboxes.
  */
 @layer ui {
   table.matrix {
-    border-collapse: collapse;
+    display: grid;
+    grid-template-columns: repeat(var(--columns, 1), min-content) max-content;
     text-transform: uppercase;
 
     + .matrix {
       margin-top: 12px;
     }
 
+    thead,
+    tbody,
+    tr {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+    }
+
+    th {
+      text-box: trim-both cap alphabetic;
+    }
+
+    thead tr {
+      justify-items: center;
+    }
+
+    tbody tr {
+      align-items: center;
+    }
+
     caption {
+      grid-column: 1 / -1;
       padding: 0 0 4px;
       text-align: left;
       color: var(--muted);
@@ -59,11 +87,13 @@
       writing-mode: vertical-rl;
       rotate: 180deg;
       text-align: left;
+      padding-top: 2px;
       /* padding: 0 0 6px; */
     }
 
     th[scope="row"] {
-      text-align: right;
+      text-align: left;
+      padding-left: 2px;
       /* padding: 0 8px 0 0; */
 
       /* &::before {
@@ -79,14 +109,22 @@
     }
 
     td {
-      padding: 3px;
+      padding: 1px;
       text-align: center;
       line-height: 0;
     }
 
-    tbody tr:hover td {
-      background: var(--color-neutral-200);
+    /* The row name and the empty corner above it go in the last column. A row and a column
+       both set, so they are placed before the checkboxes, which then fill the columns before. */
+    th[scope="row"],
+    thead td {
+      grid-row: 1;
+      grid-column: -2 / -1;
     }
+
+    /* tbody tr:hover td {
+      background: var(--color-neutral-200);
+    } */
 
     tbody tr:hover small {
       color: var(--ink);

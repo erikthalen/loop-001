@@ -5,11 +5,14 @@
     "clientKind": "git",
     "useIgnoreFile": false
   },
-  "files": { "ignoreUnknown": false, "includes": ["**", "!dist"] },
+  "files": { "ignoreUnknown": false, "includes": ["**", "!**/dist"] },
   "formatter": { "enabled": true, "indentStyle": "space" },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended" }
+    "rules": {
+      "preset": "recommended",
+      "style": { "noNonNullAssertion": "off" }
+    }
   },
   "javascript": {
     "formatter": { "quoteStyle": "single", "semicolons": "asNeeded" }

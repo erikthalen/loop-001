@@ -61,7 +61,9 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   // The UI listens here for things that are not saved: recording, playing, messages.
   const listeners = new Set<() => void>()
-  const update = () => listeners.forEach((listener) => listener())
+  const update = () => {
+    for (const listener of listeners) listener()
+  }
 
   /** A short message for the user, for example when there is no microphone. */
   let message = ''
@@ -108,7 +110,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
         },
       })
       if (ctx.signal.aborted || !busy) {
-        stream.getTracks().forEach((track) => track.stop())
+        for (const track of stream.getTracks()) track.stop()
         return
       }
       // MediaRecorder keeps the sound. The analyser only shows the level while recording.
@@ -152,7 +154,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     clearTimeout(current.timer)
     current.source.disconnect()
     if (current.recorder.state !== 'inactive') current.recorder.stop()
-    current.stream.getTracks().forEach((track) => track.stop())
+    for (const track of current.stream.getTracks()) track.stop()
     update()
   }
 

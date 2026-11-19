@@ -128,6 +128,7 @@ export interface Core {
     ...options: OptionsArg<Options>
   ): AudioModule<Result>
   /** False if the definition is `unique` and one is already in the core. */
+  // biome-ignore lint/suspicious/noExplicitAny: accepts a definition with any options and result
   canAdd(definition: AudioModuleDefinition<any, any>): boolean
   /** Take out the module's cables, then remove the module and run its clean-up. */
   remove(module: AudioModule): void
@@ -294,25 +295,25 @@ export function createCore(options: CoreOptions = {}): Core {
         result.channelInputs,
       )
     if (result.input) port('in', 'In', 'audio', 'in', [result.input])
-    result.returnInputs?.forEach((node, bus) =>
+    result.returnInputs?.forEach((node, bus) => {
       port(
         `return-${letter(bus)}`,
         `Rtn ${letter(bus).toUpperCase()}`,
         'audio',
         'in',
         [node],
-      ),
-    )
+      )
+    })
     if (result.output) port('out', 'Out', 'audio', 'out', [result.output])
-    result.sendOutputs?.forEach((node, bus) =>
+    result.sendOutputs?.forEach((node, bus) => {
       port(
         `send-${letter(bus)}`,
         `Snd ${letter(bus).toUpperCase()}`,
         'audio',
         'out',
         [node],
-      ),
-    )
+      )
+    })
     if (result.channelOutputs?.length)
       port(
         'channels-out',

@@ -176,7 +176,10 @@ export const script = defineModuleScript<typeof setup>(
         rewind: 'Tape reels: rewinding',
         still: 'Tape reels: still',
       }[transport]
-      if (words !== said) canvas.setAttribute('aria-label', (said = words))
+      if (words !== said) {
+        said = words
+        canvas.setAttribute('aria-label', said)
+      }
       frame = requestAnimationFrame(draw)
     }
     frame = requestAnimationFrame(draw)

@@ -15,6 +15,11 @@ export interface PatchbayOptions {
   readonly matrix?: boolean
   /** Called after Add put a module in the core (and gave it its usual cables). */
   readonly onAdd?: (module: AudioModule) => void
+  /**
+   * Run a change in a view transition of this type, so the app can animate it. Add runs in
+   * one of type 'add-module'. Default: the change happens at once.
+   */
+  readonly transition?: (type: string, update: () => void) => void
 }
 
 /**

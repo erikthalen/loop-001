@@ -4,14 +4,19 @@ import { type ClockEventMap, type ClockOptions, createClock } from './clock'
 // A fake audio clock. Tests move time forward by hand.
 function setup(options: ClockOptions = {}) {
   const source = { currentTime: 0 }
-  const events: { type: keyof ClockEventMap; detail: any }[] = []
+  const events: {
+    type: keyof ClockEventMap
+    detail: ClockEventMap[keyof ClockEventMap]
+  }[] = []
   const clock = createClock(
     source,
     (type, detail) => events.push({ type, detail }),
     options,
   )
   const of = <K extends keyof ClockEventMap>(type: K): ClockEventMap[K][] =>
-    events.filter((e) => e.type === type).map((e) => e.detail)
+    events
+      .filter((e) => e.type === type)
+      .map((e) => e.detail as ClockEventMap[K])
   return { source, clock, events, of }
 }
 

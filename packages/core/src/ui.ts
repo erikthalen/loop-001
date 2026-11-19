@@ -50,7 +50,9 @@ export function html(
   ...values: unknown[]
 ): HTMLTemplate {
   let text = strings[0]!
-  values.forEach((value, i) => (text += toHTML(value) + strings[i + 1]))
+  values.forEach((value, i) => {
+    text += toHTML(value) + strings[i + 1]
+  })
   return { [HTML_TEXT]: text, toString: () => text } as HTMLTemplate
 }
 
@@ -60,12 +62,11 @@ export function css(
   ...values: (string | number | CSSTemplate)[]
 ): CSSTemplate {
   let text = strings[0]!
-  values.forEach(
-    (value, i) =>
-      (text +=
-        (typeof value === 'object' ? value.cssText : String(value)) +
-        strings[i + 1]),
-  )
+  values.forEach((value, i) => {
+    text +=
+      (typeof value === 'object' ? value.cssText : String(value)) +
+      strings[i + 1]
+  })
   return { cssText: text }
 }
 

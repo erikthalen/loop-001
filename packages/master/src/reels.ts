@@ -155,7 +155,10 @@ export function drawReels(
     [outer[1][0] + 4, outer[1][1]],
     leave(1),
   ]
-  path.forEach(([x, y], i) => (i ? g.lineTo(x!, y!) : g.moveTo(x!, y!)))
+  path.forEach(([x, y], i) => {
+    if (i) g.lineTo(x!, y!)
+    else g.moveTo(x!, y!)
+  })
   g.stroke()
 
   /** A roller: an open circle with a tick that turns with the tape. */

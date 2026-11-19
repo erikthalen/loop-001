@@ -13,6 +13,12 @@ export interface Rack {
   setRemoving(value: boolean): void
   /** Call `listener` when remove mode turns on or off, or when modules are added or removed. */
   onChange(listener: () => void, options?: { signal?: AbortSignal }): void
+  /**
+   * Run `update` (a change to the modules) in a view transition of this type, for example
+   * 'add-module', so the modules slide into their new place (CSS in app.ts).
+   * Start it before the change: the "old" picture is taken first.
+   */
+  transition(type: string, update: () => void): void
 }
 
 export interface RackOptions {
@@ -85,6 +91,8 @@ export function createRack(
   const sortables = new Map<string, Sortable>()
   const manager = new DragDropManager()
   let removing = false
+  /** True while a module is removed inside a view transition (see removeModule). */
+  let inTransition = false
   const changes = new EventTarget()
   const notify = () => {
     changes.dispatchEvent(new Event('change'))
@@ -146,6 +154,34 @@ export function createRack(
       core.move(module, source.index)
   })
 
+  /**
+   * A change to the modules in a view transition of type `type`: every slot has its own
+   * view-transition-name, so the modules slide into their new place (CSS in app.ts).
+   * Reduced motion, or no view transitions in this browser: the change happens at once.
+   */
+  const transition = (type: string, update: () => void) => {
+    if (reducedMotion.matches || !('startViewTransition' in document)) {
+      update()
+      return
+    }
+    document.startViewTransition({
+      types: [type],
+      update: () => {
+        inTransition = true
+        try {
+          update()
+        } finally {
+          inTransition = false
+        }
+      },
+    })
+  }
+
+  // The transition starts before the removal, because the core unmounts the module's UI
+  // before `moduleremove`: the "old" picture still has the module in it.
+  const removeModule = (module: AudioModule) =>
+    transition('remove-module', () => module.remove())
+
   const rack: Rack = {
     get removing() {
       return removing
@@ -164,12 +200,15 @@ export function createRack(
     },
     onChange: (listener, listenOptions) =>
       changes.addEventListener('change', listener, listenOptions),
+    transition,
   }
 
   core.events.on('moduleadd', ({ module }) => {
     const slot = document.createElement('div')
     slot.className = 'slot'
     slot.dataset.id = module.id
+    // Its own name, so a view transition moves each module on its own (see removeModule).
+    slot.style.viewTransitionName = `module-${module.id}`
     render(
       html`
         <button type="button" class="drag-handle" aria-label="Move ${module.name}">${GRIP}</button>
@@ -180,7 +219,7 @@ export function createRack(
     )
     slot
       .querySelector('.remove-target')!
-      .addEventListener('click', () => module.remove())
+      .addEventListener('click', () => removeModule(module))
 
     slots.set(module.id, slot)
     element.append(slot)
@@ -217,7 +256,9 @@ export function createRack(
     if (slots.size === 0) rack.setRemoving(false)
     else notify()
 
-    if (!reducedMotion.matches) {
+    // In a view transition the slot must go at once: the transition animates it.
+    // Otherwise (for example a project is loaded) it fades out first.
+    if (!inTransition && !reducedMotion.matches) {
       await slot.animate(
         [
           { opacity: 1, scale: 1 },

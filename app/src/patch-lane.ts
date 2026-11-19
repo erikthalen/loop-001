@@ -291,7 +291,8 @@ export function createPatchLane(
         )
       )
         t++
-      ;(tracks[t] ??= []).push(net)
+      tracks[t] ??= []
+      tracks[t].push(net)
       net.track = t
     }
     outerTrack += (Math.max(1, tracks.length) - outerTrack) * step

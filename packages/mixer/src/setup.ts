@@ -106,9 +106,9 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   )
   channelInputs.forEach((input, i) => {
     input.connect(mainSwitches[i]!).connect(mix)
-    sendSwitches.forEach((switches, bus) =>
-      input.connect(switches[i]!).connect(sendBuses[bus]!),
-    )
+    sendSwitches.forEach((switches, bus) => {
+      input.connect(switches[i]!).connect(sendBuses[bus]!)
+    })
   })
 
   /** Change a gain smoothly, so it does not click. */

@@ -9,7 +9,13 @@ export function script(
   core: Core,
   options: PatchbayOptions,
 ): void {
-  const { modules, rack, colorOf, onAdd } = options
+  const {
+    modules,
+    rack,
+    colorOf,
+    onAdd,
+    transition = (_type, update) => update(),
+  } = options
   const $ = <T extends Element>(selector: string) =>
     root.querySelector<T>(selector)!
   const list = $<HTMLElement>('#add-list')
@@ -42,11 +48,14 @@ export function script(
       )
       const definition = button && modules[Number(button.dataset.index)]
       if (!definition || !core.canAdd(definition)) return
-      // The usual cables, from the modules above it (see autoPatch in @loop/core).
-      const module = core.add(definition)
-      core.autoPatch(module)
+      // Close the list first, so it is not in the transition's "old" picture.
       list.hidePopover()
-      onAdd?.(module)
+      transition('add-module', () => {
+        // The usual cables, from the modules above it (see autoPatch in @loop/core).
+        const module = core.add(definition)
+        core.autoPatch(module)
+        onAdd?.(module)
+      })
     },
     listen,
   )
