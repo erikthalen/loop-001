@@ -4,17 +4,17 @@
  *   In a label: see field.css.
  */
 @layer ui {
-  .input {
+  input[type="text"] {
     padding: 0.33em 0.5em 0.2em;
     font: inherit;
     color: var(--color-neutral-1000);
-    background: var(--color-neutral-200);
+    background: var(--color-neutral-0);
     border: 1px solid var(--color-neutral-500);
     border-radius: 5px;
     font-size: 13px;
   }
 
-  .input:focus-visible {
+  input[type="text"]:focus-visible {
     outline: 2px solid var(--loop-primary);
     outline-offset: -1px;
   }

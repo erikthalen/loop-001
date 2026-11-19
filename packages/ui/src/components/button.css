@@ -19,7 +19,7 @@
     font: inherit;
     font-family: var(--loop-font);
     color: var(--color-neutral-1000);
-    background: var(--color-neutral-200);
+    background: var(--color-neutral-100);
     border: 1px solid var(--color-neutral-500);
     border-radius: 5px;
     cursor: pointer;
@@ -30,7 +30,7 @@
   }
 
   .button:hover {
-    background: var(--color-neutral-400);
+    background: var(--color-neutral-200);
   }
 
   .button.primary,

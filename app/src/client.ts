@@ -7,6 +7,7 @@ import { connectProjectMenu } from './project-menu'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
 import { createPatchLane } from './patch-lane'
+import { createPatchMatrix } from './patch-matrix'
 import { createRack } from './rack'
 
 // The app's font, Italian Plate No1 Mono (all weights, from @loop/ui). Before anything shows text.
@@ -23,12 +24,17 @@ const picker = $('#module-picker')
 const core = createCore()
 
 // ---- Modules: the rack shows what is in the core, the cables connect them ----
-const lane = createPatchLane(core, {
-  root: $('#patch'),
-  colorOf: (module) => CABLE_COLORS[module.type] ?? 'var(--ink)',
-})
+// Two ways to patch, to try side by side: a grid of checkboxes in the Patch popover (default),
+// or the cable lane left of the rack (?lane in the URL; then there is no Patch button).
+const colorOf = (module: { type: string }) => CABLE_COLORS[module.type] ?? 'var(--ink)'
+const useLane = new URLSearchParams(location.search).has('lane')
+const lane = useLane ? createPatchLane(core, { root: $('#patch'), colorOf }) : null
+if (useLane) {
+  $('#patch-button').remove()
+  $('#patch-matrix').remove()
+} else createPatchMatrix(core, { root: $('#patch-matrix'), colorOf })
 const rack = createRack(core, $('#rack'), {
-  onSlot: (slot, module) => slot.prepend(lane.jackStrip(module)),
+  onSlot: (slot, module) => lane && slot.prepend(lane.jackStrip(module)),
   onChange: ({ removing }) => {
     removeButton.disabled = core.modules.size === 0
     removeButton.setAttribute('aria-pressed', String(removing))

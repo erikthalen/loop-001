@@ -1,0 +1,98 @@
+/*
+ * Matrix: a grid of checkboxes, like the pin matrix of an old synth. A row and a column meet
+ * at a checkbox: checked, they are connected. A plain <table>, so screen readers read the row
+ * and column names of every box.
+ *   <table class="matrix">
+ *     <caption>Audio</caption>
+ *     <thead>
+ *       <tr><td></td><th scope="col">Delay <small>In</small></th><th scope="col">Master <small>In</small></th></tr>
+ *     </thead>
+ *     <tbody>
+ *       <tr style="--loop-primary: var(--green)">
+ *         <th scope="row">Mixer <small>Out</small></th>
+ *         <td><input type="checkbox" aria-label="Mixer Out to Delay In" /></td>
+ *         <td><input type="checkbox" aria-label="Mixer Out to Master In" /></td>
+ *       </tr>
+ *     </tbody>
+ *   </table>
+ *
+ * - The column names are written downwards (like the jack labels), so the columns stay narrow.
+ * - A row can have its own color: set --loop-primary on the <tr>. Its checkboxes are in that
+ *   color, and a dot of it is before the row's name.
+ * - <small> in a name: a second, quieter part (the jack, after the module).
+ * - A disabled box (a pair that cannot connect) is faint. Put the reason in its title.
+ * - The row you point at lights up, so you can follow it to the box.
+ * Two matrices in a row get a gap between them.
+ */
+@layer ui {
+  table.matrix {
+    border-collapse: collapse;
+
+    + .matrix {
+      margin-top: 12px;
+    }
+
+    caption {
+      padding: 0 0 4px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    th {
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    small {
+      color: var(--muted);
+      font-size: inherit;
+    }
+
+    th[scope="col"] {
+      writing-mode: vertical-rl;
+      rotate: 180deg;
+      text-align: left;
+      padding: 0 0 6px;
+    }
+
+    th[scope="row"] {
+      text-align: right;
+      padding: 0 8px 0 0;
+
+      &::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 5px;
+        border-radius: 50%;
+        background: var(--loop-primary);
+        vertical-align: 1px;
+      }
+    }
+
+    td {
+      padding: 3px;
+      text-align: center;
+      line-height: 0;
+    }
+
+    tbody tr:hover td {
+      background: var(--color-neutral-200);
+    }
+
+    tbody tr:hover small {
+      color: var(--ink);
+    }
+
+    input[type="checkbox"]:disabled {
+      opacity: 0.2;
+    }
+  }
+}

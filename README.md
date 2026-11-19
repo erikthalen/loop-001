@@ -136,11 +136,12 @@ The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 | `app/src/modules.ts`        | The list of modules a user can add. **Add new modules here.**        |
 | `app/src/module-picker.ts`  | The "Add" list. A native popover (`popovertarget` on the Add button). |
 | `app/src/rack.ts`           | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it. |
-| `app/src/patch-lane.ts`     | The jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
+| `app/src/patch-matrix.ts`   | The patch as a grid of checkboxes (the matrix component of `@loop/ui`), in the Patch popover: an output per row, an input per column, one table per kind of cable. Check a box to plug in a cable, uncheck it to take it out. A box that cannot be checked is disabled, and its title says why. The default. |
+| `app/src/patch-lane.ts`     | The other way to patch, with `?lane` in the URL: the jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
 | `app/src/client.ts`         | Connects the buttons, the core, the picker and the rack.             |
 
 The core owns the modules and the cables. The page only shows them:
-Add → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the lane draws the cables.
+Add → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patch matrix (or the lane, with `?lane`) shows the cables.
 Remove → `module.remove()` → core sends `moduleremove` → the rack takes the UI away.
 
 Remove mode: modules jiggle and show a "−" badge. A full-size button lies over each module, so a click removes it.

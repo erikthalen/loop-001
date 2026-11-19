@@ -23,8 +23,8 @@
     --color-900-light-value: black 58.5%;
     --color-950-light-value: black 73.75%;
 
-    --color-50-dark-value: black 77.5%;
-    --color-100-dark-value: black 70%;
+    --color-50-dark-value: black 70%;
+    --color-100-dark-value: black 68%;
     --color-200-dark-value: black 65%;
     --color-300-dark-value: black 55%;
     --color-400-dark-value: black 35%;
@@ -222,7 +222,7 @@
     font-weight: 300;
     font-size: 12px;
     color: var(--color-neutral-1000);
-    background: var(--color-neutral-100);
+    background: var(--color-neutral-50);
     /* Never fake a bold or italic the font does not have. */
     font-synthesis: none;
 

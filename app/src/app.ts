@@ -177,6 +177,14 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             cursor: grabbing !important;
           }
 
+          /* ---- The patch as a grid of checkboxes (see patch-matrix.ts). The matrix itself is
+             styled by @loop/ui (components/matrix.css); here only the popover it sits in. ---- */
+          #patch-matrix {
+            padding: 8px 10px;
+            max-width: calc(100vw - 1rem);
+            overflow: auto;
+          }
+
           #rack:not(:has(.slot))::before {
             content: "No modules yet. Click Add.";
             color: #667085;
@@ -308,7 +316,7 @@ app.get(base, (c) =>
         <div class="row">
           <button
             id="project-menu-button"
-            class="button"
+            class="button small"
             type="button"
             popovertarget="project-menu"
           >
@@ -343,7 +351,6 @@ app.get(base, (c) =>
         <div class="row">
           <input
             id="project-name"
-            class="input"
             type="text"
             aria-label="Project name"
             autocomplete="off"
@@ -372,10 +379,20 @@ app.get(base, (c) =>
           >
             Remove
           </button>
+          <!-- Not with ?lane in the URL: then the cables are in a lane left of the rack (see client.ts). -->
+          <button
+            id="patch-button"
+            class="button small"
+            type="button"
+            popovertarget="patch-matrix"
+          >
+            Patch
+          </button>
         </div>
         <div id="module-picker" class="menu" popover>
           <menu id="module-list"></menu>
         </div>
+        <div id="patch-matrix" popover></div>
         <div id="patch">
           <div id="rack"></div>
         </div>

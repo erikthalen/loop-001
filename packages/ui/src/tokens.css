@@ -16,7 +16,7 @@
    */
   :root,
   :host {
-    --screen: var(--color-neutral-50);
+    --screen: var(--color-neutral-0);
     --ink: var(--color-neutral-1000);
     --muted: var(--color-neutral-700);
     --line: var(--color-neutral-400);
