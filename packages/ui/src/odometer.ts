@@ -41,17 +41,24 @@ const THERE = 0.001
  * Where each wheel is for a number, as a count of its digits (not wrapped to its size): the place
  * a real odometer would show. 0 or less: all zeros.
  */
-export function wheelCounts(wheels: readonly OdometerWheel[], value: number): number[] {
+export function wheelCounts(
+  wheels: readonly OdometerWheel[],
+  value: number,
+): number[] {
   const v = Math.max(0, value)
   return wheels.map(({ unit }) => {
     const whole = Math.floor(v / unit)
     // The last wheel turns all the time; the others only while the number passes its last 1.
-    const turn = unit <= 1 ? (v / unit) % 1 : Math.max(0, (v % unit) - (unit - 1))
+    const turn =
+      unit <= 1 ? (v / unit) % 1 : Math.max(0, (v % unit) - (unit - 1))
     return whole + turn
   })
 }
 
-export function createOdometer(wheels: readonly OdometerWheel[], value = 0): Odometer {
+export function createOdometer(
+  wheels: readonly OdometerWheel[],
+  value = 0,
+): Odometer {
   let counts = wheelCounts(wheels, value)
   let moving = false
   const odometer: Odometer = {

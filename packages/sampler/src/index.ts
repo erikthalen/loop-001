@@ -11,7 +11,9 @@ export type { SamplerOptions } from './setup'
 export const sampler = defineAudioModule({
   type: 'sampler',
   name: 'Sampler',
-  description: 'Records up to 5 seconds from the microphone. Plays the part between the markers.',
+  label: 'SP',
+  description:
+    'Records up to 5 seconds from the microphone. Plays the part between the markers.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
   ui: { styles: [uiStyles, styles], template, script },

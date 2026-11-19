@@ -1,10 +1,10 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import type { setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import type { setup } from './setup'
 
 /** Slider steps. The frequency slider is logarithmic: script.ts turns a step into Hz. */
-export const FREQUENCY_STEPS = 1000;
+export const FREQUENCY_STEPS = 1000
 /** Resonance slider steps: 10 per dB. */
-export const RESONANCE_STEPS = 200;
+export const RESONANCE_STEPS = 200
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, vertical,
 // sr-only) and styles.ts; @loop/ui also styles the sliders, the checkbox and the radio buttons.
@@ -32,18 +32,18 @@ export const template = defineModuleTemplate<typeof setup>(
           <div class="top-controls">
             <!-- Bypass: checked = the filter is off, the sound goes through unchanged. -->
             <label class="field">
-              <input name="bypass" type="checkbox" ${module.on ? "" : "checked"} />
+              <input name="bypass" type="checkbox" ${module.on ? '' : 'checked'} />
               <span>bypass</span>
             </label>
             <!-- The slope: 12 or 24 dB per octave. -->
             <fieldset class="slope">
               <legend class="sr-only">Slope (dB per octave)</legend>
               <label class="field">
-                <input name="slope" type="radio" value="12" ${module.slope === 12 ? "checked" : ""} />
+                <input name="slope" type="radio" value="12" ${module.slope === 12 ? 'checked' : ''} />
                 <span>12db</span>
               </label>
               <label class="field">
-                <input name="slope" type="radio" value="24" ${module.slope === 24 ? "checked" : ""} />
+                <input name="slope" type="radio" value="24" ${module.slope === 24 ? 'checked' : ''} />
                 <span>24db</span>
               </label>
             </fieldset>
@@ -64,4 +64,4 @@ export const template = defineModuleTemplate<typeof setup>(
 
     </section>
   `,
-);
+)

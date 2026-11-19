@@ -1,4 +1,12 @@
-import { html, render, type AudioModule, type Cable, type Core, type Plug, type Port } from '@loop/core'
+import {
+  type AudioModule,
+  type Cable,
+  type Core,
+  html,
+  type Plug,
+  type Port,
+  render,
+} from '@loop/core'
 import { CHANNEL_COLORS } from '@loop/ui'
 
 export interface PatchLaneOptions {
@@ -59,7 +67,10 @@ type Point = { x: number; y: number }
  * line with a branch to each. A channels cable is dashed in the 6 channel colors, a trigger cable is dotted.
  * The rack moves the modules (dnd-kit); the cables follow every frame, and slide to their new tracks.
  */
-export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLane {
+export function createPatchLane(
+  core: Core,
+  options: PatchLaneOptions,
+): PatchLane {
   const { root, colorOf } = options
 
   // ——— The drawing layer ———
@@ -78,9 +89,11 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
   /** The dot of each jack, by plug. Only the real ones: dnd-kit makes copies while it drags. */
   const dots = new Map<string, HTMLElement>()
 
-  const portOf = (plug: Plug): Port | undefined => core.ports(plug.module).find((port) => port.id === plug.port)
+  const portOf = (plug: Plug): Port | undefined =>
+    core.ports(plug.module).find((port) => port.id === plug.port)
   const moduleName = (id: string) => core.modules.get(id)?.name ?? '?'
-  const name = (plug: Plug) => `${moduleName(plug.module)} ${portOf(plug)?.label ?? plug.port}`
+  const name = (plug: Plug) =>
+    `${moduleName(plug.module)} ${portOf(plug)?.label ?? plug.port}`
   const color = (plug: Plug) => {
     const module = core.modules.get(plug.module)
     return module ? colorOf(module) : 'var(--ink)'
@@ -97,10 +110,16 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     `
     const group = (direction: Port['direction']) => {
       const list = ports.filter((port) => port.direction === direction)
-      return list.length ? html`<div class="jack-group">${list.map(jack)}</div>` : ''
+      return list.length
+        ? html`<div class="jack-group">${list.map(jack)}</div>`
+        : ''
     }
     render(html`${group('in')}${group('out')}`, element)
-    for (const button of element.querySelectorAll('.jack')) dots.set(keyOf(plugOf(button)), button.querySelector<HTMLElement>('.dot')!)
+    for (const button of element.querySelectorAll('.jack'))
+      dots.set(
+        keyOf(plugOf(button)),
+        button.querySelector<HTMLElement>('.dot')!,
+      )
     return element
   }
 
@@ -115,7 +134,8 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
   root.append(edgeStrip)
 
   core.events.on('moduleremove', ({ module }) => {
-    for (const key of [...dots.keys()]) if (key.startsWith(`${module.id}\n`)) dots.delete(key)
+    for (const key of [...dots.keys()])
+      if (key.startsWith(`${module.id}\n`)) dots.delete(key)
   })
 
   // ——— State ———
@@ -123,7 +143,8 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
   /** A pointer is down on a jack (a click, or the start of a drag). */
   let press: { plug: Plug; x: number; y: number; moved: boolean } | null = null
   /** A cable in your hand: from `from` (the end that stays plugged in), to the pointer. */
-  let drag: { from: Plug; picked?: Cable; point?: Point; over?: Plug } | null = null
+  let drag: { from: Plug; picked?: Cable; point?: Point; over?: Plug } | null =
+    null
   /** A clicked jack, waiting for a second click on another jack. */
   let pending: Plug | null = null
 
@@ -134,22 +155,38 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     for (const [key, dot] of dots) {
       const jack = dot.parentElement!
       const plug = plugOf(jack)
-      const mine = core.cables.filter((c) => keyOf(c.from) === key || keyOf(c.to) === key)
-      const can = !!origin && keyOf(origin) !== key && core.canConnect(origin, plug).ok
+      const mine = core.cables.filter(
+        (c) => keyOf(c.from) === key || keyOf(c.to) === key,
+      )
+      const can =
+        !!origin && keyOf(origin) !== key && core.canConnect(origin, plug).ok
       jack.classList.toggle('origin', !!origin && keyOf(origin) === key)
       jack.classList.toggle('can', can)
-      jack.classList.toggle('hot', can && !!drag?.over && keyOf(drag.over) === key)
-      const others = mine.map((c) => (keyOf(c.from) === key ? name(c.to) : name(c.from)))
+      jack.classList.toggle(
+        'hot',
+        can && !!drag?.over && keyOf(drag.over) === key,
+      )
+      const others = mine.map((c) =>
+        keyOf(c.from) === key ? name(c.to) : name(c.from),
+      )
       jack.setAttribute(
         'aria-label',
         `${name(plug)} ${portOf(plug)?.direction === 'in' ? 'input' : 'output'}. ` +
-          (others.length ? `Connected to ${others.join(', ')}.` : 'Not connected.'),
+          (others.length
+            ? `Connected to ${others.join(', ')}.`
+            : 'Not connected.'),
       )
     }
   }
-  for (const type of ['cablechange', 'moduleadd', 'moduleremove', 'modulemove'] as const) {
+  for (const type of [
+    'cablechange',
+    'moduleadd',
+    'moduleremove',
+    'modulemove',
+  ] as const) {
     core.events.on(type, () => {
-      if (selected && !core.cables.some((c) => c.id === selected)) selected = null
+      if (selected && !core.cables.some((c) => c.id === selected))
+        selected = null
       refresh()
     })
   }
@@ -185,15 +222,31 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
         `<path d="${d}" style="stroke:${channel};stroke-linecap:butt" stroke-width="${width}" stroke-dasharray="${STRIPE} ${gap}" stroke-dashoffset="${-k * STRIPE}"/>`,
     ).join('')
   }
-  const plugDot = (p: Point, fill: string) => `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="2.7" style="fill:${fill}"/>`
-  const dash = (plug: Plug) => (portOf(plug)?.kind === 'trigger' ? ' stroke-dasharray="2 3.5"' : '')
-  function cableSvg(cable: Cable, a: Point, b: Point, x: number, width: number) {
+  const plugDot = (p: Point, fill: string) =>
+    `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="2.7" style="fill:${fill}"/>`
+  const dash = (plug: Plug) =>
+    portOf(plug)?.kind === 'trigger' ? ' stroke-dasharray="2 3.5"' : ''
+  function cableSvg(
+    cable: Cable,
+    a: Point,
+    b: Point,
+    x: number,
+    width: number,
+  ) {
     const [top, bottom] = a.y <= b.y ? [a, b] : [b, a]
     if (portOf(cable.from)?.kind === 'channels') {
-      return rainbow(uPath(top, bottom, x), width) + plugDot(a, 'var(--ink)') + plugDot(b, 'var(--ink)')
+      return (
+        rainbow(uPath(top, bottom, x), width) +
+        plugDot(a, 'var(--ink)') +
+        plugDot(b, 'var(--ink)')
+      )
     }
     const c = color(cable.from)
-    return `<path d="${uPath(top, bottom, x)}" style="stroke:${c}" stroke-width="${width}"${dash(cable.from)}/>` + plugDot(a, c) + plugDot(b, c)
+    return (
+      `<path d="${uPath(top, bottom, x)}" style="stroke:${c}" stroke-width="${width}"${dash(cable.from)}/>` +
+      plugDot(a, c) +
+      plugDot(b, c)
+    )
   }
 
   function draw(seconds: number) {
@@ -203,7 +256,10 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     const pos = new Map<string, Point>()
     for (const [key, dot] of dots) {
       const r = dot.getBoundingClientRect()
-      pos.set(key, { x: r.left + r.width / 2 - box.left, y: r.top + r.height / 2 - box.top })
+      pos.set(key, {
+        x: r.left + r.width / 2 - box.left,
+        y: r.top + r.height / 2 - box.top,
+      })
     }
     const at = (plug: Plug) => pos.get(keyOf(plug))
     const cables = core.cables.filter((c) => at(c.from) && at(c.to))
@@ -216,14 +272,25 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     }
     const nets = [...groups].map(([key, list]) => {
       const ys = [at(list[0]!.from)!.y, ...list.map((c) => at(c.to)!.y)]
-      return { key, list, top: Math.min(...ys), bottom: Math.max(...ys), track: 0 }
+      return {
+        key,
+        list,
+        top: Math.min(...ys),
+        bottom: Math.max(...ys),
+        track: 0,
+      }
     })
     // Short nets near the rack, long ones further out: each takes the first free track.
     nets.sort((a, b) => a.bottom - a.top - (b.bottom - b.top))
     const tracks: (typeof nets)[] = []
     for (const net of nets) {
       let t = 0
-      while (tracks[t]?.some((o) => !(net.bottom + 8 < o.top || net.top - 8 > o.bottom))) t++
+      while (
+        tracks[t]?.some(
+          (o) => !(net.bottom + 8 < o.top || net.top - 8 > o.bottom),
+        )
+      )
+        t++
       ;(tracks[t] ??= []).push(net)
       net.track = t
     }
@@ -247,7 +314,9 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
       }
       // Several inputs: one upright, and a branch to each, with a dot where it leaves the upright.
       const from = net.list[0]!.from
-      const ends = [at(from)!, ...net.list.map((c) => at(c.to)!)].sort((a, b) => a.y - b.y)
+      const ends = [at(from)!, ...net.list.map((c) => at(c.to)!)].sort(
+        (a, b) => a.y - b.y,
+      )
       const c = color(from)
       base += `<path d="${uPath(ends[0]!, ends.at(-1)!, x)}" style="stroke:${c}" stroke-width="1.3"${dash(from)}/>`
       for (const e of ends.slice(1, -1)) {
@@ -259,19 +328,36 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
 
     // The selected cable, thicker, so you see what Delete takes out.
     const chosen = cables.find((c) => c.id === selected)
-    set('over', chosen ? cableSvg(chosen, at(chosen.from)!, at(chosen.to)!, xOf.get(keyOf(chosen.from))!, 2.4) : '')
+    set(
+      'over',
+      chosen
+        ? cableSvg(
+            chosen,
+            at(chosen.from)!,
+            at(chosen.to)!,
+            xOf.get(keyOf(chosen.from))!,
+            2.4,
+          )
+        : '',
+    )
 
     // The cable in your hand: to the jack it would go into, or to the pointer.
     let temp = ''
     const start = drag && at(drag.from)
     if (drag?.point && start) {
       const x = edge - FIRST_TRACK - outerTrack * TRACK
-      const target = (drag.over && core.canConnect(drag.from, drag.over).ok && at(drag.over)) || drag.point
+      const target =
+        (drag.over &&
+          core.canConnect(drag.from, drag.over).ok &&
+          at(drag.over)) ||
+        drag.point
       const kind = portOf(drag.from)?.kind
       const c = kind === 'channels' ? 'var(--ink)' : color(drag.from)
       const d = `M${f(start.x)} ${f(start.y)}H${f(x)}V${f(target.y)}H${f(target.x)}`
       temp =
-        (kind === 'channels' ? rainbow(d, 1.6) : `<path d="${d}" style="stroke:${c}" stroke-width="1.6"${dash(drag.from)}/>`) +
+        (kind === 'channels'
+          ? rainbow(d, 1.6)
+          : `<path d="${d}" style="stroke:${c}" stroke-width="1.6"${dash(drag.from)}/>`) +
         plugDot(start, c) +
         `<circle cx="${f(target.x)}" cy="${f(target.y)}" r="3.6" style="fill:${c}"/>`
     }
@@ -299,9 +385,13 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
 
   // ——— Cables: drag, click, keyboard ———
   const jackAt = (event: PointerEvent): Plug | undefined => {
-    const jack = document.elementFromPoint(event.clientX, event.clientY)?.closest('.jack')
+    const jack = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest('.jack')
     // A jack of a dnd-kit copy is not a real jack.
-    return jack && dots.get(keyOf(plugOf(jack))) === jack.querySelector('.dot') ? plugOf(jack) : undefined
+    return jack && dots.get(keyOf(plugOf(jack))) === jack.querySelector('.dot')
+      ? plugOf(jack)
+      : undefined
   }
 
   function beginDrag(plug: Plug) {
@@ -343,12 +433,20 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     if (!jack || event.button !== 0) return
     event.preventDefault()
     jack.setPointerCapture(event.pointerId)
-    press = { plug: plugOf(jack), x: event.clientX, y: event.clientY, moved: false }
+    press = {
+      plug: plugOf(jack),
+      x: event.clientX,
+      y: event.clientY,
+      moved: false,
+    }
   })
   // Move and let go: on the whole window, so the cable follows the pointer anywhere on the page.
   window.addEventListener('pointermove', (event) => {
     if (!press) return
-    if (!press.moved && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 4) {
+    if (
+      !press.moved &&
+      Math.hypot(event.clientX - press.x, event.clientY - press.y) > 4
+    ) {
       press.moved = true
       beginDrag(press.plug)
     }
@@ -407,8 +505,14 @@ export function createPatchLane(core: Core, options: PatchLaneOptions): PatchLan
     refresh()
   })
   document.addEventListener('keydown', (event) => {
-    const typing = (event.target as Element).closest('input, textarea, select, [contenteditable]')
-    if ((event.key === 'Delete' || event.key === 'Backspace') && selected && !typing) {
+    const typing = (event.target as Element).closest(
+      'input, textarea, select, [contenteditable]',
+    )
+    if (
+      (event.key === 'Delete' || event.key === 'Backspace') &&
+      selected &&
+      !typing
+    ) {
       event.preventDefault()
       removeSelected()
     }

@@ -11,7 +11,9 @@ export type { SequencerOptions } from './setup'
 export const sequencer = defineAudioModule({
   type: 'sequencer',
   name: 'Sequencer',
-  description: 'Sends triggers on 6 channels in a 16-step pattern, to the modules after it.',
+  label: 'SQ',
+  description:
+    'Sends triggers on 6 channels in a 16-step pattern, to the modules after it.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
   ui: { styles: [uiStyles, styles], template, script },

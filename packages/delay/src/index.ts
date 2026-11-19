@@ -11,7 +11,9 @@ export type { DelayOptions, RateName } from './setup'
 export const delay = defineAudioModule({
   type: 'delay',
   name: 'Delay',
-  description: 'Echoes on the beat. Plug it into a send and return of the mixer.',
+  label: 'DL',
+  description:
+    'Echoes on the beat. Plug it into a send and return of the mixer.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
   ui: { styles: [uiStyles, styles], template, script },

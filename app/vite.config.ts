@@ -1,4 +1,4 @@
-import { defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite'
+import { defineConfig, type Plugin, searchForWorkspaceRoot } from 'vite'
 
 /**
  * Vite only watches the app folder for NEW files. The workspace packages live outside it,
@@ -9,7 +9,9 @@ function watchWorkspacePackages(): Plugin {
   return {
     name: 'watch-workspace-packages',
     configureServer(server) {
-      server.watcher.add(`${searchForWorkspaceRoot(server.config.root)}/packages`)
+      server.watcher.add(
+        `${searchForWorkspaceRoot(server.config.root)}/packages`,
+      )
     },
   }
 }
@@ -34,7 +36,8 @@ export default defineConfig({
         client: 'src/client.ts',
       },
       output: {
-        entryFileNames: (chunk) => (chunk.name === 'client' ? 'client.js' : 'assets/[name]-[hash].js'),
+        entryFileNames: (chunk) =>
+          chunk.name === 'client' ? 'client.js' : 'assets/[name]-[hash].js',
       },
     },
   },

@@ -50,12 +50,22 @@ const RADIUS = 46
 const SPAN = (48 * Math.PI) / 180
 /** The scale: -20 to +3 VU. Position 0 is -20 VU, 1 is +3 VU. Like a real meter, it is not linear. */
 const MAX_VU = 3
-export const positionOf = (vu: number) => (10 ** (vu / 20) - 0.1) / (10 ** (MAX_VU / 20) - 0.1)
+export const positionOf = (vu: number) =>
+  (10 ** (vu / 20) - 0.1) / (10 ** (MAX_VU / 20) - 0.1)
 const ZERO = positionOf(0)
 /** The big marks, with their numbers ('' : no number). */
 const MARKS: readonly [vu: number, label: string][] = [
-  [-20, '20'], [-10, '10'], [-7, '7'], [-5, '5'], [-3, '3'], [-2, ''], [-1, ''],
-  [0, '0'], [1, ''], [2, ''], [3, '3'],
+  [-20, '20'],
+  [-10, '10'],
+  [-7, '7'],
+  [-5, '5'],
+  [-3, '3'],
+  [-2, ''],
+  [-1, ''],
+  [0, '0'],
+  [1, ''],
+  [2, ''],
+  [3, '3'],
 ]
 /** The fast level ("bars") goes a little past +3 VU, like the needles: up to this much of the scale. */
 export const BAR_MAX = 1.06
@@ -68,7 +78,10 @@ const LAMP_SECONDS = 0.35
 const HOLD_SECONDS = 1
 const HOLD_FALL = 0.6
 
-export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors): Meter {
+export function createMeter(
+  canvas: HTMLCanvasElement,
+  colors: () => MeterColors,
+): Meter {
   const g = canvas.getContext('2d')!
   const channels = [0, 1].map(() => ({
     vu: -30,
@@ -108,7 +121,13 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
       }
       const arc = (from: number, to: number, r: number) => {
         g.beginPath()
-        g.arc(cx, PIVOT_Y, r, -Math.PI / 2 - SPAN + from * 2 * SPAN, -Math.PI / 2 - SPAN + to * 2 * SPAN)
+        g.arc(
+          cx,
+          PIVOT_Y,
+          r,
+          -Math.PI / 2 - SPAN + from * 2 * SPAN,
+          -Math.PI / 2 - SPAN + to * 2 * SPAN,
+        )
         g.stroke()
       }
 
@@ -134,7 +153,10 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
         const position = positionOf(vu)
         g.strokeStyle = vu >= 0 ? c.red : c.ink
         g.lineWidth = label ? 1 : 0.8
-        line(...at(position, RADIUS - (label ? 5 : 3.5)), ...at(position, RADIUS + 1))
+        line(
+          ...at(position, RADIUS - (label ? 5 : 3.5)),
+          ...at(position, RADIUS + 1),
+        )
         if (label) {
           g.fillStyle = vu >= 0 ? c.red : c.muted
           g.fillText(label, ...at(position, RADIUS + 6))
@@ -171,7 +193,10 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
       g.lineWidth = 1
       if (channel.history.length > 5) {
         g.globalAlpha = 0.25
-        line(...at(channel.history[channel.history.length - 6]!, 7), ...at(channel.history[channel.history.length - 6]!, RADIUS + 1))
+        line(
+          ...at(channel.history[channel.history.length - 6]!, 7),
+          ...at(channel.history[channel.history.length - 6]!, RADIUS + 1),
+        )
         g.globalAlpha = 1
       }
       line(...at(channel.position, 7), ...at(channel.position, RADIUS + 1))
@@ -212,7 +237,8 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
     channels.forEach((channel, i) => {
       const vu = channel.vu
       let text = '–∞'
-      if (vu > -30) text = `${vu > 0 ? '+' : ''}${Math.abs(vu) < 9.95 ? vu.toFixed(1) : Math.round(vu)}`
+      if (vu > -30)
+        text = `${vu > 0 ? '+' : ''}${Math.abs(vu) < 9.95 ? vu.toFixed(1) : Math.round(vu)}`
       const y = 28 + i * 10
       g.font = `600 7px ${c.font}`
       g.fillStyle = i === 0 ? c.left : c.right
@@ -243,9 +269,14 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
       channels.forEach((channel, i) => {
         const vu = levels[i]!
         channel.vu = vu
-        const target = Math.max(-0.04, Math.min(1.06, positionOf(Math.max(-30, vu))))
+        const target = Math.max(
+          -0.04,
+          Math.min(1.06, positionOf(Math.max(-30, vu))),
+        )
         // The needle: a spring pulls it towards the level. Silence: it rests just left of the scale.
-        channel.speed += (STIFFNESS * (target - channel.position) - DAMPING * channel.speed) * seconds
+        channel.speed +=
+          (STIFFNESS * (target - channel.position) - DAMPING * channel.speed) *
+          seconds
         channel.position += channel.speed * seconds
         channel.history.push(channel.position)
         if (channel.history.length > 10) channel.history.shift()
@@ -262,7 +293,8 @@ export function createMeter(canvas: HTMLCanvasElement, colors: () => MeterColors
         }
         // The lamp follows the sound itself, not the needle: a short click lights it even when
         // the needle is too slow to reach the red zone. Real VU meters work the same way.
-        channel.lamp = vu > 0.5 ? LAMP_SECONDS : Math.max(0, channel.lamp - seconds)
+        channel.lamp =
+          vu > 0.5 ? LAMP_SECONDS : Math.max(0, channel.lamp - seconds)
       })
 
       draw()

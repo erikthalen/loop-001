@@ -22,7 +22,7 @@
     border: 0;
     background: none;
     color: var(--muted);
-    font: 500 8px/1 var(--loop-font);
+    font: 500 8px / 1 var(--loop-font);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     white-space: nowrap;

@@ -1,12 +1,12 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import { BAR_MAX, positionOf } from "./meter";
-import type { setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import { BAR_MAX, positionOf } from './meter'
+import type { setup } from './setup'
 
 /**
  * The two meters show each channel's fast level (0: -20 VU, 1: +3 VU, up to BAR_MAX), see meter.ts.
  * Their color: green up to -3 VU, yellow up to 0 VU, red above 0 VU (the red zone).
  */
-const LEVEL = html`min="0" max="${BAR_MAX}" optimum="0" low="${positionOf(-3).toFixed(3)}" high="${positionOf(0).toFixed(3)}" value="0"`;
+const LEVEL = html`min="0" max="${BAR_MAX}" optimum="0" low="${positionOf(-3).toFixed(3)}" high="${positionOf(0).toFixed(3)}" value="0"`
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, sr-only)
 // and styles.ts; @loop/ui also styles the two <meter>s. The script draws the picture (meter.ts):
@@ -33,4 +33,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

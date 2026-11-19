@@ -76,8 +76,12 @@ const loaded = new WeakMap<BaseAudioContext, Promise<void>>()
 const load = (context: BaseAudioContext) => {
   let loading = loaded.get(context)
   if (!loading) {
-    const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
-    loading = context.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url))
+    const url = URL.createObjectURL(
+      new Blob([code], { type: 'text/javascript' }),
+    )
+    loading = context.audioWorklet
+      .addModule(url)
+      .finally(() => URL.revokeObjectURL(url))
     // It failed: try again next time.
     loading.catch(() => loaded.delete(context))
     loaded.set(context, loading)
@@ -86,7 +90,10 @@ const load = (context: BaseAudioContext) => {
 }
 
 /** Make a delay line that can delay up to `seconds`. It loads in the background. */
-export async function createDelayLine(context: BaseAudioContext, seconds: number): Promise<AudioWorkletNode> {
+export async function createDelayLine(
+  context: BaseAudioContext,
+  seconds: number,
+): Promise<AudioWorkletNode> {
   await load(context)
   return new AudioWorkletNode(context, PROCESSOR, {
     numberOfInputs: 1,

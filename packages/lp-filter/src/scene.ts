@@ -65,7 +65,11 @@ const WALL_BOTTOM = 86
 const HEAD_X = 158
 const GROUND = 88
 
-export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: SceneColors) {
+export function drawScene(
+  canvas: HTMLCanvasElement,
+  state: SceneState,
+  c: SceneColors,
+) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
   if (canvas.width !== Math.round(WIDTH * scale)) {
     canvas.width = Math.round(WIDTH * scale)
@@ -93,14 +97,18 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
   g.strokeStyle = c.dim
   g.lineWidth = 0.8
   line(0, GROUND, WIDTH, GROUND)
-  for (let gx = 3; gx < WIDTH; gx += 6) line(gx, GROUND + 1.5, gx - 2, GROUND + 4)
+  for (let gx = 3; gx < WIDTH; gx += 6)
+    line(gx, GROUND + 1.5, gx - 2, GROUND + 4)
 
   // ——— The speaker, on the left ———
   g.strokeStyle = c.ink
   g.lineWidth = 1
   g.strokeRect(2.5, 30.5, 26, 56)
   g.lineWidth = 0.8
-  for (const [cy, r] of [[42, 5], [66, 9.5]] as const) {
+  for (const [cy, r] of [
+    [42, 5],
+    [66, 9.5],
+  ] as const) {
     g.beginPath()
     g.arc(15.5, cy, r, 0, Math.PI * 2)
     g.stroke()
@@ -109,7 +117,12 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
     g.stroke()
   }
   g.fillStyle = c.ink
-  for (const [sx, sy] of [[5.5, 33.5], [25.5, 33.5], [5.5, 83.5], [25.5, 83.5]] as const) {
+  for (const [sx, sy] of [
+    [5.5, 33.5],
+    [25.5, 33.5],
+    [5.5, 83.5],
+    [25.5, 83.5],
+  ] as const) {
     g.beginPath()
     g.arc(sx, sy, 0.8, 0, Math.PI * 2)
     g.fill()
@@ -137,7 +150,8 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
     g.strokeStyle = c.muted
     for (let row = 0, y = WALL_TOP + 6; y < WALL_BOTTOM; row++, y += 6) {
       line(wallLeft, y, wallRight, y)
-      for (let bx = wallLeft + (row % 2 ? 4 : 8); bx < wallRight - 1; bx += 8) line(bx, y - 6, bx, y)
+      for (let bx = wallLeft + (row % 2 ? 4 : 8); bx < wallRight - 1; bx += 8)
+        line(bx, y - 6, bx, y)
     }
     // The ring: short orange arcs on the far side of the wall.
     if (ring > 0.05) {
@@ -160,7 +174,10 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
     const wave = (from: number, to: number, amplitude: number) => {
       g.beginPath()
       for (let wx = from; wx <= to; wx += 0.5) {
-        const y = band.y + amplitude * Math.sin(((wx - state.time * 24) / band.wavelength) * Math.PI * 2)
+        const y =
+          band.y +
+          amplitude *
+            Math.sin(((wx - state.time * 24) / band.wavelength) * Math.PI * 2)
         if (wx === from) g.moveTo(wx, y)
         else g.lineTo(wx, y)
       }
@@ -192,8 +209,23 @@ export function drawScene(canvas: HTMLCanvasElement, state: SceneState, c: Scene
     87 - (87 - hy) * headScale,
   ]
   const head: [number, number][] = [
-    [238, 87], [236, 74], [240, 60], [241, 46], [236, 33], [224, 26], [212, 30], [207, 39],
-    [206, 45], [201, 52], [206, 55], [205, 60], [208, 62], [206, 67], [212, 71], [215, 78], [214, 87],
+    [238, 87],
+    [236, 74],
+    [240, 60],
+    [241, 46],
+    [236, 33],
+    [224, 26],
+    [212, 30],
+    [207, 39],
+    [206, 45],
+    [201, 52],
+    [206, 55],
+    [205, 60],
+    [208, 62],
+    [206, 67],
+    [212, 71],
+    [215, 78],
+    [214, 87],
   ].map(([hx, hy]) => hp(hx, hy))
   g.strokeStyle = c.orange
   g.lineWidth = 1.1

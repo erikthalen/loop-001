@@ -9,5 +9,8 @@
     "preview": "pnpm --filter app preview",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8"
   }
 }

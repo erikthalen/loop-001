@@ -1,5 +1,5 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import type { setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import type { setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, sr-only)
 // and styles.ts; @loop/ui also styles the slider and the checkbox.
@@ -28,9 +28,9 @@ export const template = defineModuleTemplate<typeof setup>(
 
         <label class="field">
           <span>mute</span>
-          <input name="mute" type="checkbox" ${module.muted ? "checked" : ""} />
+          <input name="mute" type="checkbox" ${module.muted ? 'checked' : ''} />
         </label>
       </div>
     </section>
   `,
-);
+)

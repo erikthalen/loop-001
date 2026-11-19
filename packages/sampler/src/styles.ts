@@ -1,4 +1,4 @@
-import { css } from "@loop/core";
+import { css } from '@loop/core'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
@@ -155,4 +155,4 @@ export const styles = css`
     top: 0;
     right: 0;
   }
-`;
+`

@@ -23,7 +23,9 @@
 import type { OdometerWheel } from '@loop/ui'
 
 /** The tempo's 3 digit wheels (hundreds first), in bpm: for createOdometer in @loop/ui. */
-export const BPM_WHEELS: readonly OdometerWheel[] = [100, 10, 1].map((unit) => ({ unit }))
+export const BPM_WHEELS: readonly OdometerWheel[] = [100, 10, 1].map(
+  (unit) => ({ unit }),
+)
 
 export interface PictureColors {
   screen: string
@@ -68,9 +70,17 @@ const TICKS = 48
 const MAJOR = 6
 
 /** `width`: the canvas's width in CSS px (the module's width). */
-export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: PictureColors, width: number) {
+export function drawPicture(
+  canvas: HTMLCanvasElement,
+  state: PictureState,
+  c: PictureColors,
+  width: number,
+) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
-  if (canvas.width !== Math.round(width * scale) || canvas.height !== Math.round(HEIGHT * scale)) {
+  if (
+    canvas.width !== Math.round(width * scale) ||
+    canvas.height !== Math.round(HEIGHT * scale)
+  ) {
     canvas.width = Math.round(width * scale)
     canvas.height = Math.round(HEIGHT * scale)
   }
@@ -172,7 +182,8 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
   g.strokeStyle = c.primary
   for (let i = 0; i < trailSteps; i++) {
     const from = state.trail + ((state.phase - state.trail) * i) / trailSteps
-    const to = state.trail + ((state.phase - state.trail) * (i + 1)) / trailSteps
+    const to =
+      state.trail + ((state.phase - state.trail) * (i + 1)) / trailSteps
     const near = (i + 1) / trailSteps
     path(from, to)
     // A soft glow under the line, then the line.
@@ -208,10 +219,12 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
     const digit = Math.floor(wheel) % 10
     const turn = wheel % 1
     // A leading zero is dim, like an unlit display (this wheel and all before it show 0).
-    const leading = i < wheels.length - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
+    const leading =
+      i < wheels.length - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
     g.fillStyle = leading ? c.dim : c.ink
     g.fillText(String(digit), x, BASE_Y - turn * row)
-    if (turn > 0) g.fillText(String((digit + 1) % 10), x, BASE_Y + (1 - turn) * row)
+    if (turn > 0)
+      g.fillText(String((digit + 1) % 10), x, BASE_Y + (1 - turn) * row)
   })
   g.restore()
   g.textAlign = 'left'

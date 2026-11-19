@@ -10,7 +10,9 @@ const CACHE = 'static-v1'
 
 // Activate a new version at once and take control of open pages.
 self.addEventListener('install', () => self.skipWaiting())
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
+self.addEventListener('activate', (event) =>
+  event.waitUntil(self.clients.claim()),
+)
 
 // A page that is not controlled (for example after a hard refresh, Shift+Cmd+R) asks us
 // to take control. See src/register-sw.ts.

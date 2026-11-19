@@ -11,7 +11,9 @@ export type { MixerOptions } from './setup'
 export const mixer = defineAudioModule({
   type: 'mixer',
   name: 'Mixer',
-  description: 'A volume and a send for each of the 6 channels, and two send buses (A, B) for effects. Put it after a sampler.',
+  label: 'MX',
+  description:
+    'A volume and a send for each of the 6 channels, and two send buses (A, B) for effects. Put it after a sampler.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
   ui: { styles: [uiStyles, styles], template, script },

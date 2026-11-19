@@ -1,4 +1,12 @@
-import { html, render, type AudioModule, type Core, type Plug, type Port, type PortKind } from '@loop/core'
+import {
+  type AudioModule,
+  type Core,
+  html,
+  type Plug,
+  type Port,
+  type PortKind,
+  render,
+} from '@loop/core'
 
 export interface MatrixOptions {
   /** Where the tables go (in the patchbay). */
@@ -47,7 +55,11 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
       core
         .ports(module.id)
         .filter((port) => port.direction === direction && port.kind === kind)
-        .map((port) => ({ module, port, plug: { module: module.id, port: port.id } })),
+        .map((port) => ({
+          module,
+          port,
+          plug: { module: module.id, port: port.id },
+        })),
     )
   }
 
@@ -62,14 +74,14 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
           <thead>
             <tr>
               <td></td>
-              ${ins.map((input) => html`<th scope="col">${input.module.name} <small>${input.port.label}</small></th>`)}
+              ${ins.map((input) => html`<th scope="col">${input.module.label} ${kind === 'audio' ? html`<small>${input.port.label}</small>` : ''}</th>`)}
             </tr>
           </thead>
           <tbody>
             ${outs.map(
               (output) => html`
                 <tr style="--loop-primary: ${colorOf(output.module)}">
-                  <th scope="row">${output.module.name} <small>${output.port.label}</small></th>
+                  <th scope="row">${kind === 'audio' ? html`<small>${output.port.label}</small>` : ''} ${output.module.label}</th>
                   ${ins.map(
                     (input) => html`
                       <td>
@@ -90,7 +102,8 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
       `
     })
     render(html`${tables}`, root)
-    if (!root.querySelector('.matrix')) render(html`<p class="text-muted">No jacks to connect yet.</p>`, root)
+    if (!root.querySelector('.matrix'))
+      render(html`<p class="text-muted">No jacks to connect yet.</p>`, root)
     update()
   }
 
@@ -99,11 +112,15 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
     return { module: module!, port: port! }
   }
   const cableBetween = (from: string, to: string) =>
-    core.cables.find((cable) => keyOf(cable.from) === from && keyOf(cable.to) === to)
+    core.cables.find(
+      (cable) => keyOf(cable.from) === from && keyOf(cable.to) === to,
+    )
 
   /** Check the boxes that are cables. Disable the ones that cannot be, and say why. */
   function update() {
-    for (const box of root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+    for (const box of root.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )) {
       const { from, to } = box.dataset as { from: string; to: string }
       const connected = !!cableBetween(from, to)
       const check = connected ? null : core.canConnect(plugOf(from), plugOf(to))
@@ -130,7 +147,8 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
     { signal },
   )
 
-  for (const type of ['moduleadd', 'moduleremove', 'modulemove'] as const) core.events.on(type, build, { signal })
+  for (const type of ['moduleadd', 'moduleremove', 'modulemove'] as const)
+    core.events.on(type, build, { signal })
   core.events.on('cablechange', update, { signal })
   build()
 }

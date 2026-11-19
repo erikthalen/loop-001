@@ -115,8 +115,12 @@ const loaded = new WeakMap<BaseAudioContext, Promise<void>>()
 const load = (context: BaseAudioContext) => {
   let loading = loaded.get(context)
   if (!loading) {
-    const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
-    loading = context.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url))
+    const url = URL.createObjectURL(
+      new Blob([code], { type: 'text/javascript' }),
+    )
+    loading = context.audioWorklet
+      .addModule(url)
+      .finally(() => URL.revokeObjectURL(url))
     // It failed: try again next time.
     loading.catch(() => loaded.delete(context))
     loaded.set(context, loading)
@@ -125,7 +129,10 @@ const load = (context: BaseAudioContext) => {
 }
 
 /** Make a tape that follows `speedSignal` (core.speedSignal). It loads in the background. */
-export async function createTape(context: BaseAudioContext, speedSignal: AudioNode): Promise<Tape> {
+export async function createTape(
+  context: BaseAudioContext,
+  speedSignal: AudioNode,
+): Promise<Tape> {
   await load(context)
   const node = new AudioWorkletNode(context, PROCESSOR, {
     numberOfInputs: 1,

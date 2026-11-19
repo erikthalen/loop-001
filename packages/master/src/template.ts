@@ -1,5 +1,5 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import type { setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import type { setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Only HTML from @loop/ui (display, field, sr-only; it also
 // styles the button, the checkbox and the slider). The tape reels (a canvas, reels.ts) on top, then
@@ -16,7 +16,7 @@ export const template = defineModuleTemplate<typeof setup>(
           <input
             name="play"
             type="checkbox"
-            ${core.playing && !core.stopping ? "checked" : ""}
+            ${core.playing && !core.stopping ? 'checked' : ''}
           />
         </label>
         <label class="field volume">
@@ -41,4 +41,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

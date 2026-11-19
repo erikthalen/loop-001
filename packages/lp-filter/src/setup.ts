@@ -26,7 +26,8 @@ const SMOOTHING = 0.02
  */
 export const SECOND_STAGE_Q = -3.01
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))
 
 /**
  * Audio: a low pass filter (12 or 24 dB per octave), with two analysers for the picture: one
@@ -44,14 +45,23 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
   const { audio } = ctx
   // Options can come from a saved project file, so check the types.
   let frequency =
-    typeof options.frequency === 'number' ? clamp(options.frequency, MIN_FREQUENCY, MAX_FREQUENCY) : 20000
-  let resonance = typeof options.resonance === 'number' ? clamp(options.resonance, 0, MAX_RESONANCE) : 0
+    typeof options.frequency === 'number'
+      ? clamp(options.frequency, MIN_FREQUENCY, MAX_FREQUENCY)
+      : 20000
+  let resonance =
+    typeof options.resonance === 'number'
+      ? clamp(options.resonance, 0, MAX_RESONANCE)
+      : 0
   let on = typeof options.on === 'boolean' ? options.on : true
   let slope: Slope = options.slope === 24 ? 24 : 12
 
   const input = new GainNode(audio)
   // For a low pass filter, Web Audio's Q is the resonance in dB.
-  const filter = new BiquadFilterNode(audio, { type: 'lowpass', frequency, Q: resonance })
+  const filter = new BiquadFilterNode(audio, {
+    type: 'lowpass',
+    frequency,
+    Q: resonance,
+  })
   const second = new BiquadFilterNode(audio, {
     type: slope === 24 ? 'lowpass' : 'allpass',
     frequency,
@@ -64,7 +74,10 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
   input.connect(dry).connect(output)
 
   // fftSize 4096: about 12 Hz per bin at 48 kHz, enough detail for the low notes.
-  const analyserOptions: AnalyserOptions = { fftSize: 4096, smoothingTimeConstant: 0.8 }
+  const analyserOptions: AnalyserOptions = {
+    fftSize: 4096,
+    smoothingTimeConstant: 0.8,
+  }
   const inputAnalyser = new AnalyserNode(audio, analyserOptions)
   const outputAnalyser = new AnalyserNode(audio, analyserOptions)
   input.connect(inputAnalyser)
@@ -124,7 +137,10 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
      * The filter's curve: how loud each frequency comes out (1 = unchanged).
      * Fills `magnitudes` for the frequencies (Hz) in `frequencies`.
      */
-    getResponse(frequencies: Float32Array<ArrayBuffer>, magnitudes: Float32Array<ArrayBuffer>) {
+    getResponse(
+      frequencies: Float32Array<ArrayBuffer>,
+      magnitudes: Float32Array<ArrayBuffer>,
+    ) {
       if (phases.length !== frequencies.length) {
         phases = new Float32Array(frequencies.length)
         secondMagnitudes = new Float32Array(frequencies.length)
@@ -132,7 +148,8 @@ export const setup = defineModuleSetup((ctx, options: LowPassOptions = {}) => {
       // Two filters in a row: multiply their curves.
       filter.getFrequencyResponse(frequencies, magnitudes, phases)
       second.getFrequencyResponse(frequencies, secondMagnitudes, phases)
-      for (let i = 0; i < magnitudes.length; i++) magnitudes[i]! *= secondMagnitudes[i]!
+      for (let i = 0; i < magnitudes.length; i++)
+        magnitudes[i]! *= secondMagnitudes[i]!
     },
     /** Saved with the project. Comes back as `options` when the project loads. */
     save: (): LowPassOptions => ({ frequency, resonance, on, slope }),

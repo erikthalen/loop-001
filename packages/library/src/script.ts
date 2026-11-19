@@ -2,11 +2,20 @@ import { render } from '@loop/core'
 import type { Library } from './library'
 import { tapes } from './template'
 
-const STATUS_TEXT = { saved: 'saved', saving: 'saving…', error: 'not saved!' } as const
+const STATUS_TEXT = {
+  saved: 'saved',
+  saving: 'saving…',
+  error: 'not saved!',
+} as const
 
 // JS: connect the HTML to the library (the app). Everything is removed for us on unmount.
-export function script(root: ShadowRoot, signal: AbortSignal, library: Library): void {
-  const $ = <T extends Element>(selector: string) => root.querySelector<T>(selector)!
+export function script(
+  root: ShadowRoot,
+  signal: AbortSignal,
+  library: Library,
+): void {
+  const $ = <T extends Element>(selector: string) =>
+    root.querySelector<T>(selector)!
   const name = $<HTMLInputElement>('[name=name]')
   const status = $<HTMLOutputElement>('[name=status]')
   const shelf = $<HTMLElement>('.tapes')
@@ -23,14 +32,25 @@ export function script(root: ShadowRoot, signal: AbortSignal, library: Library):
     const list = await library.list()
     if (ask !== asked || signal.aborted) return
     const current = library.current.id
-    const key = JSON.stringify([current, list.map((tape) => [tape.id, tape.name, tape.updatedAt])])
+    const key = JSON.stringify([
+      current,
+      list.map((tape) => [tape.id, tape.name, tape.updatedAt]),
+    ])
     if (key === shown) return
     shown = key
     // Making the shelf again loses the focus: put it back on the same tape (or its erase button).
     const focused = root.activeElement as HTMLElement | null
-    const again = focused && shelf.contains(focused) ? (focused.dataset.erase ?? (focused as HTMLInputElement).value) : null
+    const again =
+      focused && shelf.contains(focused)
+        ? (focused.dataset.erase ?? (focused as HTMLInputElement).value)
+        : null
     render(tapes(list, current), shelf)
-    if (again) shelf.querySelector<HTMLElement>(`[data-erase="${again}"], [value="${again}"]`)?.focus()
+    if (again)
+      shelf
+        .querySelector<HTMLElement>(
+          `[data-erase="${again}"], [value="${again}"]`,
+        )
+        ?.focus()
   }
 
   function update() {
@@ -62,10 +82,15 @@ export function script(root: ShadowRoot, signal: AbortSignal, library: Library):
   shelf.addEventListener(
     'click',
     async (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>('[data-erase]')
+      const button = (event.target as Element).closest<HTMLButtonElement>(
+        '[data-erase]',
+      )
       if (!button) return
-      $('.erase-name').textContent = button.getAttribute('aria-label')!.replace(/^Erase /, '')
-      if ((await answer(askErase)) === 'erase') await library.erase(button.dataset.erase!)
+      $('.erase-name').textContent = button
+        .getAttribute('aria-label')!
+        .replace(/^Erase /, '')
+      if ((await answer(askErase)) === 'erase')
+        await library.erase(button.dataset.erase!)
     },
     listen,
   )
@@ -81,7 +106,11 @@ export function script(root: ShadowRoot, signal: AbortSignal, library: Library):
     listen,
   )
 
-  $('[name=export]').addEventListener('click', () => download(library.exportFile()), listen)
+  $('[name=export]').addEventListener(
+    'click',
+    () => download(library.exportFile()),
+    listen,
+  )
 
   $('[name=import]').addEventListener('click', () => file.click(), listen)
   file.addEventListener(
@@ -93,7 +122,8 @@ export function script(root: ShadowRoot, signal: AbortSignal, library: Library):
       try {
         await library.importFile(picked)
       } catch (error) {
-        $('.problem-text').textContent = error instanceof Error ? error.message : String(error)
+        $('.problem-text').textContent =
+          error instanceof Error ? error.message : String(error)
         void answer($<HTMLDialogElement>('.problem'))
       }
     },
@@ -110,13 +140,20 @@ export function script(root: ShadowRoot, signal: AbortSignal, library: Library):
 function answer(dialog: HTMLDialogElement): Promise<string> {
   dialog.returnValue = ''
   dialog.showModal()
-  return new Promise((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true }))
+  return new Promise((resolve) =>
+    dialog.addEventListener('close', () => resolve(dialog.returnValue), {
+      once: true,
+    }),
+  )
 }
 
 /** Let the browser download a file (native: a temporary link with `download`). */
 function download(file: File): void {
   const url = URL.createObjectURL(file)
-  const link = Object.assign(document.createElement('a'), { href: url, download: file.name })
+  const link = Object.assign(document.createElement('a'), {
+    href: url,
+    download: file.name,
+  })
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

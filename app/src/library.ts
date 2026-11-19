@@ -1,5 +1,9 @@
 import type { Library } from '@loop/library'
-import { createProjectFile, PROJECT_FILE_EXTENSION, readProjectFile } from './project-file'
+import {
+  createProjectFile,
+  PROJECT_FILE_EXTENSION,
+  readProjectFile,
+} from './project-file'
 import type { ProjectSession } from './project-session'
 
 /**
@@ -20,7 +24,8 @@ export function createLibrary(session: ProjectSession): Library {
     create: () => session.create(),
     rename: (name) => session.rename(name),
     erase: (id) => session.delete(id),
-    exportFile: () => createProjectFile(session.current.name, session.snapshot()),
+    exportFile: () =>
+      createProjectFile(session.current.name, session.snapshot()),
     async importFile(file) {
       const { name, project } = await readProjectFile(file)
       await session.create(name, project)

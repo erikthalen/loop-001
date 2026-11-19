@@ -1,7 +1,11 @@
-import { CollisionPriority, CollisionType, type CollisionDetector } from '@dnd-kit/abstract'
+import {
+  type CollisionDetector,
+  CollisionPriority,
+  CollisionType,
+} from '@dnd-kit/abstract'
 import { DragDropManager } from '@dnd-kit/dom'
 import { isSortable, Sortable } from '@dnd-kit/dom/sortable'
-import { html, render, type AudioModule, type Core } from '@loop/core'
+import { type AudioModule, type Core, html, render } from '@loop/core'
 
 export interface Rack {
   /** True while the rack is in remove mode. */
@@ -53,7 +57,12 @@ const passTheMiddle: CollisionDetector = ({ dragOperation, droppable }) => {
     (position.direction === 'down' && to > from && pointer.y > middle) ||
     (position.direction === 'up' && to < from && pointer.y < middle)
   if (!passed) return null
-  return { id: droppable.id, value: 1, type: CollisionType.Collision, priority: CollisionPriority.Normal }
+  return {
+    id: droppable.id,
+    value: 1,
+    type: CollisionType.Collision,
+    priority: CollisionPriority.Normal,
+  }
 }
 
 /**
@@ -67,7 +76,11 @@ const passTheMiddle: CollisionDetector = ({ dragOperation, droppable }) => {
  *
  * Remove mode: modules jiggle and a click on a module removes it from the core.
  */
-export function createRack(core: Core, element: HTMLElement, options: RackOptions = {}): Rack {
+export function createRack(
+  core: Core,
+  element: HTMLElement,
+  options: RackOptions = {},
+): Rack {
   const slots = new Map<string, HTMLElement>()
   const sortables = new Map<string, Sortable>()
   const manager = new DragDropManager()
@@ -79,10 +92,14 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
 
   /** Put the slots in the core's order, and tell each sortable its place. */
   const followCore = () => {
-    const wanted = [...core.modules.keys()].map((id) => slots.get(id)).filter((slot) => slot !== undefined)
+    const wanted = [...core.modules.keys()]
+      .map((id) => slots.get(id))
+      .filter((slot) => slot !== undefined)
     // dnd-kit already moves the slots during a drag, so usually they are in place.
     // Compare only our slots: not dnd-kit's gap copy, and not a slot that is fading out.
-    const current = [...element.children].filter((child) => wanted.includes(child as HTMLElement))
+    const current = [...element.children].filter((child) =>
+      wanted.includes(child as HTMLElement),
+    )
     if (current.some((slot, i) => slot !== wanted[i])) {
       for (const slot of wanted) element.append(slot)
     }
@@ -110,7 +127,8 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
 
   const releaseSize = (slot: HTMLElement) => {
     const check = () => {
-      if (element.querySelector('[data-dnd-placeholder]')) return requestAnimationFrame(check)
+      if (element.querySelector('[data-dnd-placeholder]'))
+        return requestAnimationFrame(check)
       slot.style.removeProperty('width')
       slot.style.removeProperty('height')
     }
@@ -124,7 +142,8 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
     if (slot instanceof HTMLElement) releaseSize(slot)
     if (canceled || !isSortable(source)) return
     const module = core.modules.get(String(source.id))
-    if (module && source.index !== source.initialIndex) core.move(module, source.index)
+    if (module && source.index !== source.initialIndex)
+      core.move(module, source.index)
   })
 
   const rack: Rack = {
@@ -143,7 +162,8 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
       for (const sortable of sortables.values()) sortable.disabled = removing
       notify()
     },
-    onChange: (listener, listenOptions) => changes.addEventListener('change', listener, listenOptions),
+    onChange: (listener, listenOptions) =>
+      changes.addEventListener('change', listener, listenOptions),
   }
 
   core.events.on('moduleadd', ({ module }) => {
@@ -158,7 +178,9 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
       `,
       slot,
     )
-    slot.querySelector('.remove-target')!.addEventListener('click', () => module.remove())
+    slot
+      .querySelector('.remove-target')!
+      .addEventListener('click', () => module.remove())
 
     slots.set(module.id, slot)
     element.append(slot)
@@ -196,8 +218,13 @@ export function createRack(core: Core, element: HTMLElement, options: RackOption
     else notify()
 
     if (!reducedMotion.matches) {
-      await slot.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.85 }], { duration: 150, easing: 'ease-in' })
-        .finished
+      await slot.animate(
+        [
+          { opacity: 1, scale: 1 },
+          { opacity: 0, scale: 0.85 },
+        ],
+        { duration: 150, easing: 'ease-in' },
+      ).finished
     }
     slot.remove()
     followCore()

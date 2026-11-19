@@ -15,6 +15,7 @@ export type { MasterOptions } from './setup'
 export const master = defineAudioModule({
   type: 'master',
   name: 'Master',
+  label: 'MSTR',
   description: 'Play, stop and rewind, and the master volume.',
   // The end of the sound, straight into the speakers: one is enough.
   unique: true,

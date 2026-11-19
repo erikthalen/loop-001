@@ -1,4 +1,4 @@
-import { html, type HTMLTemplate } from '@loop/core'
+import { type HTMLTemplate, html } from '@loop/core'
 import type { PatchbayOptions } from './patchbay'
 
 // HTML: only HTML from @loop/ui (display, button, menu, popover, matrix, sr-only). From the top:

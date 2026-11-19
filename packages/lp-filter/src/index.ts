@@ -11,6 +11,7 @@ export type { LowPassOptions } from './setup'
 export const lpFilter = defineAudioModule({
   type: 'lp-filter',
   name: 'Low pass',
+  label: 'LP',
   description: 'Takes away the high sounds. Shows the sound before and after.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).

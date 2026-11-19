@@ -1,6 +1,6 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import { CHANNEL_COLORS } from "@loop/ui";
-import { CHANNELS, type setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNELS, type setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, button,
 // sr-only) and styles.ts; @loop/ui also styles the radio buttons and the checkbox. The script draws the tape and keeps the text up to date.
@@ -65,7 +65,7 @@ export const template = defineModuleTemplate<typeof setup>(
                   type="radio"
                   name="channel"
                   value="${i}"
-                  ${module.active === i ? "checked" : ""}
+                  ${module.active === i ? 'checked' : ''}
                 />
                 <span>${i + 1}</span>
               </label>
@@ -79,4 +79,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

@@ -1,4 +1,4 @@
-import { mountView, type Core } from '@loop/core'
+import { type Core, mountView } from '@loop/core'
 import { uiStyles } from '@loop/ui'
 import type { PatchbayOptions } from './patchbay'
 import { script } from './script'
@@ -17,7 +17,11 @@ export type { PatchbayOptions, RemoveMode } from './patchbay'
  *
  *   mountPatchbay(document.querySelector('#patchbay')!, core, { modules, colorOf, rack })
  */
-export function mountPatchbay(parent: Element, core: Core, options: PatchbayOptions): () => void {
+export function mountPatchbay(
+  parent: Element,
+  core: Core,
+  options: PatchbayOptions,
+): () => void {
   return mountView(parent, {
     label: 'Patchbay',
     // The shared UI library first, then the module's own CSS (which can override it).

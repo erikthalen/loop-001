@@ -27,7 +27,8 @@ export function encodeSound(buffer: AudioBuffer): SavedSound {
   // btoa takes a "binary string". Build it in parts: one huge String.fromCharCode call can fail.
   const array = new Uint8Array(bytes.buffer)
   let binary = ''
-  for (let i = 0; i < array.length; i += 0x8000) binary += String.fromCharCode(...array.subarray(i, i + 0x8000))
+  for (let i = 0; i < array.length; i += 0x8000)
+    binary += String.fromCharCode(...array.subarray(i, i + 0x8000))
   return { rate: buffer.sampleRate / step, data: btoa(binary) }
 }
 
@@ -43,7 +44,8 @@ export function decodeSound(saved: unknown): AudioBuffer | null {
     for (let i = 0; i < length * 2; i++) bytes.setUint8(i, binary.charCodeAt(i))
     const buffer = new AudioBuffer({ length, sampleRate: rate })
     const output = buffer.getChannelData(0)
-    for (let i = 0; i < length; i++) output[i] = bytes.getInt16(i * 2, true) / 32767
+    for (let i = 0; i < length; i++)
+      output[i] = bytes.getInt16(i * 2, true) / 32767
     return buffer
   } catch {
     return null

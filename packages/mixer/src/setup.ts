@@ -30,8 +30,10 @@ interface OldMixerOptions {
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 const numberOr = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? clamp(value) : fallback
-const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
-const booleanOr = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback)
+const listOf = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : []
+const booleanOr = (value: unknown, fallback: boolean) =>
+  typeof value === 'boolean' ? value : fallback
 
 /**
  * Mixer: it takes in 6 channels (one channels cable, for example from a sampler) and mixes them:
@@ -54,37 +56,64 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
   const old = options as OldMixerOptions
   const savedVolumes = listOf(options.volumes)
   // The first version saved one list of booleans (one bus). Now it is one list per bus.
-  const savedSends = listOf(options.sends).every((item) => typeof item === 'boolean')
+  const savedSends = listOf(options.sends).every(
+    (item) => typeof item === 'boolean',
+  )
     ? [listOf(old.sends)]
     : listOf(options.sends).map(listOf)
-  const savedSendLevels = Array.isArray(options.sendLevels) ? options.sendLevels : [old.send]
-  const savedReturnLevels = Array.isArray(options.returnLevels) ? options.returnLevels : [old.return]
+  const savedSendLevels = Array.isArray(options.sendLevels)
+    ? options.sendLevels
+    : [old.send]
+  const savedReturnLevels = Array.isArray(options.returnLevels)
+    ? options.returnLevels
+    : [old.return]
 
-  const volumes = Array.from({ length: CHANNELS }, (_, i) => numberOr(savedVolumes[i], 1))
+  const volumes = Array.from({ length: CHANNELS }, (_, i) =>
+    numberOr(savedVolumes[i], 1),
+  )
   const savedMains = listOf(options.mains)
-  const mains = Array.from({ length: CHANNELS }, (_, i) => booleanOr(savedMains[i], true))
+  const mains = Array.from({ length: CHANNELS }, (_, i) =>
+    booleanOr(savedMains[i], true),
+  )
   const sends = Array.from({ length: BUSES }, (_, bus) =>
     Array.from({ length: CHANNELS }, (_, i) => savedSends[bus]?.[i] === true),
   )
-  const sendLevels = Array.from({ length: BUSES }, (_, bus) => numberOr(savedSendLevels[bus], 1))
-  const returnLevels = Array.from({ length: BUSES }, (_, bus) => numberOr(savedReturnLevels[bus], 1))
+  const sendLevels = Array.from({ length: BUSES }, (_, bus) =>
+    numberOr(savedSendLevels[bus], 1),
+  )
+  const returnLevels = Array.from({ length: BUSES }, (_, bus) =>
+    numberOr(savedReturnLevels[bus], 1),
+  )
 
   const mix = new GainNode(audio, { gain: 1 })
   // Per bus: the send bus (its level), and the return (its level) into the mix.
-  const sendBuses = sendLevels.map((level) => new GainNode(audio, { gain: level }))
-  const returnInputs = returnLevels.map((level) => new GainNode(audio, { gain: level }))
+  const sendBuses = sendLevels.map(
+    (level) => new GainNode(audio, { gain: level }),
+  )
+  const returnInputs = returnLevels.map(
+    (level) => new GainNode(audio, { gain: level }),
+  )
   for (const input of returnInputs) input.connect(mix)
   // Per channel: its volume (the input), then a main switch to the mix, and a send switch to each send bus.
-  const channelInputs = volumes.map((volume) => new GainNode(audio, { gain: volume }))
-  const mainSwitches = mains.map((on) => new GainNode(audio, { gain: on ? 1 : 0 }))
-  const sendSwitches = sends.map((bus) => bus.map((on) => new GainNode(audio, { gain: on ? 1 : 0 })))
+  const channelInputs = volumes.map(
+    (volume) => new GainNode(audio, { gain: volume }),
+  )
+  const mainSwitches = mains.map(
+    (on) => new GainNode(audio, { gain: on ? 1 : 0 }),
+  )
+  const sendSwitches = sends.map((bus) =>
+    bus.map((on) => new GainNode(audio, { gain: on ? 1 : 0 })),
+  )
   channelInputs.forEach((input, i) => {
     input.connect(mainSwitches[i]!).connect(mix)
-    sendSwitches.forEach((switches, bus) => input.connect(switches[i]!).connect(sendBuses[bus]!))
+    sendSwitches.forEach((switches, bus) =>
+      input.connect(switches[i]!).connect(sendBuses[bus]!),
+    )
   })
 
   /** Change a gain smoothly, so it does not click. */
-  const glide = (param: AudioParam, value: number) => param.setTargetAtTime(value, audio.currentTime, 0.01)
+  const glide = (param: AudioParam, value: number) =>
+    param.setTargetAtTime(value, audio.currentTime, 0.01)
   const isChannel = (channel: number) => channel >= 0 && channel < CHANNELS
   const isBus = (bus: number) => bus >= 0 && bus < BUSES
 
@@ -101,8 +130,12 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
      */
     routes: [
       ['channels-in', 'out'],
-      ...BUS_NAMES.map((bus) => [`return-${bus.toLowerCase()}`, 'out'] as const),
-      ...BUS_NAMES.map((bus) => ['channels-in', `send-${bus.toLowerCase()}`] as const),
+      ...BUS_NAMES.map(
+        (bus) => [`return-${bus.toLowerCase()}`, 'out'] as const,
+      ),
+      ...BUS_NAMES.map(
+        (bus) => ['channels-in', `send-${bus.toLowerCase()}`] as const,
+      ),
     ],
 
     /** The volume of each channel, 0 to 1. */

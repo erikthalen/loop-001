@@ -11,7 +11,9 @@ describe('html', () => {
 
   it('inserts nested templates and arrays as HTML', () => {
     const items = ['a', 'b'].map((x) => html`<li>${x}</li>`)
-    expect(String(html`<ul>${items}</ul>`)).toBe('<ul><li>a</li><li>b</li></ul>')
+    expect(String(html`<ul>${items}</ul>`)).toBe(
+      '<ul><li>a</li><li>b</li></ul>',
+    )
   })
 
   it('inserts nothing for null, undefined and false, but keeps 0', () => {
@@ -22,6 +24,8 @@ describe('html', () => {
 describe('css', () => {
   it('joins strings, numbers and other css templates', () => {
     const base = css`a { color: red; }`
-    expect(css`${base} p { margin: ${2}px; }`.cssText).toBe('a { color: red; } p { margin: 2px; }')
+    expect(css`${base} p { margin: ${2}px; }`.cssText).toBe(
+      'a { color: red; } p { margin: 2px; }',
+    )
   })
 })

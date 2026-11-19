@@ -2,6 +2,7 @@
 // that uses @loop/ui gets them too.
 /// <reference types="vite/client" />
 
+export { CHANNEL_COLORS } from './display'
 /*
  * @loop/ui – a small component library in plain CSS.
  *
@@ -12,15 +13,30 @@
  * Order: tokens, base, layout, then every file in components/ (a new file there is included
  * automatically).
  */
-export { addLoopFont, addMatrixFont, addVideoFont, LOOP_FONT, MATRIX_FONT, VIDEO_FONT } from './font'
-export { CHANNEL_COLORS } from './display'
-export { createOdometer, wheelCounts, type Odometer, type OdometerWheel } from './odometer'
+export {
+  addLoopFont,
+  addMatrixFont,
+  addVideoFont,
+  LOOP_FONT,
+  MATRIX_FONT,
+  VIDEO_FONT,
+} from './font'
+export {
+  createOdometer,
+  type Odometer,
+  type OdometerWheel,
+  wheelCounts,
+} from './odometer'
 
 import base from './base.css?inline'
 import layout from './layout.css?inline'
 import tokens from './tokens.css?inline'
 
-const components = import.meta.glob<string>('./components/*.css', { query: '?inline', import: 'default', eager: true })
+const components = import.meta.glob<string>('./components/*.css', {
+  query: '?inline',
+  import: 'default',
+  eager: true,
+})
 
 /**
  * The whole UI library as one stylesheet.

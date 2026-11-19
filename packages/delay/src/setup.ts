@@ -39,15 +39,22 @@ const MAX_SECONDS = 13
 /** How fast a new setting takes over, in seconds (a new rate glides there, like a tape delay). */
 const SMOOTHING = 0.03
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))
 const numberOr = (value: unknown, fallback: number, max = 1) =>
-  typeof value === 'number' && Number.isFinite(value) ? clamp(value, 0, max) : fallback
+  typeof value === 'number' && Number.isFinite(value)
+    ? clamp(value, 0, max)
+    : fallback
 
 /** The note length's place in RATES. */
-export const rateIndex = (name: RateName) => RATES.findIndex((rate) => rate.name === name)
+export const rateIndex = (name: RateName) =>
+  RATES.findIndex((rate) => rate.name === name)
 
 /** Dry and wet levels for a mix (equal power: the sound is as loud in the middle as at the ends). */
-export const levelsOf = (mix: number) => ({ dry: Math.cos((mix * Math.PI) / 2), wet: Math.sin((mix * Math.PI) / 2) })
+export const levelsOf = (mix: number) => ({
+  dry: Math.cos((mix * Math.PI) / 2),
+  wet: Math.sin((mix * Math.PI) / 2),
+})
 
 /**
  * Delay: echoes of the sound, on the beat.
@@ -67,10 +74,13 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
   // Options can come from a saved project file, so check everything.
   let mix = numberOr(options.mix, 1)
   let feedback = numberOr(options.feedback, 0.4, MAX_FEEDBACK)
-  let rate: RateName = RATES.some((r) => r.name === options.rate) ? options.rate! : '1/8d'
+  let rate: RateName = RATES.some((r) => r.name === options.rate)
+    ? options.rate!
+    : '1/8d'
 
   /** Seconds until each echo, at the tempo now. */
-  const seconds = () => Math.min(MAX_SECONDS, (RATES[rateIndex(rate)]!.beats * 60) / core.bpm)
+  const seconds = () =>
+    Math.min(MAX_SECONDS, (RATES[rateIndex(rate)]!.beats * 60) / core.bpm)
 
   const input = new GainNode(audio)
   const output = new GainNode(audio)
@@ -83,11 +93,19 @@ export const setup = defineModuleSetup((ctx, options: DelayOptions = {}) => {
   const glide = (param: AudioParam | undefined, value: number) =>
     param?.setTargetAtTime(value, audio.currentTime, SMOOTHING)
   /** The delay line's parameters, once it has loaded. */
-  let line: { node: AudioWorkletNode; time: AudioParam; feedback: AudioParam } | null = null
+  let line: {
+    node: AudioWorkletNode
+    time: AudioParam
+    feedback: AudioParam
+  } | null = null
   createDelayLine(audio, MAX_SECONDS)
     .then((node) => {
       if (ctx.signal.aborted) return node.port.close()
-      line = { node, time: node.parameters.get('delayTime')!, feedback: node.parameters.get('feedback')! }
+      line = {
+        node,
+        time: node.parameters.get('delayTime')!,
+        feedback: node.parameters.get('feedback')!,
+      }
       line.time.value = seconds()
       line.feedback.value = feedback
       input.connect(node).connect(wet)

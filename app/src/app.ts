@@ -1,20 +1,20 @@
-import { Hono } from "hono";
-import { html, raw } from "hono/html";
-import { uiStyles } from "@loop/ui";
+import { uiStyles } from '@loop/ui'
+import { Hono } from 'hono'
+import { html, raw } from 'hono/html'
 
 // This Hono app runs INSIDE the service worker (in the browser).
 // It answers page requests, so pages work offline too.
 // Note: a service worker has no Web Audio. All audio code runs in the page,
 // in src/client.ts. Hono only sends the HTML.
-export const app = new Hono();
+export const app = new Hono()
 
 // The path the app lives under: "/", or for example "/loop-001/" on GitHub Pages.
-const base = import.meta.env.BASE_URL;
+const base = import.meta.env.BASE_URL
 
 // Dev: Vite serves the TypeScript source. Build: vite.config.ts outputs a fixed client.js.
 const clientScript = import.meta.env.DEV
   ? `${base}src/client.ts`
-  : `${base}client.js`;
+  : `${base}client.js`
 
 const layout = (title: string, body: ReturnType<typeof html>) =>
   html`<!doctype html>
@@ -238,20 +238,22 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             }
           }
         </style>
-        ${import.meta.env.DEV
-          ? html`<script type="module" src="${base}@vite/client"></script>`
-          : ""}
+        ${
+          import.meta.env.DEV
+            ? html`<script type="module" src="${base}@vite/client"></script>`
+            : ''
+        }
         <script type="module" src="${clientScript}"></script>
       </head>
       <body>
         ${body}
       </body>
-    </html>`;
+    </html>`
 
 app.get(base, (c) =>
   c.html(
     layout(
-      "Loop 001",
+      'Loop 001',
       html`<main>
         <h1 class="sr-only">Loop 001</h1>
 
@@ -267,4 +269,4 @@ app.get(base, (c) =>
       </main>`,
     ),
   ),
-);
+)

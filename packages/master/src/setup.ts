@@ -19,7 +19,10 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value))
 export const setup = defineModuleSetup((ctx, options: MasterOptions = {}) => {
   const { core, audio } = ctx
   // Options can come from a saved project file, so check the type.
-  let volume = typeof options.volume === 'number' && Number.isFinite(options.volume) ? clamp(options.volume) : 1
+  let volume =
+    typeof options.volume === 'number' && Number.isFinite(options.volume)
+      ? clamp(options.volume)
+      : 1
 
   const input = new GainNode(audio)
   const output = new GainNode(audio, { gain: volume })
@@ -34,13 +37,16 @@ export const setup = defineModuleSetup((ctx, options: MasterOptions = {}) => {
       input.disconnect(output)
       input.connect(tape.node).connect(output)
       // The tape and the transport agree on where the tape is: now, and each time it stands still.
-      const align = () => loaded.setPosition(core.clock.positionAt(audio.currentTime))
+      const align = () =>
+        loaded.setPosition(core.clock.positionAt(audio.currentTime))
       align()
       ctx.on('rewindend', align)
       // (Not when a rewind turned the transport around: it still moves then.)
       ctx.on('stop', () => core.rewinding || align())
     })
-    .catch((error) => console.error('The tape (rewind sound) could not load:', error))
+    .catch((error) =>
+      console.error('The tape (rewind sound) could not load:', error),
+    )
 
   ctx.onDispose(() => {
     tape?.dispose()

@@ -41,7 +41,9 @@ export function serializeProject(core: Core): ProjectData {
     bpm: core.bpm,
     modules: [...core.modules.values()].map((module) => {
       const state = module.save?.()
-      return state === undefined ? { type: module.type } : { type: module.type, state }
+      return state === undefined
+        ? { type: module.type }
+        : { type: module.type, state }
     }),
     cables: core.cables.map(({ from, to }) => ({
       from: { module: ids.indexOf(from.module), port: from.port },
@@ -55,25 +57,44 @@ export function serializeProject(core: Core): ProjectData {
  * Returns `undefined` if it is not.
  */
 export function parseProject(data: unknown): ProjectData | undefined {
-  if (!isObject(data) || (data.version !== 1 && data.version !== 2)) return undefined
-  if (typeof data.bpm !== 'number' || !Number.isFinite(data.bpm) || data.bpm <= 0) return undefined
+  if (!isObject(data) || (data.version !== 1 && data.version !== 2))
+    return undefined
+  if (
+    typeof data.bpm !== 'number' ||
+    !Number.isFinite(data.bpm) ||
+    data.bpm <= 0
+  )
+    return undefined
   if (!Array.isArray(data.modules)) return undefined
   // A broken module entry is dropped, so the cables count the places of the entries as saved.
-  const places = data.modules.map((m) => (isObject(m) && typeof m.type === 'string' ? m : undefined))
+  const places = data.modules.map((m) =>
+    isObject(m) && typeof m.type === 'string' ? m : undefined,
+  )
   const kept = places.flatMap((m, i) => (m ? [i] : []))
-  const modules = kept.map((i) => ({ type: places[i]!.type as string, state: places[i]!.state }))
+  const modules = kept.map((i) => ({
+    type: places[i]!.type as string,
+    state: places[i]!.state,
+  }))
   const project: ProjectData = { version: 2, bpm: data.bpm, modules }
   if (data.version === 2) {
-    const place = (value: unknown) => (typeof value === 'number' ? kept.indexOf(value) : -1)
+    const place = (value: unknown) =>
+      typeof value === 'number' ? kept.indexOf(value) : -1
     const cables = Array.isArray(data.cables) ? data.cables : []
     project.cables = cables.flatMap((cable): ProjectCable[] => {
-      if (!isObject(cable) || !isObject(cable.from) || !isObject(cable.to)) return []
+      if (!isObject(cable) || !isObject(cable.from) || !isObject(cable.to))
+        return []
       const { from, to } = cable
-      if (typeof from.port !== 'string' || typeof to.port !== 'string') return []
+      if (typeof from.port !== 'string' || typeof to.port !== 'string')
+        return []
       const fromModule = place(from.module)
       const toModule = place(to.module)
       if (fromModule < 0 || toModule < 0) return []
-      return [{ from: { module: fromModule, port: from.port }, to: { module: toModule, port: to.port } }]
+      return [
+        {
+          from: { module: fromModule, port: from.port },
+          to: { module: toModule, port: to.port },
+        },
+      ]
     })
   }
   return project
@@ -96,7 +117,9 @@ export function restoreProject(
   project: ProjectData,
   definitions: readonly AnyAudioModuleDefinition[],
 ): RestoreResult {
-  const byType = new Map(definitions.map((definition) => [definition.type, definition]))
+  const byType = new Map(
+    definitions.map((definition) => [definition.type, definition]),
+  )
   const result: RestoreResult = { added: [], skipped: [] }
 
   for (const module of [...core.modules.values()]) core.remove(module)
@@ -128,7 +151,10 @@ export function restoreProject(
     const fromModule = placed[from.module]
     const toModule = placed[to.module]?.id
     if (!fromModule || !toModule) continue
-    core.connect({ module: fromModule.id, port: from.port }, { module: toModule, port: to.port })
+    core.connect(
+      { module: fromModule.id, port: from.port },
+      { module: toModule, port: to.port },
+    )
   }
   return result
 }

@@ -18,7 +18,8 @@ export interface SequencerOptions {
 function readPattern(saved: unknown): boolean[][] {
   const rows = Array.isArray(saved) ? saved : []
   return Array.from({ length: CHANNELS }, (_, channel) => {
-    const row = typeof rows[channel] === 'string' ? (rows[channel] as string) : ''
+    const row =
+      typeof rows[channel] === 'string' ? (rows[channel] as string) : ''
     return Array.from({ length: STEPS }, (_, step) => row[step] === 'x')
   })
 }
@@ -28,34 +29,38 @@ function readPattern(saved: unknown): boolean[][] {
  * note) for each channel that is on, out of its trigger jack. The modules plugged into it get
  * them, for example a sampler.
  */
-export const setup = defineModuleSetup((ctx, options: SequencerOptions = {}) => {
-  const pattern = readPattern(options.pattern)
+export const setup = defineModuleSetup(
+  (ctx, options: SequencerOptions = {}) => {
+    const pattern = readPattern(options.pattern)
 
-  // Removed for us when the module is removed.
-  ctx.on('step', ({ step, time }) => {
-    const index = step % STEPS
-    pattern.forEach((row, channel) => {
-      if (row[index]) ctx.send({ channel, time })
+    // Removed for us when the module is removed.
+    ctx.on('step', ({ step, time }) => {
+      const index = step % STEPS
+      pattern.forEach((row, channel) => {
+        if (row[index]) ctx.send({ channel, time })
+      })
     })
-  })
 
-  return {
-    /** It sends triggers: it gets a trigger out jack. */
-    triggerOutput: true,
-    /** Which steps are on: `pattern[channel][step]`. Change it with `setStep`. */
-    get pattern(): readonly (readonly boolean[])[] {
-      return pattern
-    },
-    /** Turn one step of one channel on or off. */
-    setStep(channel: number, step: number, on: boolean) {
-      const row = pattern[channel]
-      if (!row || step < 0 || step >= STEPS) return
-      row[step] = on
-      ctx.changed()
-    },
-    /** Saved with the project. Comes back as `options` when the project loads. */
-    save: (): SequencerOptions => ({
-      pattern: pattern.map((row) => row.map((on) => (on ? 'x' : '.')).join('')),
-    }),
-  }
-})
+    return {
+      /** It sends triggers: it gets a trigger out jack. */
+      triggerOutput: true,
+      /** Which steps are on: `pattern[channel][step]`. Change it with `setStep`. */
+      get pattern(): readonly (readonly boolean[])[] {
+        return pattern
+      },
+      /** Turn one step of one channel on or off. */
+      setStep(channel: number, step: number, on: boolean) {
+        const row = pattern[channel]
+        if (!row || step < 0 || step >= STEPS) return
+        row[step] = on
+        ctx.changed()
+      },
+      /** Saved with the project. Comes back as `options` when the project loads. */
+      save: (): SequencerOptions => ({
+        pattern: pattern.map((row) =>
+          row.map((on) => (on ? 'x' : '.')).join(''),
+        ),
+      }),
+    }
+  },
+)

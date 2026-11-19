@@ -13,10 +13,11 @@
 // A module UI lives in a Shadow DOM, and `@font-face` rules do not work there.
 // Fonts added to `document.fonts` work everywhere, also inside the Shadow DOM.
 // The browser downloads a font file only when some text on the page uses it.
-import matrixBoldUrl from './fonts/matrixtype/MatrixTypeDisplay-Bold.ttf?url'
-import matrixRegularUrl from './fonts/matrixtype/MatrixTypeDisplay-Regular.ttf?url'
+
 import homeVideoBoldUrl from './fonts/home-video/HomeVideo-Bold.ttf?url'
 import homeVideoRegularUrl from './fonts/home-video/HomeVideo-Regular.ttf?url'
+import matrixBoldUrl from './fonts/matrixtype/MatrixTypeDisplay-Bold.ttf?url'
+import matrixRegularUrl from './fonts/matrixtype/MatrixTypeDisplay-Regular.ttf?url'
 
 /** The MatrixType Display font-family name to use in CSS. Weights: 400 and 700. */
 export const MATRIX_FONT = 'MatrixType Display'
@@ -27,11 +28,21 @@ export const VIDEO_FONT = 'Home Video'
 const added = new Set<string>()
 
 /** Add a font file to the page, once per family and weight. */
-function addFont(family: string, url: string, format: string, weight: string): void {
+function addFont(
+  family: string,
+  url: string,
+  format: string,
+  weight: string,
+): void {
   const key = `${family} ${weight}`
   if (added.has(key) || typeof FontFace === 'undefined') return
   added.add(key)
-  document.fonts.add(new FontFace(family, `url("${url}") format("${format}")`, { weight, display: 'swap' }))
+  document.fonts.add(
+    new FontFace(family, `url("${url}") format("${format}")`, {
+      weight,
+      display: 'swap',
+    }),
+  )
 }
 
 /** Add the MatrixType Display font (regular and bold) to the page (once). */
@@ -50,11 +61,14 @@ export function addVideoFont(): void {
  * The Italian Plate No1 Mono files, by file name, for example "300-upright.woff2" or "700-italic.woff2".
  * (Vite finds them and gives each one a URL.)
  */
-const loopFontFiles = import.meta.glob<string>('./fonts/Italian Plate/*.woff2', {
-  query: '?url',
-  import: 'default',
-  eager: true,
-})
+const loopFontFiles = import.meta.glob<string>(
+  './fonts/Italian Plate/*.woff2',
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+)
 
 /** The --loop-font family name. */
 export const LOOP_FONT = 'Italian Plate No1 Mono'
@@ -71,6 +85,12 @@ export function addLoopFont(): void {
     const key = `${LOOP_FONT} ${weight} ${style}`
     if (added.has(key) || typeof FontFace === 'undefined') continue
     added.add(key)
-    document.fonts.add(new FontFace(LOOP_FONT, `url("${url}") format("woff2")`, { weight, style, display: 'swap' }))
+    document.fonts.add(
+      new FontFace(LOOP_FONT, `url("${url}") format("woff2")`, {
+        weight,
+        style,
+        display: 'swap',
+      }),
+    )
   }
 }

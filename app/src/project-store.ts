@@ -1,4 +1,4 @@
-import { parseProject, type ProjectData } from '@loop/core'
+import { type ProjectData, parseProject } from '@loop/core'
 
 /** A project as it is kept in the browser. */
 export interface StoredProject {
@@ -40,12 +40,14 @@ export async function openProjectStore(): Promise<ProjectStore> {
     (() => {
       const open = indexedDB.open(DB_NAME, DB_VERSION)
       // Runs the first time, and when DB_VERSION goes up: create or change the tables here.
-      open.onupgradeneeded = () => open.result.createObjectStore(PROJECTS, { keyPath: 'id' })
+      open.onupgradeneeded = () =>
+        open.result.createObjectStore(PROJECTS, { keyPath: 'id' })
       return open
     })(),
   )
 
-  const store = (mode: IDBTransactionMode) => db.transaction(PROJECTS, mode).objectStore(PROJECTS)
+  const store = (mode: IDBTransactionMode) =>
+    db.transaction(PROJECTS, mode).objectStore(PROJECTS)
 
   return {
     async list() {
@@ -85,8 +87,18 @@ export async function openProjectStore(): Promise<ProjectStore> {
       try {
         const value = JSON.parse(localStorage.getItem(BACKUP_KEY) ?? 'null')
         const data = parseProject(value?.data)
-        if (!data || typeof value.id !== 'string' || typeof value.name !== 'string') return undefined
-        return { id: value.id, name: value.name, updatedAt: Number(value.updatedAt) || 0, data }
+        if (
+          !data ||
+          typeof value.id !== 'string' ||
+          typeof value.name !== 'string'
+        )
+          return undefined
+        return {
+          id: value.id,
+          name: value.name,
+          updatedAt: Number(value.updatedAt) || 0,
+          data,
+        }
       } catch {
         return undefined
       }

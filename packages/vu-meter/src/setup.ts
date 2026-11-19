@@ -14,10 +14,17 @@ export const VU_REFERENCE_DBFS = -18
  */
 export const setup = defineModuleSetup((ctx) => {
   const { audio } = ctx
-  const input = new GainNode(audio, { channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers' })
+  const input = new GainNode(audio, {
+    channelCount: 2,
+    channelCountMode: 'explicit',
+    channelInterpretation: 'speakers',
+  })
   const splitter = new ChannelSplitterNode(audio, { numberOfOutputs: 2 })
   // fftSize 2048: about 43 ms of sound at 48 kHz per reading.
-  const analysers = [new AnalyserNode(audio, { fftSize: 2048 }), new AnalyserNode(audio, { fftSize: 2048 })] as const
+  const analysers = [
+    new AnalyserNode(audio, { fftSize: 2048 }),
+    new AnalyserNode(audio, { fftSize: 2048 }),
+  ] as const
   input.connect(splitter)
   splitter.connect(analysers[0], 0)
   splitter.connect(analysers[1], 1)
@@ -36,6 +43,9 @@ export const setup = defineModuleSetup((ctx) => {
   return {
     input,
     /** How loud the left and the right channel are now, in VU (0 VU = -18 dBFS). */
-    levels: (): [left: number, right: number] => [levelOf(analysers[0]), levelOf(analysers[1])],
+    levels: (): [left: number, right: number] => [
+      levelOf(analysers[0]),
+      levelOf(analysers[1]),
+    ],
   }
 })

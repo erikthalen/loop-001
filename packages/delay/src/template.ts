@@ -1,5 +1,5 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import { MAX_FEEDBACK, RATES, rateIndex, type setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import { MAX_FEEDBACK, RATES, rateIndex, type setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, sr-only)
 // and styles.ts; @loop/ui also styles the sliders and the radio buttons.
@@ -33,4 +33,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

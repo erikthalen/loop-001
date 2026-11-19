@@ -4,16 +4,22 @@ import { mountLibrary } from '@loop/library'
 import { mountPatchbay } from '@loop/patchbay'
 import { addLoopFont } from '@loop/ui'
 import { createLibrary } from './library'
-import { availableModules, CABLE_COLORS, newProject, upgradeProject } from './modules'
+import {
+  availableModules,
+  CABLE_COLORS,
+  newProject,
+  upgradeProject,
+} from './modules'
+import { createPatchLane } from './patch-lane'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
-import { createPatchLane } from './patch-lane'
 import { createRack } from './rack'
 
 // The app's font, Italian Plate No1 Mono (all weights, from @loop/ui). Before anything shows text.
 addLoopFont()
 
-const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!
+const $ = <T extends HTMLElement>(selector: string) =>
+  document.querySelector<T>(selector)!
 
 // The audio context starts "suspended". Browsers only allow sound after a user action,
 // so core.start() (on the Play click) wakes it up.
@@ -23,9 +29,12 @@ const core = createCore()
 // ---- Modules: the rack shows what is in the core, the patchbay adds, removes and connects them ----
 // Two ways to see the cables, to try side by side: the matrix in the patchbay (default), or the
 // cable lane left of the rack (?lane in the URL; then the patchbay has no matrix).
-const colorOf = (module: { type: string }) => CABLE_COLORS[module.type] ?? 'var(--ink)'
+const colorOf = (module: { type: string }) =>
+  CABLE_COLORS[module.type] ?? 'var(--ink)'
 const useLane = new URLSearchParams(location.search).has('lane')
-const lane = useLane ? createPatchLane(core, { root: $('#patch'), colorOf }) : null
+const lane = useLane
+  ? createPatchLane(core, { root: $('#patch'), colorOf })
+  : null
 const rack = createRack(core, $('#rack'), {
   onSlot: (slot, module) => lane && slot.prepend(lane.jackStrip(module)),
 })

@@ -1,9 +1,9 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import { CHANNEL_COLORS } from "@loop/ui";
-import { CHANNELS, STEPS, type setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNELS, STEPS, type setup } from './setup'
 
 /** The progress bar's resolution: 20 per step, so it slides smoothly (the script moves it). */
-const PROGRESS_STEPS = STEPS * 20;
+const PROGRESS_STEPS = STEPS * 20
 
 // HTML: made once, when the UI is mounted. A grid of checkboxes: one row per channel (1 to 6), one column per step.
 // The classes come from @loop/ui (display); it also styles the progress bar and the checkboxes.
@@ -26,7 +26,7 @@ export const template = defineModuleTemplate<typeof setup>(
                 data-step="${step}"
                 style="--c: ${CHANNEL_COLORS[row]}"
                 aria-label="Channel ${row + 1}, step ${step + 1}"
-                ${module.pattern[row]![step] ? "checked" : ""}
+                ${module.pattern[row]![step] ? 'checked' : ''}
               />
             `,
           ),
@@ -34,4 +34,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

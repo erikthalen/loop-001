@@ -27,6 +27,7 @@
 @layer ui {
   table.matrix {
     border-collapse: collapse;
+    text-transform: uppercase;
 
     + .matrix {
       margin-top: 12px;
@@ -37,8 +38,8 @@
       text-align: left;
       color: var(--muted);
       font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      /* font-weight: 600; */
+      /* letter-spacing: 0.04em; */
       text-transform: uppercase;
     }
 
@@ -58,14 +59,14 @@
       writing-mode: vertical-rl;
       rotate: 180deg;
       text-align: left;
-      padding: 0 0 6px;
+      /* padding: 0 0 6px; */
     }
 
     th[scope="row"] {
       text-align: right;
-      padding: 0 8px 0 0;
+      /* padding: 0 8px 0 0; */
 
-      &::before {
+      /* &::before {
         content: "";
         display: inline-block;
         width: 6px;
@@ -74,7 +75,7 @@
         border-radius: 50%;
         background: var(--loop-primary);
         vertical-align: 1px;
-      }
+      } */
     }
 
     td {

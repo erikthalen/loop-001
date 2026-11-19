@@ -18,9 +18,17 @@ export type Listener<T> = (detail: T) => void
 
 export interface Emitter<M extends object> {
   /** Listen to an event. Returns a function that removes the listener. */
-  on<K extends keyof M & string>(type: K, listener: Listener<M[K]>, options?: ListenOptions): () => void
+  on<K extends keyof M & string>(
+    type: K,
+    listener: Listener<M[K]>,
+    options?: ListenOptions,
+  ): () => void
   /** Listen to an event one time only. */
-  once<K extends keyof M & string>(type: K, listener: Listener<M[K]>, options?: Omit<ListenOptions, 'once'>): () => void
+  once<K extends keyof M & string>(
+    type: K,
+    listener: Listener<M[K]>,
+    options?: Omit<ListenOptions, 'once'>,
+  ): () => void
   /**
    * Send an event to all listeners, in the order they were added.
    * If one listener throws, the error is reported and the other listeners still run.
@@ -39,7 +47,8 @@ export function createEmitter<M extends object>(): Emitter<M> {
 
   return {
     on,
-    once: (type, listener, options) => on(type, listener, { ...options, once: true }),
+    once: (type, listener, options) =>
+      on(type, listener, { ...options, once: true }),
     emit: (type, detail) => {
       target.dispatchEvent(new CustomEvent(type, { detail }))
     },

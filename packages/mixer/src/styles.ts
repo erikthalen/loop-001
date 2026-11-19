@@ -1,4 +1,4 @@
-import { css } from "@loop/core";
+import { css } from '@loop/core'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the sliders and checkboxes too. The rules here are outside a cascade
@@ -86,4 +86,4 @@ export const styles = css`
   input[type="checkbox"] {
     --loop-primary: var(--c);
   }
-`;
+`

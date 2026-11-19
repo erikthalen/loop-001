@@ -1,5 +1,5 @@
 import type { Core, CoreEventMap } from './core'
-import type { ListenOptions, Listener } from './events'
+import type { Listener, ListenOptions } from './events'
 import type { CSSTemplate, HTMLTemplate } from './ui'
 
 /** Listen to a core event. The listener is removed for you at clean-up time. */
@@ -111,7 +111,8 @@ export interface ModuleUIContext<Result extends ModuleSetupResult> {
   readonly core: Core
 }
 
-export interface ModuleUIScriptContext<Result extends ModuleSetupResult> extends ModuleUIContext<Result> {
+export interface ModuleUIScriptContext<Result extends ModuleSetupResult>
+  extends ModuleUIContext<Result> {
   /** The module's own Shadow DOM. Query your elements here: `root.querySelector(...)`. */
   readonly root: ShadowRoot
   /** Listen to a core event. The listener is removed when the UI is unmounted. */
@@ -124,23 +125,22 @@ export interface ModuleUIScriptContext<Result extends ModuleSetupResult> extends
 }
 
 /** Audio part of a module. Called by `core.add()`. Make audio nodes and listen to events here. */
-export type ModuleSetup<Options = any, Result extends ModuleSetupResult = ModuleSetupResult> = (
-  ctx: ModuleContext,
-  options: Options,
-) => Result
+export type ModuleSetup<
+  Options = any,
+  Result extends ModuleSetupResult = ModuleSetupResult,
+> = (ctx: ModuleContext, options: Options) => Result
 
 /** The type that a `setup` function returns. */
 export type SetupResultOf<Setup extends ModuleSetup> = ReturnType<Setup>
 
 /** HTML part of a module UI. */
-export type ModuleTemplate<Result extends ModuleSetupResult = ModuleSetupResult> = (
-  ctx: ModuleUIContext<Result>,
-) => HTMLTemplate
+export type ModuleTemplate<
+  Result extends ModuleSetupResult = ModuleSetupResult,
+> = (ctx: ModuleUIContext<Result>) => HTMLTemplate
 
 /** JS part of a module UI. Runs after the HTML is in place. */
-export type ModuleScript<Result extends ModuleSetupResult = ModuleSetupResult> = (
-  ctx: ModuleUIScriptContext<Result>,
-) => void
+export type ModuleScript<Result extends ModuleSetupResult = ModuleSetupResult> =
+  (ctx: ModuleUIScriptContext<Result>) => void
 
 /** CSS part of a module UI. It only applies inside the module's Shadow DOM. */
 export type ModuleStyles = CSSTemplate | readonly CSSTemplate[]
@@ -152,7 +152,10 @@ export interface ModuleUI<Result extends ModuleSetupResult> {
   readonly script?: ModuleScript<Result>
 }
 
-export interface AudioModuleDefinition<Options, Result extends ModuleSetupResult> {
+export interface AudioModuleDefinition<
+  Options,
+  Result extends ModuleSetupResult,
+> {
   /**
    * Unique, stable key for this kind of module, for example 'metronome'.
    * Saved projects use it to find the module again, so never change it.
@@ -160,6 +163,8 @@ export interface AudioModuleDefinition<Options, Result extends ModuleSetupResult
   readonly type: string
   /** Name to show to the user. */
   readonly name: string
+  /** Short form name to show to the user. */
+  readonly label: string
   /** One short sentence to show to the user, for example in a list of modules. */
   readonly description?: string
   /** True: only one of this module can be in the core at a time (Master). */
@@ -174,19 +179,21 @@ export interface AudioModuleDefinition<Options, Result extends ModuleSetupResult
 export type AnyAudioModuleDefinition = AudioModuleDefinition<any, any>
 
 /** A module that was added to a core: the setup result, plus the fields below. */
-export type AudioModule<Result extends ModuleSetupResult = ModuleSetupResult> = Result & {
-  readonly id: string
-  /** The definition's `type`, for example 'metronome'. */
-  readonly type: string
-  readonly name: string
-  /**
-   * Show the module's UI inside `parent`. Returns a function that removes the UI.
-   * The UI is also removed when the module is removed.
-   */
-  mount(parent: Element): () => void
-  /** Remove the module from the core. Same as `core.remove(module)`. */
-  remove(): void
-}
+export type AudioModule<Result extends ModuleSetupResult = ModuleSetupResult> =
+  Result & {
+    readonly id: string
+    /** The definition's `type`, for example 'metronome'. */
+    readonly type: string
+    readonly name: string
+    readonly label: string
+    /**
+     * Show the module's UI inside `parent`. Returns a function that removes the UI.
+     * The UI is also removed when the module is removed.
+     */
+    mount(parent: Element): () => void
+    /** Remove the module from the core. Same as `core.remove(module)`. */
+    remove(): void
+  }
 
 /**
  * Define an audio module. This only adds types; it returns the definition as it is.
@@ -209,7 +216,10 @@ export type AudioModule<Result extends ModuleSetupResult = ModuleSetupResult> = 
  *   const instance = core.add(myModule, { volume: 0.5 })
  *   instance.mount(document.querySelector('#rack')!)
  */
-export function defineAudioModule<Options = void, Result extends ModuleSetupResult = ModuleSetupResult>(
+export function defineAudioModule<
+  Options = void,
+  Result extends ModuleSetupResult = ModuleSetupResult,
+>(
   definition: AudioModuleDefinition<Options, Result>,
 ): AudioModuleDefinition<Options, Result> {
   return definition
@@ -227,9 +237,10 @@ export function defineAudioModule<Options = void, Result extends ModuleSetupResu
 // `typeof setup` tells the template and the script what the module offers (for example `setVolume`).
 
 /** Define the audio part of a module. */
-export function defineModuleSetup<Options = void, Result extends ModuleSetupResult = ModuleSetupResult>(
-  setup: ModuleSetup<Options, Result>,
-): ModuleSetup<Options, Result> {
+export function defineModuleSetup<
+  Options = void,
+  Result extends ModuleSetupResult = ModuleSetupResult,
+>(setup: ModuleSetup<Options, Result>): ModuleSetup<Options, Result> {
   return setup
 }
 

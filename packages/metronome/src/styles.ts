@@ -1,4 +1,4 @@
-import { css } from "@loop/core";
+import { css } from '@loop/core'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The rules here are outside a cascade layer, so they win.
@@ -51,4 +51,4 @@ export const styles = css`
     width: 0;
     min-width: 0;
   }
-`;
+`

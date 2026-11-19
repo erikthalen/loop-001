@@ -1,4 +1,4 @@
-import { css } from "@loop/core";
+import { css } from '@loop/core'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the checkboxes too. Here the grid's checkboxes only get their row's color (--c),
@@ -51,4 +51,4 @@ export const styles = css`
   /* .grid input[type="checkbox"].now:checked {
     box-shadow: 0 0 0 1.5px var(--ink);
   } */
-`;
+`

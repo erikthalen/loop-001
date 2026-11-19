@@ -1,12 +1,12 @@
-import { html, type HTMLTemplate } from "@loop/core";
-import type { Library, Tape } from "./library";
+import { type HTMLTemplate, html } from '@loop/core'
+import type { Library, Tape } from './library'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+})
 
 // HTML: only HTML from @loop/ui (display, field, button, sr-only; it also styles the text input,
 // the radio buttons and the dialogs). From the top:
@@ -67,7 +67,7 @@ export const template = (library: Library): HTMLTemplate => html`
       </footer>
     </form>
   </dialog>
-`;
+`
 
 /** The tapes on the shelf. The script puts them in `.tapes` (they are read from the app, later). */
 export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
@@ -79,7 +79,7 @@ export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
             type="radio"
             name="tape"
             value="${tape.id}"
-            ${tape.id === current ? html`checked` : ""}
+            ${tape.id === current ? html`checked` : ''}
           />
           <span class="tape-name">${tape.name}</span>
           <time datetime="${new Date(tape.updatedAt).toISOString()}"
@@ -96,4 +96,4 @@ export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
         </button>
       </li>
     `,
-  )}`;
+  )}`

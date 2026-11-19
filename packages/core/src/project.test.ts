@@ -6,14 +6,21 @@ describe('parseProject', () => {
     const project = {
       version: 2,
       bpm: 90,
-      modules: [{ type: 'metronome', state: { volume: 0.3 } }, { type: 'master' }],
-      cables: [{ from: { module: 0, port: 'out' }, to: { module: 1, port: 'in' } }],
+      modules: [
+        { type: 'metronome', state: { volume: 0.3 } },
+        { type: 'master' },
+      ],
+      cables: [
+        { from: { module: 0, port: 'out' }, to: { module: 1, port: 'in' } },
+      ],
     }
     expect(parseProject(project)).toEqual(project)
   })
 
   it('reads a version 1 project as version 2 without cables', () => {
-    expect(parseProject({ version: 1, bpm: 90, modules: [{ type: 'a' }] })).toEqual({
+    expect(
+      parseProject({ version: 1, bpm: 90, modules: [{ type: 'a' }] }),
+    ).toEqual({
       version: 2,
       bpm: 90,
       modules: [{ type: 'a', state: undefined }],
@@ -24,7 +31,9 @@ describe('parseProject', () => {
     expect(parseProject(null)).toBeUndefined()
     expect(parseProject('hello')).toBeUndefined()
     expect(parseProject({ version: 3, bpm: 90, modules: [] })).toBeUndefined()
-    expect(parseProject({ version: 2, bpm: 'fast', modules: [] })).toBeUndefined()
+    expect(
+      parseProject({ version: 2, bpm: 'fast', modules: [] }),
+    ).toBeUndefined()
     expect(parseProject({ version: 2, bpm: -5, modules: [] })).toBeUndefined()
     expect(parseProject({ version: 2, bpm: 90 })).toBeUndefined()
   })
@@ -45,7 +54,10 @@ describe('parseProject', () => {
     expect(parsed).toEqual({
       version: 2,
       bpm: 90,
-      modules: [{ type: 'a', state: undefined }, { type: 'c', state: undefined }],
+      modules: [
+        { type: 'a', state: undefined },
+        { type: 'c', state: undefined },
+      ],
       cables: [
         { from: { module: 0, port: 'out' }, to: { module: 1, port: 'in' } },
         { from: { module: 1, port: 'out' }, to: { module: 0, port: 'in' } },

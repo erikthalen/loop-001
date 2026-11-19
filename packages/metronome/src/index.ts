@@ -11,6 +11,7 @@ export type { MetronomeOptions } from './setup'
 export const metronome = defineAudioModule({
   type: 'metronome',
   name: 'Metronome',
+  label: 'MN',
   description: 'Ticks on every beat.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).

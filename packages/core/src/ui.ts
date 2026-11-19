@@ -22,12 +22,19 @@ export interface CSSTemplate {
   readonly cssText: string
 }
 
-const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+const ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
 
 function toHTML(value: unknown): string {
   if (value == null || value === false) return ''
   if (Array.isArray(value)) return value.map(toHTML).join('')
-  if (typeof value === 'object' && HTML_TEXT in value) return (value as HTMLTemplate)[HTML_TEXT]
+  if (typeof value === 'object' && HTML_TEXT in value)
+    return (value as HTMLTemplate)[HTML_TEXT]
   return String(value).replace(/[&<>"']/g, (c) => ESCAPES[c]!)
 }
 
@@ -38,16 +45,27 @@ function toHTML(value: unknown): string {
  * - `null`, `undefined` and `false` insert nothing.
  * Always put quotes around attribute values: `value="${x}"`.
  */
-export function html(strings: TemplateStringsArray, ...values: unknown[]): HTMLTemplate {
+export function html(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): HTMLTemplate {
   let text = strings[0]!
   values.forEach((value, i) => (text += toHTML(value) + strings[i + 1]))
   return { [HTML_TEXT]: text, toString: () => text } as HTMLTemplate
 }
 
 /** CSS tagged template. Values are inserted as they are (CSS is written by the module author). */
-export function css(strings: TemplateStringsArray, ...values: (string | number | CSSTemplate)[]): CSSTemplate {
+export function css(
+  strings: TemplateStringsArray,
+  ...values: (string | number | CSSTemplate)[]
+): CSSTemplate {
   let text = strings[0]!
-  values.forEach((value, i) => (text += (typeof value === 'object' ? value.cssText : String(value)) + strings[i + 1]))
+  values.forEach(
+    (value, i) =>
+      (text +=
+        (typeof value === 'object' ? value.cssText : String(value)) +
+        strings[i + 1]),
+  )
   return { cssText: text }
 }
 
@@ -74,21 +92,30 @@ export interface MountViewOptions {
  * cannot leak in (CSS variables, like --loop-primary, still pass in). Returns a function that
  * removes it. Every module UI is shown like this (`module.mount`); so can a UI that is not a module.
  */
-export function mountView(parent: Element, view: View, options: MountViewOptions = {}): () => void {
+export function mountView(
+  parent: Element,
+  view: View,
+  options: MountViewOptions = {},
+): () => void {
   const host = document.createElement('section')
-  for (const [name, value] of Object.entries(options.attributes ?? {})) host.setAttribute(name, value)
+  for (const [name, value] of Object.entries(options.attributes ?? {}))
+    host.setAttribute(name, value)
   host.setAttribute('aria-label', view.label)
   const root = host.attachShadow({ mode: 'open' })
 
   const mounted = new AbortController()
-  const signal = options.signal ? AbortSignal.any([mounted.signal, options.signal]) : mounted.signal
+  const signal = options.signal
+    ? AbortSignal.any([mounted.signal, options.signal])
+    : mounted.signal
   const unmount = () => {
     mounted.abort()
     host.remove()
   }
   options.signal?.addEventListener('abort', unmount, { signal: mounted.signal })
 
-  root.adoptedStyleSheets = (view.styles ? [view.styles].flat() : []).map(toStyleSheet)
+  root.adoptedStyleSheets = (view.styles ? [view.styles].flat() : []).map(
+    toStyleSheet,
+  )
   render(view.template, root)
   parent.append(host)
   view.script?.(root, signal)
@@ -96,7 +123,10 @@ export function mountView(parent: Element, view: View, options: MountViewOptions
 }
 
 /** Replace the content of `target` with the template. */
-export function render(template: HTMLTemplate, target: Element | ShadowRoot | DocumentFragment): void {
+export function render(
+  template: HTMLTemplate,
+  target: Element | ShadowRoot | DocumentFragment,
+): void {
   const element = document.createElement('template')
   element.innerHTML = template[HTML_TEXT]
   target.replaceChildren(element.content)

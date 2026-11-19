@@ -3,9 +3,15 @@ import { showMatrix } from './matrix'
 import type { PatchbayOptions } from './patchbay'
 
 // JS: connect the HTML to the core. Everything is removed for us on unmount.
-export function script(root: ShadowRoot, signal: AbortSignal, core: Core, options: PatchbayOptions): void {
+export function script(
+  root: ShadowRoot,
+  signal: AbortSignal,
+  core: Core,
+  options: PatchbayOptions,
+): void {
   const { modules, rack, colorOf, onAdd } = options
-  const $ = <T extends Element>(selector: string) => root.querySelector<T>(selector)!
+  const $ = <T extends Element>(selector: string) =>
+    root.querySelector<T>(selector)!
   const list = $<HTMLElement>('#add-list')
   const remove = $<HTMLButtonElement>('[name=remove]')
   const listen = { signal }
@@ -18,7 +24,9 @@ export function script(root: ShadowRoot, signal: AbortSignal, core: Core, option
     (event) => {
       if ((event as ToggleEvent).newState !== 'open') return
       rack.setRemoving(false)
-      for (const button of list.querySelectorAll<HTMLButtonElement>('button[data-index]')) {
+      for (const button of list.querySelectorAll<HTMLButtonElement>(
+        'button[data-index]',
+      )) {
         const definition = modules[Number(button.dataset.index)]
         button.disabled = !definition || !core.canAdd(definition)
       }
@@ -29,7 +37,9 @@ export function script(root: ShadowRoot, signal: AbortSignal, core: Core, option
   list.addEventListener(
     'click',
     (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>('button[data-index]')
+      const button = (event.target as Element).closest<HTMLButtonElement>(
+        'button[data-index]',
+      )
       const definition = button && modules[Number(button.dataset.index)]
       if (!definition || !core.canAdd(definition)) return
       // The usual cables, from the modules above it (see autoPatch in @loop/core).
@@ -47,10 +57,19 @@ export function script(root: ShadowRoot, signal: AbortSignal, core: Core, option
     remove.setAttribute('aria-pressed', String(rack.removing))
     remove.textContent = rack.removing ? 'done' : 'remove'
   }
-  remove.addEventListener('click', () => rack.setRemoving(!rack.removing), listen)
+  remove.addEventListener(
+    'click',
+    () => rack.setRemoving(!rack.removing),
+    listen,
+  )
   rack.onChange(showRemoving, listen)
   // Escape ends remove mode, wherever the focus is.
-  document.addEventListener('keydown', (event) => event.key === 'Escape' && rack.removing && rack.setRemoving(false), listen)
+  document.addEventListener(
+    'keydown',
+    (event) =>
+      event.key === 'Escape' && rack.removing && rack.setRemoving(false),
+    listen,
+  )
   showRemoving()
 
   // ——— The cables ———

@@ -23,7 +23,7 @@
  * - Firefox: has its own part for it, ::-moz-range-progress.
  */
 @property --range-progress {
-  syntax: '<number>';
+  syntax: "<number>";
   inherits: true;
   initial-value: 0;
 }
@@ -97,7 +97,9 @@
       100% 100%;
     background-image:
       linear-gradient(currentColor 0 0),
-      linear-gradient(light-dark(color-mix(in srgb, currentColor, #767676), #858585) 0 0),
+      linear-gradient(
+        light-dark(color-mix(in srgb, currentColor, #767676), #858585) 0 0
+      ),
       linear-gradient(light-dark(#efefef, #3b3b3b) 0 0),
       linear-gradient(light-dark(#b2b2b2, #858585) 0 0);
   }
@@ -105,7 +107,9 @@
   input[type="range"]:enabled:hover::-webkit-slider-runnable-track {
     background-image:
       linear-gradient(currentColor 0 0),
-      linear-gradient(light-dark(color-mix(in srgb, currentColor, #505050), #acacac) 0 0),
+      linear-gradient(
+        light-dark(color-mix(in srgb, currentColor, #505050), #acacac) 0 0
+      ),
       linear-gradient(light-dark(#e5e5e5, #3b3b3b) 0 0),
       linear-gradient(light-dark(#9a9a9a, #acacac) 0 0);
   }
@@ -113,7 +117,9 @@
   input[type="range"]:enabled:active::-webkit-slider-runnable-track {
     background-image:
       linear-gradient(currentColor 0 0),
-      linear-gradient(light-dark(color-mix(in srgb, currentColor, #8d8d8d), #6e6e6e) 0 0),
+      linear-gradient(
+        light-dark(color-mix(in srgb, currentColor, #8d8d8d), #6e6e6e) 0 0
+      ),
       linear-gradient(light-dark(#f5f5f5, #3b3b3b) 0 0),
       linear-gradient(light-dark(#c1c1c1, #6e6e6e) 0 0);
   }
@@ -143,11 +149,13 @@
      6px high (16px - 5px - 5px), reaching 100vw to the left (vertical: down). The slider cuts it off. */
   @supports not (animation-timeline: view()) {
     input[type="range"]::-webkit-slider-thumb {
-      border-image: linear-gradient(currentColor 0 0) 0 fill / 5px 0 / 0 0 0 100vw;
+      border-image:
+        linear-gradient(currentColor 0 0) 0 fill / 5px 0 / 0 0 0 100vw;
     }
 
     input[type="range"].vertical::-webkit-slider-thumb {
-      border-image: linear-gradient(currentColor 0 0) 0 fill / 0 5px / 0 0 100vw 0;
+      border-image:
+        linear-gradient(currentColor 0 0) 0 fill / 0 5px / 0 0 100vw 0;
     }
   }
 
@@ -180,7 +188,8 @@
     box-sizing: border-box;
     height: 8px;
     background: currentColor;
-    border: 1px solid light-dark(color-mix(in srgb, currentColor, #767676), #858585);
+    border: 1px solid
+      light-dark(color-mix(in srgb, currentColor, #767676), #858585);
     border-radius: 4px;
   }
 
@@ -200,7 +209,10 @@
   }
 
   input[type="range"]:enabled:hover::-moz-range-progress {
-    border-color: light-dark(color-mix(in srgb, currentColor, #505050), #acacac);
+    border-color: light-dark(
+      color-mix(in srgb, currentColor, #505050),
+      #acacac
+    );
   }
 
   input[type="range"]:enabled:active::-moz-range-track {
@@ -209,7 +221,10 @@
   }
 
   input[type="range"]:enabled:active::-moz-range-progress {
-    border-color: light-dark(color-mix(in srgb, currentColor, #8d8d8d), #6e6e6e);
+    border-color: light-dark(
+      color-mix(in srgb, currentColor, #8d8d8d),
+      #6e6e6e
+    );
   }
 
   input[type="range"]:disabled::-moz-range-track {

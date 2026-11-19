@@ -24,8 +24,10 @@ export interface SamplerOptions {
   channels?: ({ sound: SavedSound; start: number; end: number } | null)[]
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
-const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))
+const isNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value)
 
 /**
  * Audio: records the microphone into one of 6 channels, and plays the part between the markers.
@@ -35,17 +37,23 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const { audio } = ctx
   // One output per channel, all on one jack ("Ch 1–6"): a channels cable takes each channel on its
   // own into a mixer.
-  const channelOutputs = Array.from({ length: CHANNELS }, () => new GainNode(audio, { gain: 1 }))
+  const channelOutputs = Array.from(
+    { length: CHANNELS },
+    () => new GainNode(audio, { gain: 1 }),
+  )
   // Listens to all channels, for the level meter in the picture.
   const outputAnalyser = new AnalyserNode(audio, { fftSize: 1024 })
   for (const channel of channelOutputs) channel.connect(outputAnalyser)
 
   // Options can come from a saved project file, so check everything.
-  let active = isNumber(options.active) ? clamp(Math.round(options.active), 0, CHANNELS - 1) : 0
+  let active = isNumber(options.active)
+    ? clamp(Math.round(options.active), 0, CHANNELS - 1)
+    : 0
   const channels: Channel[] = Array.from({ length: CHANNELS }, (_, i) => {
     const saved = Array.isArray(options.channels) ? options.channels[i] : null
     const buffer = saved ? decodeSound(saved.sound) : null
-    if (!saved || !buffer) return { buffer: null, start: 0, end: 1, saved: null }
+    if (!saved || !buffer)
+      return { buffer: null, start: 0, end: 1, saved: null }
     const start = isNumber(saved.start) ? clamp(saved.start, 0, 1 - MIN_GAP) : 0
     const end = isNumber(saved.end) ? clamp(saved.end, start + MIN_GAP, 1) : 1
     return { buffer, start, end, saved: saved.sound }
@@ -76,7 +84,8 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
 
   /** The audio context only runs after a click. Recording and playing need it to run. */
   const wake = () => {
-    if (audio instanceof AudioContext && audio.state === 'suspended') void audio.resume()
+    if (audio instanceof AudioContext && audio.state === 'suspended')
+      void audio.resume()
   }
 
   /** Start to record into the active channel. */
@@ -88,27 +97,39 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     wake()
     update()
     try {
-      if (!(audio instanceof AudioContext)) throw new Error('No live audio context')
+      if (!(audio instanceof AudioContext))
+        throw new Error('No live audio context')
       // Turn off the phone-call cleaning: it changes the sound.
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
       })
       if (ctx.signal.aborted || !busy) {
         stream.getTracks().forEach((track) => track.stop())
         return
       }
       // MediaRecorder keeps the sound. The analyser only shows the level while recording.
-      const source = new MediaStreamAudioSourceNode(audio, { mediaStream: stream })
+      const source = new MediaStreamAudioSourceNode(audio, {
+        mediaStream: stream,
+      })
       const analyser = new AnalyserNode(audio, { fftSize: 1024 })
       source.connect(analyser)
       const recorder = new MediaRecorder(stream)
       const chunks: Blob[] = []
       const channel = active
       recorder.ondataavailable = (event) => chunks.push(event.data)
-      recorder.onstop = () => void finish(new Blob(chunks, { type: recorder.mimeType }), channel)
+      recorder.onstop = () =>
+        void finish(new Blob(chunks, { type: recorder.mimeType }), channel)
       recorder.start()
       recording = {
-        stream, recorder, analyser, source, channel,
+        stream,
+        recorder,
+        analyser,
+        source,
+        channel,
         began: performance.now(),
         timer: setTimeout(() => stopRecording(), MAX_SECONDS * 1000),
       }
@@ -141,11 +162,15 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       const decoded = await audio.decodeAudioData(await blob.arrayBuffer())
       if (ctx.signal.aborted) return
       // One channel (mono): the average of the microphone's channels.
-      const mono = new AudioBuffer({ length: decoded.length, sampleRate: decoded.sampleRate })
+      const mono = new AudioBuffer({
+        length: decoded.length,
+        sampleRate: decoded.sampleRate,
+      })
       const data = mono.getChannelData(0)
       for (let c = 0; c < decoded.numberOfChannels; c++) {
         const input = decoded.getChannelData(c)
-        for (let i = 0; i < data.length; i++) data[i]! += input[i]! / decoded.numberOfChannels
+        for (let i = 0; i < data.length; i++)
+          data[i]! += input[i]! / decoded.numberOfChannels
       }
       // Start just before the first loud part, so a click on "play" is not silent at first.
       let peak = 0
@@ -168,20 +193,38 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   // ——— Playing ———
 
   /** `transport`: it follows the core's transport speed (a trigger from the clock), see core.speed. */
-  interface Playing { source: AudioBufferSourceNode; began: number; offset: number; length: number; channel: number; transport: boolean }
+  interface Playing {
+    source: AudioBufferSourceNode
+    began: number
+    offset: number
+    length: number
+    channel: number
+    transport: boolean
+  }
   /** The sound from the play button (it says "stop" while this plays). */
   let pressed: Playing | null = null
   /** The newest sound of each channel, from the play button or a trigger: the picture shows it. */
-  const latest: (Playing | null)[] = Array.from({ length: CHANNELS }, () => null)
+  const latest: (Playing | null)[] = Array.from(
+    { length: CHANNELS },
+    () => null,
+  )
 
   /** The sounds that follow the transport speed now. When the transport has stopped, they stop. */
-  const onTransport = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>()
+  const onTransport = new Set<{
+    source: AudioBufferSourceNode
+    gain: GainNode
+  }>()
 
   /**
    * Play a channel from its start marker to its end marker, at an exact audio time and a volume
    * (0 to 1). `transport`: follow the core's transport speed (speed and pitch), like a sound on a tape.
    */
-  const trigger = (channel: number, time = audio.currentTime, volume = 1, transport = false): Playing | null => {
+  const trigger = (
+    channel: number,
+    time = audio.currentTime,
+    volume = 1,
+    transport = false,
+  ): Playing | null => {
     const { buffer, start, end } = channels[channel] ?? {}
     if (!buffer || start === undefined || end === undefined) return null
     const source = new AudioBufferSourceNode(audio, { buffer })
@@ -254,7 +297,9 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   // Triggers that come into the trigger jack (for example from a sequencer): play that channel
   // at that time. The play button does not change; the picture shows it (see nowPlaying).
   // They follow the transport speed (see core.speed).
-  ctx.onTrigger(({ channel, time, volume }) => void trigger(channel, time, volume, true))
+  ctx.onTrigger(
+    ({ channel, time, volume }) => void trigger(channel, time, volume, true),
+  )
 
   ctx.onDispose(() => {
     busy = false
@@ -266,7 +311,8 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const setMarker = (which: 'start' | 'end', value: number) => {
     const channel = channels[active]!
     if (!channel.buffer) return
-    if (which === 'start') channel.start = clamp(value, 0, channel.end - MIN_GAP)
+    if (which === 'start')
+      channel.start = clamp(value, 0, channel.end - MIN_GAP)
     else channel.end = clamp(value, channel.start + MIN_GAP, 1)
     ctx.changed()
   }
@@ -339,14 +385,20 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       if (!sound || audio.currentTime < sound.began) return null
       const duration = sound.source.buffer!.duration
       // A sound that follows the transport plays as far as the transport has moved.
-      const seconds = sound.transport ? ctx.core.clock.travel(sound.began, audio.currentTime) : audio.currentTime - sound.began
+      const seconds = sound.transport
+        ? ctx.core.clock.travel(sound.began, audio.currentTime)
+        : audio.currentTime - sound.began
       const played = clamp(seconds, 0, sound.length)
-      return { at: (sound.offset + played) / duration, progress: played / sound.length }
+      return {
+        at: (sound.offset + played) / duration,
+        progress: played / sound.length,
+      }
     },
     play,
     stop,
     /** Play any channel at an exact audio time (for example from a sequencer). */
-    trigger: (channel: number, time?: number, volume?: number) => void trigger(channel, time, volume),
+    trigger: (channel: number, time?: number, volume?: number) =>
+      void trigger(channel, time, volume),
 
     get message() {
       return message
@@ -360,7 +412,9 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     /** Saved with the project. Comes back as `options` when the project loads. */
     save: (): SamplerOptions => ({
       active,
-      channels: channels.map(({ saved, start, end }) => (saved ? { sound: saved, start, end } : null)),
+      channels: channels.map(({ saved, start, end }) =>
+        saved ? { sound: saved, start, end } : null,
+      ),
     }),
   }
 })

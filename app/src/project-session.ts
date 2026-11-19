@@ -1,9 +1,9 @@
 import {
-  restoreProject,
-  serializeProject,
   type AnyAudioModuleDefinition,
   type Core,
   type ProjectData,
+  restoreProject,
+  serializeProject,
 } from '@loop/core'
 import type { ProjectStore, StoredProject } from './project-store'
 
@@ -44,15 +44,29 @@ export interface ProjectSessionOptions {
   saveDelay?: number
 }
 
-const EMPTY_PROJECT: ProjectData = { version: 2, bpm: 120, modules: [], cables: [] }
+const EMPTY_PROJECT: ProjectData = {
+  version: 2,
+  bpm: 120,
+  modules: [],
+  cables: [],
+}
 const DEFAULT_NAME = 'Untitled project'
 
 /**
  * Keeps the open project saved (local first: everything stays in this browser).
  * Every change in the core is saved automatically, a moment later.
  */
-export function createProjectSession(options: ProjectSessionOptions): ProjectSession {
-  const { core, store, definitions, newProject = EMPTY_PROJECT, upgrade = (p) => p, saveDelay = 400 } = options
+export function createProjectSession(
+  options: ProjectSessionOptions,
+): ProjectSession {
+  const {
+    core,
+    store,
+    definitions,
+    newProject = EMPTY_PROJECT,
+    upgrade = (p) => p,
+    saveDelay = 400,
+  } = options
 
   let current = { id: '', name: DEFAULT_NAME }
   let status: SaveStatus = 'saved'
@@ -76,7 +90,11 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     if (!current.id) return
     setStatus('saving')
     try {
-      await store.put({ ...current, updatedAt: Date.now(), data: serializeProject(core) })
+      await store.put({
+        ...current,
+        updatedAt: Date.now(),
+        data: serializeProject(core),
+      })
       setStatus('saved')
     } catch (error) {
       console.error('Could not save the project:', error)
@@ -91,7 +109,14 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     if (status !== 'saving') setStatus('saving')
   }
 
-  for (const type of ['bpmchange', 'moduleadd', 'moduleremove', 'modulemove', 'modulechange', 'cablechange'] as const) {
+  for (const type of [
+    'bpmchange',
+    'moduleadd',
+    'moduleremove',
+    'modulemove',
+    'modulechange',
+    'cablechange',
+  ] as const) {
     core.events.on(type, scheduleSave)
   }
 
@@ -99,18 +124,30 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
   // The IndexedDB write may not finish in time, so also keep a quick backup copy.
   const saveIfWaiting = () => {
     if (!timer || !current.id) return
-    store.writeBackup({ ...current, updatedAt: Date.now(), data: serializeProject(core) })
+    store.writeBackup({
+      ...current,
+      updatedAt: Date.now(),
+      data: serializeProject(core),
+    })
     void saveNow()
   }
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && saveIfWaiting())
+  document.addEventListener(
+    'visibilitychange',
+    () => document.visibilityState === 'hidden' && saveIfWaiting(),
+  )
   addEventListener('pagehide', saveIfWaiting)
 
   const load = (project: StoredProject) => {
     loading = true
     try {
       current = { id: project.id, name: project.name }
-      const { skipped } = restoreProject(core, upgrade(project.data), definitions)
-      if (skipped.length) console.warn('Some modules could not be loaded:', skipped)
+      const { skipped } = restoreProject(
+        core,
+        upgrade(project.data),
+        definitions,
+      )
+      if (skipped.length)
+        console.warn('Some modules could not be loaded:', skipped)
     } finally {
       loading = false
     }
@@ -131,7 +168,8 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
       const backup = store.readBackup()
       if (backup) {
         const saved = await store.get(backup.id)
-        if (!saved || backup.updatedAt > saved.updatedAt) await store.put(backup)
+        if (!saved || backup.updatedAt > saved.updatedAt)
+          await store.put(backup)
         store.clearBackup()
       }
 
@@ -150,7 +188,12 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
     },
     async create(name = DEFAULT_NAME, data = newProject) {
       await session.flush()
-      const project: StoredProject = { id: crypto.randomUUID(), name, updatedAt: Date.now(), data }
+      const project: StoredProject = {
+        id: crypto.randomUUID(),
+        name,
+        updatedAt: Date.now(),
+        data,
+      }
       await store.put(project)
       load(project)
     },
@@ -171,7 +214,8 @@ export function createProjectSession(options: ProjectSessionOptions): ProjectSes
       if (timer) await saveNow()
     },
     snapshot: () => serializeProject(core),
-    onChange: (listener, options) => changes.addEventListener('change', listener, options),
+    onChange: (listener, options) =>
+      changes.addEventListener('change', listener, options),
   }
 
   return session

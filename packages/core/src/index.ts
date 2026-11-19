@@ -1,42 +1,36 @@
-export { createCore, type Core, type CoreEventMap, type CoreOptions } from './core'
 export {
-  autoPatch,
-  checkCable,
-  portOf,
-  reaches,
-  routeTrigger,
-  samePlug,
-  type Cable,
-  type CableCheck,
-  type PatchChange,
-  type PatchModule,
-  type Plug,
-  type Port,
-  type PortKind,
-} from './patch'
-export {
-  createClock,
   type BeatEvent,
   type Clock,
   type ClockEmit,
   type ClockEventMap,
   type ClockOptions,
+  createClock,
   type SpeedPlan,
   type SpeedPoint,
   type StepEvent,
   type TimeSource,
 } from './clock'
-export { createEmitter, type Emitter, type Listener, type ListenOptions } from './events'
 export {
+  type Core,
+  type CoreEventMap,
+  type CoreOptions,
+  createCore,
+} from './core'
+export {
+  createEmitter,
+  type Emitter,
+  type Listener,
+  type ListenOptions,
+} from './events'
+export {
+  type AnyAudioModuleDefinition,
+  type AudioModule,
+  type AudioModuleDefinition,
   defineAudioModule,
   defineModuleScript,
   defineModuleSetup,
   defineModuleTemplate,
-  type AnyAudioModuleDefinition,
-  type AudioModule,
-  type AudioModuleDefinition,
   type ModuleContext,
-  type Trigger,
   type ModuleScript,
   type ModuleSetup,
   type ModuleSetupResult,
@@ -47,14 +41,40 @@ export {
   type ModuleUIScriptContext,
   type ScopedOn,
   type SetupResultOf,
+  type Trigger,
 } from './module'
-export { css, html, mountView, render, toStyleSheet, type CSSTemplate, type HTMLTemplate, type MountViewOptions, type View } from './ui'
 export {
-  parseProject,
-  restoreProject,
-  serializeProject,
+  autoPatch,
+  type Cable,
+  type CableCheck,
+  checkCable,
+  type PatchChange,
+  type PatchModule,
+  type Plug,
+  type Port,
+  type PortKind,
+  portOf,
+  reaches,
+  routeTrigger,
+  samePlug,
+} from './patch'
+export {
   type ProjectCable,
   type ProjectData,
   type ProjectModuleData,
+  parseProject,
   type RestoreResult,
+  restoreProject,
+  serializeProject,
 } from './project'
+export {
+  type CSSTemplate,
+  css,
+  type HTMLTemplate,
+  html,
+  type MountViewOptions,
+  mountView,
+  render,
+  toStyleSheet,
+  type View,
+} from './ui'

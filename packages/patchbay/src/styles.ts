@@ -10,7 +10,7 @@ export const styles = css`
   }
 
   .display {
-    gap: 14px;
+    gap: 8px;
   }
 
   .controls {

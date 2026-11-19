@@ -1,6 +1,6 @@
-import { defineModuleTemplate, html } from "@loop/core";
-import { CHANNEL_COLORS } from "@loop/ui";
-import { BUS_NAMES, CHANNELS, type setup } from "./setup";
+import { defineModuleTemplate, html } from '@loop/core'
+import { CHANNEL_COLORS } from '@loop/ui'
+import { BUS_NAMES, CHANNELS, type setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Only HTML from @loop/ui (display, vertical, sr-only;
 // it also styles the sliders and the checkboxes).
@@ -32,7 +32,7 @@ export const template = defineModuleTemplate<typeof setup>(
                 type="checkbox"
                 data-channel="${i}"
                 aria-label="Channel ${i + 1} to the mixer's output"
-                ${module.mains[i] ? html`checked` : ""}
+                ${module.mains[i] ? html`checked` : ''}
               />
               ${BUS_NAMES.map(
                 (bus, b) => html`
@@ -42,7 +42,7 @@ export const template = defineModuleTemplate<typeof setup>(
                     data-bus="${b}"
                     data-channel="${i}"
                     aria-label="Channel ${i + 1} send ${bus}"
-                    ${module.sends[b]![i] ? html`checked` : ""}
+                    ${module.sends[b]![i] ? html`checked` : ''}
                   />
                 `,
               )}
@@ -99,4 +99,4 @@ export const template = defineModuleTemplate<typeof setup>(
       </div>
     </section>
   `,
-);
+)

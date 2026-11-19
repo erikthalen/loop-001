@@ -95,7 +95,8 @@ export function columnsOf(buffer: AudioBuffer): Float32Array {
   let peak = 0.0001
   for (let i = 0; i < COLUMNS; i++) {
     let p = 0
-    for (let k = Math.floor(i * per); k < Math.floor((i + 1) * per); k++) p = Math.max(p, Math.abs(data[k]!))
+    for (let k = Math.floor(i * per); k < Math.floor((i + 1) * per); k++)
+      p = Math.max(p, Math.abs(data[k]!))
     out[i] = p
     peak = Math.max(peak, p)
   }
@@ -159,7 +160,11 @@ export const COUNTER_WHEELS = WHEELS.filter((wheel) => wheel !== null)
 const COUNTER_ROW = 15
 const COUNTER_Y = 10
 
-export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveColors) {
+export function drawWave(
+  canvas: HTMLCanvasElement,
+  state: WaveState,
+  c: WaveColors,
+) {
   // More canvas pixels than screen pixels, so thin lines stay sharp.
   const dpr = (devicePixelRatio || 1) * SUPERSAMPLE
   if (canvas.width !== Math.round(WIDTH * dpr)) {
@@ -205,7 +210,12 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
       const turn = place % 1
       // The digit moves up, and the next one comes in from below.
       g.fillText(String(digit), x, COUNTER_Y - turn * COUNTER_ROW)
-      if (turn > 0) g.fillText(String((digit + 1) % wheel.size), x, COUNTER_Y + (1 - turn) * COUNTER_ROW)
+      if (turn > 0)
+        g.fillText(
+          String((digit + 1) % wheel.size),
+          x,
+          COUNTER_Y + (1 - turn) * COUNTER_ROW,
+        )
     }
     x += charWidth
   }
@@ -222,7 +232,8 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   g.strokeStyle = c.dim
   g.lineWidth = 1
   line(METER_X, METER_TOP, METER_X, METER_BOTTOM)
-  for (let y = METER_BOTTOM; y >= METER_TOP; y -= 8) line(METER_X - 3, y, METER_X - 1, y)
+  for (let y = METER_BOTTOM; y >= METER_TOP; y -= 8)
+    line(METER_X - 3, y, METER_X - 1, y)
   g.fillStyle = c.rec
   circle(METER_X, METER_BOTTOM - state.level * (METER_BOTTOM - METER_TOP), 2.5)
   g.fill()
@@ -232,7 +243,8 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   const reel = (x: number, mass: number, turn: number) => {
     const tape = tapeRadius(mass)
     /** A point on the reel: at an angle, at a distance from its middle. */
-    const at = (angle: number, r: number) => [x + Math.cos(angle) * r, REEL_Y + Math.sin(angle) * r] as const
+    const at = (angle: number, r: number) =>
+      [x + Math.cos(angle) * r, REEL_Y + Math.sin(angle) * r] as const
     // The tape wound on the reel. Faint rings: the windings.
     g.fillStyle = c.line
     circle(x, REEL_Y, tape)
@@ -260,7 +272,10 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
       const angle = turn + (i * Math.PI * 2) / 36
       const long = i % 3 === 0
       g.strokeStyle = long ? c.muted : c.dim
-      line(...at(angle, REEL_RING - 0.9), ...at(angle, long ? REEL_RING - 2.5 : REEL_RING - 1.8))
+      line(
+        ...at(angle, REEL_RING - 0.9),
+        ...at(angle, long ? REEL_RING - 2.5 : REEL_RING - 1.8),
+      )
     }
     // Two spokes across the tape, that turn with the reel, each with a rivet at its end (one
     // red: you can see the reel turn even when the tape hides the rest).
@@ -320,11 +335,25 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   // The tape is pulled tight around the rollers: straight lines that touch each roller (tangents),
   // and arcs along the rollers' edges. `side`: where the roller is, seen from the tape: -1 above it
   // (the tape runs under it), 1 below it (the tape runs over it).
-  interface Wheel { x: number; y: number; r: number; side: 1 | -1 }
-  const tension: [Wheel, Wheel] = [{ x: 68, y: 77, r: 3, side: -1 }, { x: 179, y: 77, r: 3, side: -1 }]
-  const guides: [Wheel, Wheel] = [{ x: 92, y: 66, r: 3.5, side: 1 }, { x: 155, y: 66, r: 3.5, side: 1 }]
+  interface Wheel {
+    x: number
+    y: number
+    r: number
+    side: 1 | -1
+  }
+  const tension: [Wheel, Wheel] = [
+    { x: 68, y: 77, r: 3, side: -1 },
+    { x: 179, y: 77, r: 3, side: -1 },
+  ]
+  const guides: [Wheel, Wheel] = [
+    { x: 92, y: 66, r: 3.5, side: 1 },
+    { x: 155, y: 66, r: 3.5, side: 1 },
+  ]
   /** The tape lies on the roller's edge, so it runs just outside the roller's line. */
-  const onEdge = (wheel: Wheel): Wheel => ({ ...wheel, r: wheel.r + ROLLER_TAPE })
+  const onEdge = (wheel: Wheel): Wheel => ({
+    ...wheel,
+    r: wheel.r + ROLLER_TAPE,
+  })
   /**
    * The straight piece of tape from wheel `a` to wheel `b`: where it leaves `a` and where it
    * reaches `b`. (In complex numbers: the direction is (b - a) / (along + i·k).)
@@ -345,8 +374,15 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
     }
   }
   // The reels: the tape comes off the bottom of each pack (the pack is above the tape).
-  const packs: [Wheel, Wheel] = [{ x: REELS[0], y: REEL_Y, r: left, side: -1 }, { x: REELS[1], y: REEL_Y, r: right, side: -1 }]
-  const wheels = [packs[0], ...[tension[0], guides[0], guides[1], tension[1]].map(onEdge), packs[1]]
+  const packs: [Wheel, Wheel] = [
+    { x: REELS[0], y: REEL_Y, r: left, side: -1 },
+    { x: REELS[1], y: REEL_Y, r: right, side: -1 },
+  ]
+  const wheels = [
+    packs[0],
+    ...[tension[0], guides[0], guides[1], tension[1]].map(onEdge),
+    packs[1],
+  ]
   const pieces = wheels.slice(1).map((wheel, i) => tangent(wheels[i]!, wheel))
 
   /** A roller: an open circle with a tick that turns with the tape, slower than the tape (like Master's). */
@@ -477,7 +513,11 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
       const text = 'blank tape — tick rec'
       const middle = (CUT_Y + 2 + TRACKS_Y) / 2
       g.textBaseline = 'alphabetic'
-      g.fillText(text, WIDTH / 2, middle + g.measureText(text).actualBoundingBoxAscent / 2)
+      g.fillText(
+        text,
+        WIDTH / 2,
+        middle + g.measureText(text).actualBoundingBoxAscent / 2,
+      )
       g.textBaseline = 'middle'
     } else {
       // The sound.
@@ -500,7 +540,8 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
     const [start, end] = tape.columns ? [tape.start, tape.end] : [0, 1]
     for (const at of [start, end]) {
       const x = Math.round(shift + at * WIDTH)
-      if (x >= 0 && x <= WIDTH) g.fillRect(x - 0.5, CUT_Y - 4, 1, HEIGHT - CUT_Y + 4)
+      if (x >= 0 && x <= WIDTH)
+        g.fillRect(x - 0.5, CUT_Y - 4, 1, HEIGHT - CUT_Y + 4)
     }
   }
 
@@ -519,6 +560,11 @@ export function drawWave(canvas: HTMLCanvasElement, state: WaveState, c: WaveCol
   // ——— The playhead: an orange line that moves along the sound ———
   if (state.playhead !== null) {
     g.fillStyle = c.tape
-    g.fillRect(state.playhead * WIDTH - 0.75, CUT_Y - 3, 1.5, HEIGHT - CUT_Y + 3)
+    g.fillRect(
+      state.playhead * WIDTH - 0.75,
+      CUT_Y - 3,
+      1.5,
+      HEIGHT - CUT_Y + 3,
+    )
   }
 }

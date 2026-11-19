@@ -63,18 +63,28 @@ export type CableCheck =
   | { readonly ok: true; readonly from: Plug; readonly to: Plug }
   | { readonly ok: false; readonly reason: string }
 
-export const samePlug = (a: Plug, b: Plug) => a.module === b.module && a.port === b.port
+export const samePlug = (a: Plug, b: Plug) =>
+  a.module === b.module && a.port === b.port
 
 /** The port a plug points to, or undefined. */
-export function portOf(modules: readonly PatchModule[], plug: Plug): Port | undefined {
-  return modules.find((module) => module.id === plug.module)?.ports.find((port) => port.id === plug.port)
+export function portOf(
+  modules: readonly PatchModule[],
+  plug: Plug,
+): Port | undefined {
+  return modules
+    .find((module) => module.id === plug.module)
+    ?.ports.find((port) => port.id === plug.port)
 }
 
 /** The outputs that an input of a module reaches inside the module (see `routes`). */
 function outputsOf(module: PatchModule, input: string): string[] {
-  const outputs = module.ports.filter((port) => port.direction === 'out').map((port) => port.id)
+  const outputs = module.ports
+    .filter((port) => port.direction === 'out')
+    .map((port) => port.id)
   if (!module.routes) return outputs
-  return module.routes.filter(([from, to]) => from === input && outputs.includes(to)).map(([, to]) => to)
+  return module.routes
+    .filter(([from, to]) => from === input && outputs.includes(to))
+    .map(([, to]) => to)
 }
 
 /** Does sound (or a trigger) get from `start` to `goal`, through cables and through modules? */
@@ -96,9 +106,11 @@ export function reaches(
     if (!port) continue
     if (port.direction === 'in') {
       const module = modules.find((m) => m.id === plug.module)!
-      for (const output of outputsOf(module, plug.port)) stack.push({ module: plug.module, port: output })
+      for (const output of outputsOf(module, plug.port))
+        stack.push({ module: plug.module, port: output })
     } else {
-      for (const cable of cables) if (samePlug(cable.from, plug)) stack.push(cable.to)
+      for (const cable of cables)
+        if (samePlug(cable.from, plug)) stack.push(cable.to)
     }
   }
   return false
@@ -116,23 +128,36 @@ export function checkCable(
 ): CableCheck {
   const portA = portOf(modules, a)
   const portB = portOf(modules, b)
-  if (!portA || !portB) return { ok: false, reason: 'That jack does not exist.' }
-  if (samePlug(a, b)) return { ok: false, reason: 'A jack cannot connect to itself.' }
+  if (!portA || !portB)
+    return { ok: false, reason: 'That jack does not exist.' }
+  if (samePlug(a, b))
+    return { ok: false, reason: 'A jack cannot connect to itself.' }
   if (portA.direction === portB.direction) {
-    return { ok: false, reason: portA.direction === 'in' ? 'Both are inputs. Connect an output to an input.' : 'Both are outputs. Connect an output to an input.' }
+    return {
+      ok: false,
+      reason:
+        portA.direction === 'in'
+          ? 'Both are inputs. Connect an output to an input.'
+          : 'Both are outputs. Connect an output to an input.',
+    }
   }
   if (portA.kind !== portB.kind) {
     const kinds = [portA.kind, portB.kind]
     return {
       ok: false,
-      reason: kinds.includes('trigger') ? 'Triggers only go to trigger jacks.' : 'Channels only go to a channels jack.',
+      reason: kinds.includes('trigger')
+        ? 'Triggers only go to trigger jacks.'
+        : 'Channels only go to a channels jack.',
     }
   }
   const [from, to] = portA.direction === 'out' ? [a, b] : [b, a]
-  if (cables.some((cable) => samePlug(cable.from, from) && samePlug(cable.to, to))) {
+  if (
+    cables.some((cable) => samePlug(cable.from, from) && samePlug(cable.to, to))
+  ) {
     return { ok: false, reason: 'These two are already connected.' }
   }
-  if (reaches(modules, cables, to, from)) return { ok: false, reason: 'That makes a loop, and a loop goes silent.' }
+  if (reaches(modules, cables, to, from))
+    return { ok: false, reason: 'That makes a loop, and a loop goes silent.' }
   return { ok: true, from: { ...from }, to: { ...to } }
 }
 
@@ -169,7 +194,11 @@ export function autoPatch(
   const add: Pick<Cable, 'from' | 'to'>[] = []
   const has = (m: PatchModule, port: string, direction: 'in' | 'out') =>
     m.ports.some((p) => p.id === port && p.direction === direction)
-  const above = (port: string) => modules.slice(0, index).reverse().find((m) => has(m, port, 'out'))
+  const above = (port: string) =>
+    modules
+      .slice(0, index)
+      .reverse()
+      .find((m) => has(m, port, 'out'))
   const plug = (m: string, port: string): Plug => ({ module: m, port })
   const tryAdd = (from: Plug, to: Plug) => {
     const check = checkCable(modules, current, from, to)
@@ -193,11 +222,14 @@ export function autoPatch(
   if (audioIn && audioOut) {
     const source = above('out')
     const from = source && plug(source.id, 'out')
-    const targets = from ? current.filter((cable) => samePlug(cable.from, from)) : []
+    const targets = from
+      ? current.filter((cable) => samePlug(cable.from, from))
+      : []
     current = current.filter((cable) => !targets.includes(cable))
     remove.push(...targets)
     if (from) tryAdd(from, plug(id, 'in'))
-    if (targets.length) for (const { to } of targets) tryAdd(plug(id, 'out'), to)
+    if (targets.length)
+      for (const { to } of targets) tryAdd(plug(id, 'out'), to)
     else intoEnd()
   } else if (audioIn) {
     const source = above('out')
@@ -217,14 +249,24 @@ export function routeTrigger<T>(
   cables: readonly Pick<Cable, 'from' | 'to'>[],
   from: string,
   trigger: T,
-  stopOf: (id: string) => { readonly listeners?: readonly ((trigger: T) => void)[]; readonly pass?: (trigger: T) => T | null } | undefined,
+  stopOf: (id: string) =>
+    | {
+        readonly listeners?: readonly ((trigger: T) => void)[]
+        readonly pass?: (trigger: T) => T | null
+      }
+    | undefined,
   onError: (error: unknown) => void = () => {},
   depth = 0,
 ): void {
   // Loops are not allowed, so this is only a guard.
   if (depth > 64) return
   for (const cable of cables) {
-    if (cable.from.module !== from || cable.from.port !== 'trigger-out' || cable.to.port !== 'trigger-in') continue
+    if (
+      cable.from.module !== from ||
+      cable.from.port !== 'trigger-out' ||
+      cable.to.port !== 'trigger-in'
+    )
+      continue
     const id = cable.to.module
     const stop = stopOf(id)
     for (const listener of stop?.listeners ?? []) {
@@ -241,6 +283,7 @@ export function routeTrigger<T>(
     } catch (error) {
       onError(error)
     }
-    if (next !== null) routeTrigger(cables, id, next, stopOf, onError, depth + 1)
+    if (next !== null)
+      routeTrigger(cables, id, next, stopOf, onError, depth + 1)
   }
 }

@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createClock, type ClockEventMap, type ClockOptions } from './clock'
+import { type ClockEventMap, type ClockOptions, createClock } from './clock'
 
 // A fake audio clock. Tests move time forward by hand.
 function setup(options: ClockOptions = {}) {
   const source = { currentTime: 0 }
   const events: { type: keyof ClockEventMap; detail: any }[] = []
-  const clock = createClock(source, (type, detail) => events.push({ type, detail }), options)
+  const clock = createClock(
+    source,
+    (type, detail) => events.push({ type, detail }),
+    options,
+  )
   const of = <K extends keyof ClockEventMap>(type: K): ClockEventMap[K][] =>
     events.filter((e) => e.type === type).map((e) => e.detail)
   return { source, clock, events, of }
@@ -23,14 +27,22 @@ describe('createClock', () => {
   it('emits start, then steps inside the lookahead window', () => {
     const { clock, of, events } = setup({ bpm: 120, lookahead: 0.3 })
     clock.start(0)
-    expect(events.find((e) => e.type === 'start')).toEqual({ type: 'start', detail: { time: 0, step: 0 } })
+    expect(events.find((e) => e.type === 'start')).toEqual({
+      type: 'start',
+      detail: { time: 0, step: 0 },
+    })
     // Steps at 0, 0.125, 0.25 are inside 0..0.3
     expect(of('step').map((s) => s.time)).toEqual([0, 0.125, 0.25])
     expect(of('step').map((s) => s.step)).toEqual([0, 1, 2])
   })
 
   it('emits a beat on every stepsPerBeat-th step, with bar position', () => {
-    const { clock, source, of } = setup({ bpm: 60, stepsPerBeat: 2, beatsPerBar: 3, lookahead: 0.1 })
+    const { clock, source, of } = setup({
+      bpm: 60,
+      stepsPerBeat: 2,
+      beatsPerBar: 3,
+      lookahead: 0.1,
+    })
     clock.start(0)
     for (let t = 0; t <= 4; t += 0.025) {
       source.currentTime = t
@@ -59,7 +71,11 @@ describe('createClock', () => {
   })
 
   it('uses the new bpm for steps after a tempo change', () => {
-    const { clock, source, of } = setup({ bpm: 120, stepsPerBeat: 1, lookahead: 0.01 })
+    const { clock, source, of } = setup({
+      bpm: 120,
+      stepsPerBeat: 1,
+      lookahead: 0.01,
+    })
     clock.start(0) // beat at 0
     clock.setBpm(60) // next beat should be 0.5 s later (already advanced), then 1 s apart
     for (let t = 0; t <= 3; t += 0.025) {
@@ -143,7 +159,9 @@ describe('createClock', () => {
       expect(clock.running).toBe(false)
       expect(of('stop')).toEqual([{ time: expect.closeTo(2, 2) }])
       // Steps after the stop: further and further apart, and none after the transport has stopped.
-      const late = of('step').map((s) => s.time).filter((t) => t > 1.1)
+      const late = of('step')
+        .map((s) => s.time)
+        .filter((t) => t > 1.1)
       expect(late.length).toBeGreaterThan(1)
       expect(late[1]! - late[0]!).toBeGreaterThan(0.125)
       expect(late.every((t) => t <= 2)).toBe(true)
@@ -195,7 +213,11 @@ describe('createClock', () => {
     }
 
     it('goes back to the first step of the bar while playing: it turns around, goes back, then stops there', () => {
-      const { clock, source, of } = setup({ bpm: 120, rewindBpm: 240, rewindRamp: 0.1 })
+      const { clock, source, of } = setup({
+        bpm: 120,
+        rewindBpm: 240,
+        rewindRamp: 0.1,
+      })
       clock.start(0)
       run(source, 2.6) // about 20 steps: in the second bar (steps 16 to 31)
       const steps = of('step').length
@@ -207,7 +229,11 @@ describe('createClock', () => {
       // The stop event came when it turned around; no step played after the turn.
       expect(of('stop')).toHaveLength(1)
       const turned = of('stop')[0]!.time
-      expect(of('step').slice(steps).every((s) => s.time <= turned)).toBe(true)
+      expect(
+        of('step')
+          .slice(steps)
+          .every((s) => s.time <= turned),
+      ).toBe(true)
       // Backwards at the rewind tempo: 240 bpm at a tempo of 120 is twice the full speed.
       expect(clock.speedAt(turned + 0.15)).toBeCloseTo(-2, 6)
       // The rewind steps go down one by one, to step 16 (the first step of the bar): no further.
@@ -225,7 +251,11 @@ describe('createClock', () => {
     })
 
     it('ramps up and down: the speed changes in straight lines, not at once', () => {
-      const { clock, source } = setup({ bpm: 120, rewindBpm: 130, rewindRamp: 0.2 })
+      const { clock, source } = setup({
+        bpm: 120,
+        rewindBpm: 130,
+        rewindRamp: 0.2,
+      })
       clock.start(0)
       run(source, 1.6)
       clock.stop()
@@ -248,11 +278,18 @@ describe('createClock', () => {
       clock.start(3.5)
       run(source, 3.6)
       expect(of('start').at(-1)).toEqual({ time: 3.5, step: 0 })
-      expect(of('step').find((s) => s.time >= 3.5)).toMatchObject({ step: 0, time: 3.5 })
+      expect(of('step').find((s) => s.time >= 3.5)).toMatchObject({
+        step: 0,
+        time: 3.5,
+      })
     })
 
     it('ends exactly at the first step of the bar, also after a tempo change', () => {
-      const { clock, source } = setup({ bpm: 120, rewindBpm: 240, rewindRamp: 0.1 })
+      const { clock, source } = setup({
+        bpm: 120,
+        rewindBpm: 240,
+        rewindRamp: 0.1,
+      })
       clock.start(0)
       run(source, 1.3) // about 10 steps at 120 bpm
       clock.setBpm(97)
@@ -265,7 +302,11 @@ describe('createClock', () => {
     })
 
     it('stops the rewind on stop, and keeps that place', () => {
-      const { clock, source, of } = setup({ bpm: 120, rewindBpm: 240, rewindRamp: 0.1 })
+      const { clock, source, of } = setup({
+        bpm: 120,
+        rewindBpm: 240,
+        rewindRamp: 0.1,
+      })
       clock.start(0)
       run(source, 3.9) // 31 steps: the last step of the second bar
       clock.stop()
@@ -282,7 +323,11 @@ describe('createClock', () => {
     })
 
     it('plays from where it is, if started while it rewinds', () => {
-      const { clock, source, of } = setup({ bpm: 120, rewindBpm: 240, rewindRamp: 0.1 })
+      const { clock, source, of } = setup({
+        bpm: 120,
+        rewindBpm: 240,
+        rewindRamp: 0.1,
+      })
       clock.start(0)
       run(source, 3.9)
       clock.stop()

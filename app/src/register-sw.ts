@@ -11,7 +11,10 @@ const status = document.querySelector('#status')
 function showError(message: string) {
   if (!status) return
   status.textContent = message + ' '
-  const button = Object.assign(document.createElement('button'), { type: 'button', textContent: 'Reload' })
+  const button = Object.assign(document.createElement('button'), {
+    type: 'button',
+    textContent: 'Reload',
+  })
   button.addEventListener('click', () => location.reload())
   status.append(button)
 }
@@ -43,7 +46,8 @@ async function start() {
 
     // Hard refresh: the service worker is already running, but it does not control this page,
     // and it will not take control by itself. Ask it to.
-    if (!navigator.serviceWorker.controller) registration.active?.postMessage({ type: 'claim' })
+    if (!navigator.serviceWorker.controller)
+      registration.active?.postMessage({ type: 'claim' })
   } catch (error) {
     console.error('Service worker registration failed:', error)
     showError('Could not start the app.')

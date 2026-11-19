@@ -67,10 +67,16 @@ const QUIET = 0.01
 const TEXT_Y = 8
 const ROW = 15
 /** The time's digit wheels, in ms: up to 99999. */
-export const MS_WHEELS: readonly OdometerWheel[] = [10000, 1000, 100, 10, 1].map((unit) => ({ unit }))
+export const MS_WHEELS: readonly OdometerWheel[] = [
+  10000, 1000, 100, 10, 1,
+].map((unit) => ({ unit }))
 const DIGITS = MS_WHEELS.length
 
-export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: PictureColors) {
+export function drawPicture(
+  canvas: HTMLCanvasElement,
+  state: PictureState,
+  c: PictureColors,
+) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
   if (canvas.width !== Math.round(WIDTH * scale)) {
     canvas.width = Math.round(WIDTH * scale)
@@ -130,10 +136,12 @@ export function drawPicture(canvas: HTMLCanvasElement, state: PictureState, c: P
     const digit = Math.floor(wheel) % 10
     const part = wheel % 1
     // Leading zeros are dim, like an unlit display.
-    const leading = i < DIGITS - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
+    const leading =
+      i < DIGITS - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
     g.fillStyle = leading ? c.dim : c.ink
     g.fillText(String(digit), x, TEXT_Y - part * ROW)
-    if (part > 0) g.fillText(String((digit + 1) % 10), x, TEXT_Y + (1 - part) * ROW)
+    if (part > 0)
+      g.fillText(String((digit + 1) % 10), x, TEXT_Y + (1 - part) * ROW)
   })
   g.restore()
 

@@ -76,14 +76,24 @@ const HEAD_X = WIDTH / 2
 const COUNTER_Y = TAPE_Y - 33
 const COUNTER_ROW = 15
 /** The counter's 4 digit wheels (thousands first), in steps: for createOdometer in @loop/ui. */
-export const COUNTER_WHEELS: readonly OdometerWheel[] = [1000, 100, 10, 1].map((unit) => ({ unit }))
+export const COUNTER_WHEELS: readonly OdometerWheel[] = [1000, 100, 10, 1].map(
+  (unit) => ({ unit }),
+)
 
 /** The tape on a reel: its radius, in px. `mass`: how much of the tape is on it, 0 to 1. */
-export const packRadius = (mass: number) => HUB + 2 + (PACK_MAX - HUB - 2) * Math.min(1, Math.max(0, mass))
+export const packRadius = (mass: number) =>
+  HUB + 2 + (PACK_MAX - HUB - 2) * Math.min(1, Math.max(0, mass))
 
-export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelColors) {
+export function drawReels(
+  canvas: HTMLCanvasElement,
+  state: ReelState,
+  c: ReelColors,
+) {
   const scale = (devicePixelRatio || 1) * SUPERSAMPLE
-  if (canvas.width !== Math.round(WIDTH * scale) || canvas.height !== Math.round(HEIGHT * scale)) {
+  if (
+    canvas.width !== Math.round(WIDTH * scale) ||
+    canvas.height !== Math.round(HEIGHT * scale)
+  ) {
     canvas.width = Math.round(WIDTH * scale)
     canvas.height = Math.round(HEIGHT * scale)
   }
@@ -104,14 +114,21 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
     g.lineTo(x2, y2)
     g.stroke()
   }
-  const at = (x: number, y: number, angle: number, r: number) => [x + Math.cos(angle) * r, y + Math.sin(angle) * r] as const
+  const at = (x: number, y: number, angle: number, r: number) =>
+    [x + Math.cos(angle) * r, y + Math.sin(angle) * r] as const
 
   const packs = [packRadius(1 - state.tape), packRadius(state.tape)] as const
 
   // ——— The tape path, under the reels ———
   // Rollers: the tension rollers by the reels, two guides by the head, and the pinch roller.
-  const outer = [[18, 94], [WIDTH - 18, 94]] as const
-  const guides = [[66, TAPE_Y], [WIDTH - 54, TAPE_Y]] as const
+  const outer = [
+    [18, 94],
+    [WIDTH - 18, 94],
+  ] as const
+  const guides = [
+    [66, TAPE_Y],
+    [WIDTH - 54, TAPE_Y],
+  ] as const
   const capstan = [WIDTH - 72, TAPE_Y - 3.5] as const
   const pinch = [WIDTH - 72, TAPE_Y + 6] as const
   /** Where the tape leaves a reel's pack, on its outer side, towards the roller (a tangent). */
@@ -126,8 +143,18 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
   g.strokeStyle = c.muted
   g.lineWidth = 1.1
   g.beginPath()
-  const path = [leave(0), [outer[0][0] - 4, outer[0][1]], [outer[0][0], outer[0][1] + 4], [guides[0][0], TAPE_Y + 4], [HEAD_X, TAPE_Y + 1],
-    [capstan[0], TAPE_Y + 1], [guides[1][0], TAPE_Y + 4], [outer[1][0], outer[1][1] + 4], [outer[1][0] + 4, outer[1][1]], leave(1)]
+  const path = [
+    leave(0),
+    [outer[0][0] - 4, outer[0][1]],
+    [outer[0][0], outer[0][1] + 4],
+    [guides[0][0], TAPE_Y + 4],
+    [HEAD_X, TAPE_Y + 1],
+    [capstan[0], TAPE_Y + 1],
+    [guides[1][0], TAPE_Y + 4],
+    [outer[1][0], outer[1][1] + 4],
+    [outer[1][0] + 4, outer[1][1]],
+    leave(1),
+  ]
   path.forEach(([x, y], i) => (i ? g.lineTo(x!, y!) : g.moveTo(x!, y!)))
   g.stroke()
 
@@ -227,7 +254,10 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
     for (let i = 0; i < 60; i++) {
       const angle = turn + (i * Math.PI * 2) / 60
       g.strokeStyle = i % 5 === 0 ? c.muted : c.dim
-      line(...at(x, REEL_Y, angle, REEL - 4), ...at(x, REEL_Y, angle, i % 5 === 0 ? REEL - 7 : REEL - 5.5))
+      line(
+        ...at(x, REEL_Y, angle, REEL - 4),
+        ...at(x, REEL_Y, angle, i % 5 === 0 ? REEL - 7 : REEL - 5.5),
+      )
     }
     // Three screws between the windows.
     g.strokeStyle = c.muted
@@ -281,7 +311,12 @@ export function drawReels(canvas: HTMLCanvasElement, state: ReelState, c: ReelCo
     const turn = wheel % 1
     g.fillStyle = c.ink
     g.fillText(String(digit), x, COUNTER_Y - turn * COUNTER_ROW)
-    if (turn > 0) g.fillText(String((digit + 1) % 10), x, COUNTER_Y + (1 - turn) * COUNTER_ROW)
+    if (turn > 0)
+      g.fillText(
+        String((digit + 1) % 10),
+        x,
+        COUNTER_Y + (1 - turn) * COUNTER_ROW,
+      )
   })
   g.restore()
   // A thin line under the counter.

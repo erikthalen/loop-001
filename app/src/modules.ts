@@ -1,4 +1,8 @@
-import type { AnyAudioModuleDefinition, ProjectCable, ProjectData } from '@loop/core'
+import type {
+  AnyAudioModuleDefinition,
+  ProjectCable,
+  ProjectData,
+} from '@loop/core'
 import { delay } from '@loop/delay'
 import { lpFilter } from '@loop/lp-filter'
 import { master } from '@loop/master'
@@ -9,7 +13,16 @@ import { sequencer } from '@loop/sequencer'
 import { vuMeter } from '@loop/vu-meter'
 
 /** The modules a user can add. Add new modules here. */
-export const availableModules: readonly AnyAudioModuleDefinition[] = [master, metronome, sequencer, sampler, mixer, delay, lpFilter, vuMeter]
+export const availableModules: readonly AnyAudioModuleDefinition[] = [
+  master,
+  metronome,
+  sequencer,
+  sampler,
+  mixer,
+  delay,
+  lpFilter,
+  vuMeter,
+]
 
 /** The color of the cables that come out of each kind of module (see patch-lane.ts). */
 export const CABLE_COLORS: Readonly<Record<string, string>> = {
@@ -24,7 +37,12 @@ export const CABLE_COLORS: Readonly<Record<string, string>> = {
 }
 
 /** A cable between two modules, by their place in `modules`. */
-const cable = (from: number, fromPort: string, to: number, toPort: string): ProjectCable => ({
+const cable = (
+  from: number,
+  fromPort: string,
+  to: number,
+  toPort: string,
+): ProjectCable => ({
   from: { module: from, port: fromPort },
   to: { module: to, port: toPort },
 })
@@ -38,7 +56,9 @@ const cable = (from: number, fromPort: string, to: number, toPort: string): Proj
 export const newProject: ProjectData = {
   version: 2,
   bpm: 120,
-  modules: [master, sequencer, sampler, mixer, delay, lpFilter, vuMeter].map(({ type }) => ({ type })),
+  modules: [master, sequencer, sampler, mixer, delay, lpFilter, vuMeter].map(
+    ({ type }) => ({ type }),
+  ),
   cables: [
     cable(1, 'trigger-out', 2, 'trigger-in'),
     cable(2, 'channels-out', 3, 'channels-in'),
@@ -98,10 +118,18 @@ export function upgradeProject(project: ProjectData): ProjectData {
   const cables: ProjectCable[] = []
   type Source = { module: number; port: string }
   const plugInto = (sources: Source[], module: number, port: string) =>
-    sources.forEach((source) => cables.push(cable(source.module, source.port, module, port)))
+    sources.forEach((source) =>
+      cables.push(cable(source.module, source.port, module, port)),
+    )
 
   old.forEach((sender, i) => {
-    if (sender.triggerOut) old.forEach((m, j) => j > i && m.triggerIn && cables.push(cable(i, 'trigger-out', j, 'trigger-in')))
+    if (sender.triggerOut)
+      old.forEach(
+        (m, j) =>
+          j > i &&
+          m.triggerIn &&
+          cables.push(cable(i, 'trigger-out', j, 'trigger-in')),
+      )
     if (sender.channelsOut) {
       const j = old.findIndex((m, j) => j > i && m.channelsIn)
       if (j >= 0) cables.push(cable(i, 'channels-out', j, 'channels-in'))
@@ -110,7 +138,11 @@ export function upgradeProject(project: ProjectData): ProjectData {
       const letter = 'ab'[sender.bus]
       let j = i - 1
       while (j >= 0 && !old[j]!.sends) j--
-      if (j >= 0) cables.push(cable(j, `send-${letter}`, i, 'in'), cable(i, 'out', j, `return-${letter}`))
+      if (j >= 0)
+        cables.push(
+          cable(j, `send-${letter}`, i, 'in'),
+          cable(i, 'out', j, `return-${letter}`),
+        )
     }
   })
 

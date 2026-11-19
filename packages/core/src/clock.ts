@@ -109,7 +109,10 @@ export interface ClockOptions {
   rewindRamp?: number
 }
 
-export type ClockEmit = <K extends keyof ClockEventMap>(type: K, detail: ClockEventMap[K]) => void
+export type ClockEmit = <K extends keyof ClockEventMap>(
+  type: K,
+  detail: ClockEventMap[K],
+) => void
 
 export interface Clock {
   readonly bpm: number
@@ -172,7 +175,11 @@ export interface Clock {
 
 type Mode = 'stopped' | 'playing' | 'stopping' | 'rewinding' | 'braking'
 
-export function createClock(source: TimeSource, emit: ClockEmit, options: ClockOptions = {}): Clock {
+export function createClock(
+  source: TimeSource,
+  emit: ClockEmit,
+  options: ClockOptions = {},
+): Clock {
   const stepsPerBeat = options.stepsPerBeat ?? 4
   const beatsPerBar = options.beatsPerBar ?? 4
   const lookahead = options.lookahead ?? 0.1
@@ -204,7 +211,8 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
   let timer: ReturnType<typeof setInterval> | undefined
 
   const stepDuration = () => 60 / bpm / stepsPerBeat
-  const stepPosition = (index: number) => base.position + (index - base.step) * stepDuration()
+  const stepPosition = (index: number) =>
+    base.position + (index - base.step) * stepDuration()
 
   /**
    * The speed at `time`. Where the speed jumps (two points at one time), it is the speed after the
@@ -213,7 +221,11 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
   const speedAt = (time: number, before = false) => {
     // The last point at (or before) `time`, then a straight line to the next point.
     let i = -1
-    while (i + 1 < plan.length && (before ? plan[i + 1]!.time < time : plan[i + 1]!.time <= time)) i++
+    while (
+      i + 1 < plan.length &&
+      (before ? plan[i + 1]!.time < time : plan[i + 1]!.time <= time)
+    )
+      i++
     if (i < 0) return plan[0]!.speed
     const a = plan[i]!
     const b = plan[i + 1]
@@ -227,9 +239,12 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     plan.forEach((b, i) => {
       times.push(b.time)
       const a = plan[i - 1]
-      if (a && a.speed * b.speed < 0) times.push(a.time + ((b.time - a.time) * a.speed) / (a.speed - b.speed))
+      if (a && a.speed * b.speed < 0)
+        times.push(a.time + ((b.time - a.time) * a.speed) / (a.speed - b.speed))
     })
-    return [...new Set(times.filter((time) => time >= from && time <= to))].sort((x, y) => x - y)
+    return [
+      ...new Set(times.filter((time) => time >= from && time <= to)),
+    ].sort((x, y) => x - y)
   }
 
   const travel = (from: number, to: number): number => {
@@ -243,7 +258,8 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     return distance
   }
 
-  const positionAt = (time: number) => anchor.position + travel(anchor.time, time)
+  const positionAt = (time: number) =>
+    anchor.position + travel(anchor.time, time)
 
   /** The first audio time from `from` on when the transport is at `target`. Infinity: never. */
   const timeAt = (target: number, from: number) => {
@@ -256,7 +272,11 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       const [sa, sb] = [speedAt(a), speedAt(b, true)]
       const area = ((sa + sb) / 2) * (b - a)
       // Between two corners the speed has one direction, so the transport gets to `left` at most once.
-      if (area !== 0 && Math.sign(area) === Math.sign(left) && Math.abs(left) <= Math.abs(area)) {
+      if (
+        area !== 0 &&
+        Math.sign(area) === Math.sign(left) &&
+        Math.abs(left) <= Math.abs(area)
+      ) {
         const slope = (sb - sa) / (b - a)
         if (Math.abs(slope) < 1e-12) return a + left / sa
         // Solve sa·x + slope·x²/2 = left. Take the root where the speed has the right direction.
@@ -267,7 +287,9 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     }
     // After the last point the speed stays the same.
     const speed = last.speed
-    return speed !== 0 && Math.sign(speed) === Math.sign(left) ? Math.max(from, last.time) + left / speed : Infinity
+    return speed !== 0 && Math.sign(speed) === Math.sign(left)
+      ? Math.max(from, last.time) + left / speed
+      : Infinity
   }
 
   /** Use a new speed plan from now on. The transport keeps its place. */
@@ -304,7 +326,12 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       emit('step', { step, stepInBar: step % stepsPerBar, time, duration })
       if (step % stepsPerBeat === 0) {
         const beat = step / stepsPerBeat
-        emit('beat', { beat, beatInBar: beat % beatsPerBar, bar: Math.floor(beat / beatsPerBar), time })
+        emit('beat', {
+          beat,
+          beatInBar: beat % beatsPerBar,
+          bar: Math.floor(beat / beatsPerBar),
+          time,
+        })
       }
       step++
       cursor = time
@@ -369,7 +396,10 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     const now = source.currentTime
     const speed = speedAt(now)
     const still = now + Math.abs(speed) / rewindAccel()
-    setPlan([{ time: now, speed }, { time: still, speed: 0 }])
+    setPlan([
+      { time: now, speed },
+      { time: still, speed: 0 },
+    ])
     return still
   }
 
@@ -406,7 +436,8 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
     speedAt: (time) => speedAt(time),
     travel,
     positionAt,
-    stepsAt: (time) => base.step + (positionAt(time) - base.position) / stepDuration(),
+    stepsAt: (time) =>
+      base.step + (positionAt(time) - base.position) / stepDuration(),
     setBpm(value) {
       const next = validBpm(value)
       // The next step keeps its place on the timeline; the steps after it use the new tempo.
@@ -420,7 +451,10 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
         // It slows down: speed up again from here. It takes the part of spinUp that is left.
         const speed = speedAt(now)
         mode = 'playing'
-        setPlan([{ time: now, speed }, { time: now + spinUp * (1 - speed), speed: 1 }])
+        setPlan([
+          { time: now, speed },
+          { time: now + spinUp * (1 - speed), speed: 1 },
+        ])
         tick()
         return
       }
@@ -430,7 +464,11 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
         sendStop()
         rewindSteps(still + 1e-9)
         emit('rewindend', { time: still })
-        setPlan([...plan, { time: still, speed: 0 }, { time: still + spinUp, speed: 1 }])
+        setPlan([
+          ...plan,
+          { time: still, speed: 0 },
+          { time: still + spinUp, speed: 1 },
+        ])
         mode = 'playing'
         cursor = still
         emit('start', { time: still, step })
@@ -469,7 +507,10 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
         return
       }
       mode = 'stopping'
-      setPlan([{ time: now, speed }, { time: now + length, speed: 0 }])
+      setPlan([
+        { time: now, speed },
+        { time: now + length, speed: 0 },
+      ])
     },
     rewind() {
       if (mode === 'rewinding') return
@@ -482,7 +523,10 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       while (on > 0 && stepPosition(on) > position + 1e-9) on--
       // Back to the first step of that bar.
       const stepsPerBar = stepsPerBeat * beatsPerBar
-      const target = Math.max(0, Math.floor(Math.max(0, on) / stepsPerBar) * stepsPerBar)
+      const target = Math.max(
+        0,
+        Math.floor(Math.max(0, on) / stepsPerBar) * stepsPerBar,
+      )
       const distance = position - stepPosition(target)
       if (distance <= 1e-9 && speed <= 0) return
       rewindTo = target
@@ -494,10 +538,20 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
       const accel = rewindAccel()
       const forward = (speed * speed) / (2 * accel)
       // (Already backwards faster than this peak: keep that speed; it may go a little too far.)
-      const peak = Math.max(-speed, Math.min(rewindSpeed(), Math.sqrt(Math.max(0, accel * (distance + forward)))))
-      const cruise = Math.max(0, (distance + forward - (peak * peak) / accel) / peak)
+      const peak = Math.max(
+        -speed,
+        Math.min(
+          rewindSpeed(),
+          Math.sqrt(Math.max(0, accel * (distance + forward))),
+        ),
+      )
+      const cruise = Math.max(
+        0,
+        (distance + forward - (peak * peak) / accel) / peak,
+      )
       const turned = now + (speed + peak) / accel
-      if (mode === 'playing' || mode === 'stopping') stopAt = speed > 0 ? now + speed / accel : now
+      if (mode === 'playing' || mode === 'stopping')
+        stopAt = speed > 0 ? now + speed / accel : now
       mode = 'rewinding'
       cursor = now
       setPlan([
@@ -518,6 +572,7 @@ export function createClock(source: TimeSource, emit: ClockEmit, options: ClockO
 }
 
 function validBpm(bpm: number): number {
-  if (!Number.isFinite(bpm) || bpm <= 0) throw new RangeError(`bpm must be a positive number, got ${bpm}`)
+  if (!Number.isFinite(bpm) || bpm <= 0)
+    throw new RangeError(`bpm must be a positive number, got ${bpm}`)
   return bpm
 }

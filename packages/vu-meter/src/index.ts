@@ -9,6 +9,7 @@ import { template } from './template'
 export const vuMeter = defineAudioModule({
   type: 'vu-meter',
   name: 'VU meter',
+  label: 'VU',
   description: 'Shows how loud the sound is, left and right.',
   setup,
   // The shared UI library first, then the module's own CSS (which can override it).
