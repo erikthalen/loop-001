@@ -22,6 +22,12 @@
 import type { OdometerWheel } from '@loop/ui'
 import { RATES } from './setup'
 
+/**
+ * The weights and sizes of the text in the picture (the family is `PictureColors.font`).
+ * script.ts loads them before it draws again: see there.
+ */
+export const TEXT_FONTS = { counter: '300 13px', message: '500 10px' } as const
+
 export interface PictureColors {
   screen: string
   ink: string
@@ -96,7 +102,7 @@ export function drawPicture(
   const step = (RIGHT - LEFT) / STEPS
 
   // ——— The rate, and the time until each echo: they roll, like a tape counter ———
-  g.font = `300 13px ${c.font}`
+  g.font = `${TEXT_FONTS.counter} ${c.font}`
   g.textBaseline = 'middle'
   g.save()
   g.beginPath()
@@ -175,7 +181,7 @@ export function drawPicture(
   if (!state.connected) {
     const text = 'NOTHING PLUGGED IN'
     const y = (TOP + BASE) / 2
-    g.font = `500 10px ${c.font}`
+    g.font = `${TEXT_FONTS.message} ${c.font}`
     g.textAlign = 'center'
     // On a patch of screen, so the dim echoes behind it do not cross the words.
     const width = g.measureText(text).width + 10

@@ -1,28 +1,29 @@
-import { uiStyles } from "@loop/ui";
-import { Hono } from "hono";
-import { html, raw } from "hono/html";
-import { type ModuleDoc, moduleDocOf, moduleDocs } from "./module-docs";
+import { uiStyles } from '@loop/ui'
+import { Hono } from 'hono'
+import { html, raw } from 'hono/html'
+import { type ModuleDoc, moduleDocOf, moduleDocs } from './module-docs'
+import { SKELETON_HEIGHT, skeletonCss, skeletonSvg } from './skeleton'
 
 // This Hono app runs INSIDE the service worker (in the browser).
 // It answers page requests, so pages work offline too.
 // Note: a service worker has no Web Audio. All audio code runs in the page,
 // in src/client.ts. Hono only sends the HTML.
-export const app = new Hono();
+export const app = new Hono()
 
 // The path the app lives under: "/", or for example "/loop-001/" on GitHub Pages.
-const base = import.meta.env.BASE_URL;
+const base = import.meta.env.BASE_URL
 
 /** The page scripts: the studio (client), and a module page (module-page). */
-type PageScript = "client" | "module-page";
+type PageScript = 'client' | 'module-page'
 
 // Dev: Vite serves the TypeScript source. Build: vite.config.ts outputs a fixed <name>.js.
 const scriptUrl = (name: PageScript) =>
-  import.meta.env.DEV ? `${base}src/${name}.ts` : `${base}${name}.js`;
+  import.meta.env.DEV ? `${base}src/${name}.ts` : `${base}${name}.js`
 
 const layout = (
   title: string,
   body: ReturnType<typeof html>,
-  script: PageScript = "client",
+  script: PageScript = 'client',
 ) =>
   html`<!doctype html>
     <html lang="en">
@@ -63,6 +64,31 @@ const layout = (
             align-items: flex-start;
             gap: 5px;
             margin-top: 10px;
+          }
+
+          /* ---- Loading (see skeleton.ts) ---- */
+          /* Until client.ts sets data-ready, the silhouettes of the modules show in their place.
+             The real modules are already there (they need their size), but hidden. */
+          ${raw(skeletonCss)}
+          #patch > .skeleton {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition:
+              opacity 0.3s,
+              visibility 0s 0.3s;
+          }
+          #patch > :not(.skeleton) {
+            transition: opacity 0.3s;
+          }
+          /* As tall as the skeleton, so what comes after it (the guide link) stays below it. */
+          #patch:not([data-ready]) {
+            min-height: ${SKELETON_HEIGHT}px;
+          }
+          #patch:not([data-ready]) > :not(.skeleton),
+          #patch[data-ready] > .skeleton {
+            visibility: hidden;
+            opacity: 0;
           }
           #rack {
             display: flex;
@@ -388,24 +414,28 @@ const layout = (
             }
           }
         </style>
-        ${import.meta.env.DEV
-          ? html`<script type="module" src="${base}@vite/client"></script>`
-          : ""}
+        ${
+          import.meta.env.DEV
+            ? html`<script type="module" src="${base}@vite/client"></script>`
+            : ''
+        }
         <script type="module" src="${scriptUrl(script)}"></script>
       </head>
       <body>
         ${body}
       </body>
-    </html>`;
+    </html>`
 
 app.get(base, (c) =>
   c.html(
     layout(
-      "Loop 001",
+      'Loop 001',
       html`<main>
         <h1 class="sr-only">Loop 001</h1>
 
         <div id="patch">
+          <!-- The loading screen: hidden when the modules are ready (client.ts). -->
+          <div class="skeleton">${raw(skeletonSvg())}</div>
           <div id="rack"></div>
           <!-- The patchbay module: add, remove, and the cables (see @loop/patchbay). Under the
                last module, not in the rack: it cannot be moved, removed or patched. -->
@@ -421,17 +451,17 @@ app.get(base, (c) =>
       </main>`,
     ),
   ),
-);
+)
 
 // ---- The module guide: a list of the modules, and one page per module ----
 // Each module page shows the module (module-page.ts mounts it into #module), then its docs
 // (module-docs.ts). The same <main> width as the studio.
 
 const KIND_NAMES = {
-  audio: "Sound",
-  channels: "6 channels",
-  trigger: "Triggers",
-} as const;
+  audio: 'Sound',
+  channels: '6 channels',
+  trigger: 'Triggers',
+} as const
 
 /** Links to all the modules. The one on this page is marked. */
 const moduleList = (current?: string) =>
@@ -441,15 +471,17 @@ const moduleList = (current?: string) =>
         html`<li>
           <a
             href="${base}modules/${doc.type}"
-            ${doc.type === current ? raw('aria-current="page"') : ""}
+            ${doc.type === current ? raw('aria-current="page"') : ''}
             >${doc.name}</a
           >
-          ${doc.type === current
-            ? ""
-            : html`<span class="text-muted"> – ${doc.summary}</span>`}
+          ${
+            doc.type === current
+              ? ''
+              : html`<span class="text-muted"> – ${doc.summary}</span>`
+          }
         </li>`,
     )}
-  </ul>`;
+  </ul>`
 
 const modulePage = (doc: ModuleDoc) =>
   html`<main>
@@ -462,19 +494,15 @@ const modulePage = (doc: ModuleDoc) =>
       </header>
 
       <section>
-        <h2>What it does</h2>
-        ${doc.about.map((text) => html`<p>${text}</p>`)}
-      </section>
-
-      <section>
         <h2>How to use it</h2>
         <ol>
           ${doc.howTo.map((text) => html`<li>${text}</li>`)}
         </ol>
       </section>
 
-      ${doc.jacks?.length
-        ? html`<section>
+      ${
+        doc.jacks?.length
+          ? html`<section>
             <h2>Jacks</h2>
             <ul class="jacks-list">
               ${doc.jacks.map(
@@ -490,25 +518,27 @@ const modulePage = (doc: ModuleDoc) =>
                   </li>`,
               )}
             </ul>
-            <p class="text-muted">
-              A jack is a socket for a cable. You connect the jacks in the
-              patchbay, in the studio.
-            </p>
+            <p class="text-muted">Connect the jacks in the patchbay.</p>
           </section>`
-        : ""}
-      ${doc.tips?.length
-        ? html`<section>
+          : ''
+      }
+      ${
+        doc.tips?.length
+          ? html`<section>
             <h2>Good to know</h2>
             <ul>
               ${doc.tips.map((text) => html`<li>${text}</li>`)}
             </ul>
           </section>`
-        : ""}
+          : ''
+      }
 
       <p class="note">
-        ${doc.note ??
-        "On this page, the module has no cables, so it makes no sound. This page does not save your settings."}
-        To use it in a project, <a href="${base}">open the studio</a>.
+        ${
+          doc.note ??
+          'On this page, the module has no cables and makes no sound.'
+        }
+        To use it, <a href="${base}">open the studio</a>.
       </p>
 
       <nav aria-label="Modules">
@@ -516,34 +546,34 @@ const modulePage = (doc: ModuleDoc) =>
         ${moduleList(doc.type)}
       </nav>
     </article>
-  </main>`;
+  </main>`
 
 app.get(`${base}modules`, (c) =>
   c.html(
     layout(
-      "Modules – Loop 001",
+      'Modules – Loop 001',
       html`<main>
         <article class="guide">
           <header>
             <h1>Module guide</h1>
             <p class="summary">
-              Read what each module is, what it does and how to use it.
+              How to use each module.
             </p>
           </header>
           <nav aria-label="Modules">${moduleList()}</nav>
           <p><a href="${base}">← Go to the studio</a></p>
         </article>
       </main>`,
-      "module-page",
+      'module-page',
     ),
   ),
-);
+)
 
 app.get(`${base}modules/:type`, (c) => {
-  const doc = moduleDocOf(c.req.param("type"));
+  const doc = moduleDocOf(c.req.param('type'))
   // An unknown module: go to the list. (A 404 would go to the network, see sw.ts.)
-  if (!doc) return c.redirect(`${base}modules`);
+  if (!doc) return c.redirect(`${base}modules`)
   return c.html(
-    layout(`${doc.name} – Loop 001`, modulePage(doc), "module-page"),
-  );
-});
+    layout(`${doc.name} – Loop 001`, modulePage(doc), 'module-page'),
+  )
+})

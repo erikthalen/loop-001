@@ -1,6 +1,11 @@
 import { defineModuleScript } from '@loop/core'
 import { createOdometer } from '@loop/ui'
-import { drawPicture, MS_WHEELS, type PictureColors } from './picture'
+import {
+  drawPicture,
+  MS_WHEELS,
+  type PictureColors,
+  TEXT_FONTS,
+} from './picture'
 import { levelsOf, RATES, rateIndex, type setup } from './setup'
 
 /** A rate in words, for screen readers: '1/8d' → '1/8 dotted'. */
@@ -175,5 +180,16 @@ export const script = defineModuleScript<typeof setup>(
     showFeedback()
     showRate()
     draw()
+
+    // A canvas does not wait for a font. The browser downloads a font weight only when something
+    // uses it, so the first draw can use the fallback font. The picture is not drawn every frame,
+    // so the fallback would stay: load the weights it uses, then draw again.
+    Promise.all(
+      Object.values(TEXT_FONTS).map((font) =>
+        document.fonts.load(`${font} ${colors.font}`),
+      ),
+    )
+      .then(() => signal.aborted || draw())
+      .catch((error) => console.error('The delay font did not load:', error))
   },
 )

@@ -2,7 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // vite.config.ts imports precache-plugin.ts with its extension (Vite's native config loader needs it).
+    "allowImportingTsExtensions": true
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]

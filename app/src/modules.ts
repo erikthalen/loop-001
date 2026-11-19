@@ -48,25 +48,27 @@ const cable = (
 })
 
 /**
- * A new project: Master (play / stop and the volume) plays into the speakers, the sequencer sends
- * triggers to the sampler, the mixer mixes the sampler's channels (a volume and a send each), the
- * delay echoes on the mixer's send A, the sound goes through the low pass filter into Master, and
- * the VU meter shows it.
+ * A new project: Master (play / stop and the volume) plays into the speakers, and the VU meter
+ * under it shows that sound. The sequencer sends triggers to the sampler, the mixer mixes the
+ * sampler's channels (a volume and a send each), the delay echoes on the mixer's send A, and the
+ * sound goes through the low pass filter into Master and the VU meter.
+ * The order here is the rack order. Change it: change the cables' numbers too, and the order in
+ * skeleton.ts (the loading screen).
  */
 export const newProject: ProjectData = {
   version: 2,
   bpm: 120,
-  modules: [master, sequencer, sampler, mixer, delay, lpFilter, vuMeter].map(
+  modules: [master, vuMeter, sequencer, sampler, mixer, delay, lpFilter].map(
     ({ type }) => ({ type }),
   ),
   cables: [
-    cable(1, 'trigger-out', 2, 'trigger-in'),
-    cable(2, 'channels-out', 3, 'channels-in'),
-    cable(3, 'send-a', 4, 'in'),
-    cable(4, 'out', 3, 'return-a'),
-    cable(3, 'out', 5, 'in'),
-    cable(5, 'out', 0, 'in'),
-    cable(5, 'out', 6, 'in'),
+    cable(2, 'trigger-out', 3, 'trigger-in'),
+    cable(3, 'channels-out', 4, 'channels-in'),
+    cable(4, 'send-a', 5, 'in'),
+    cable(5, 'out', 4, 'return-a'),
+    cable(4, 'out', 6, 'in'),
+    cable(6, 'out', 0, 'in'),
+    cable(6, 'out', 1, 'in'),
   ],
 }
 

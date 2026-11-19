@@ -54,6 +54,15 @@ Here, the Hono app runs **inside the service worker**:
 
 So: add pages as Hono routes in `app/src/app.ts`.
 
+### New versions
+
+Each build has a version (`app/precache-plugin.ts`). A new deploy makes a new `sw.js`.
+
+1. The app looks for a new `sw.js` only when it opens: on each page load (the browser does this), and when the installed app opens again from the background on a phone (`app/src/updates.ts`). An open page in a browser tab does not look.
+2. The new service worker downloads all the files of the new version into a new cache. If there is no internet, this step fails, and the current version continues to work from its cache.
+3. The new service worker deletes the caches of the old versions and takes control of the open pages.
+4. The pages reload. The studio waits until the music stops and the project is saved.
+
 - `/` – the studio (page script `app/src/client.ts`).
 - `/modules` and `/modules/<type>` – the module guide: each module alone, with its docs (text in `app/src/module-docs.ts`, page script `app/src/module-page.ts`).
 - A new page script needs a fixed file name: add it to `PAGE_SCRIPTS` and `input` in `app/vite.config.ts`.

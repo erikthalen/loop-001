@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin, searchForWorkspaceRoot } from 'vite'
+import { readPrecacheList, writePrecacheList } from './precache-plugin.ts'
 
 /**
  * Vite only watches the app folder for NEW files. The workspace packages live outside it,
@@ -25,7 +26,13 @@ const PAGE_SCRIPTS = ['client', 'module-page']
 export default defineConfig({
   // The URL path the app lives under. "/" by default. GitHub Pages sets it, for example "/loop-001/".
   base: process.env.BASE_PATH || '/',
-  plugins: [watchWorkspacePackages()],
+  plugins: [
+    watchWorkspacePackages(),
+    // Build: write the list of files of this version (dist/precache.json) for the service worker.
+    writePrecacheList(),
+    // Dev: Vite serves sw.ts with this config, so it needs `virtual:precache` too.
+    readPrecacheList(),
+  ],
   optimizeDeps: {
     // sw.ts is not linked from index.html, so tell Vite to scan it for deps.
     entries: ['index.html', 'sw.ts'],

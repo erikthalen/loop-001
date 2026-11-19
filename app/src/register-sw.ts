@@ -6,10 +6,24 @@
 // - the user did a hard refresh (Shift+Cmd+R). The browser then skips the service worker
 //   for one page load, so the server sends this start page instead of the app.
 
-const status = document.querySelector('#status')
+import { addLoopFont, uiStyles } from '@loop/ui'
+import { skeletonCss, skeletonSvg } from './skeleton'
+
+// Look like the studio while it loads: its colors and font, and the silhouettes of the modules.
+const style = document.createElement('style')
+style.textContent = uiStyles.cssText + skeletonCss
+document.head.append(style)
+addLoopFont()
+document
+  .querySelector('.skeleton')
+  ?.insertAdjacentHTML('afterbegin', skeletonSvg())
+
+const status = document.querySelector<HTMLElement>('#status')
 
 function showError(message: string) {
   if (!status) return
+  // Show it on screen (it is hidden while all goes well).
+  delete status.dataset.quiet
   status.textContent = `${message} `
   const button = Object.assign(document.createElement('button'), {
     type: 'button',

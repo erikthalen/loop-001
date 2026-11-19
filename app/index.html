@@ -9,10 +9,42 @@
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Loop 001</title>
+    <style>
+      /* The same place as the studio's modules (app.ts). Colors and fonts: register-sw.ts. */
+      body {
+        margin: 0;
+        padding: 0.5rem;
+      }
+      main {
+        width: 275px;
+        margin: auto;
+      }
+      #patch {
+        margin-top: 10px;
+      }
+      #status {
+        margin: 10px 0;
+        text-align: center;
+      }
+      #status[data-quiet] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    </style>
   </head>
   <body>
-    <!-- Boot page: only shown on the first visit, before the service worker runs. -->
-    <p id="status">Starting…</p>
+    <!-- Boot page: only shown on the first visit (and after a hard refresh), before the service
+         worker runs. It looks like the studio while it loads: the silhouettes of the modules, in
+         the same place (register-sw.ts puts them in, see skeleton.ts). -->
+    <main>
+      <!-- Hidden on screen, until there is a problem (register-sw.ts). -->
+      <p id="status" role="status" data-quiet>Starting…</p>
+      <div id="patch"><div class="skeleton"></div></div>
+    </main>
     <script type="module" src="/src/register-sw.ts"></script>
   </body>
 </html>

@@ -14,6 +14,7 @@ import { createPatchLane } from './patch-lane'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
 import { createRack } from './rack'
+import { watchForUpdates } from './updates'
 
 // The app's font, Italian Plate No1 Mono (all weights, from @loop/ui). Before anything shows text.
 addLoopFont()
@@ -62,6 +63,29 @@ const session = createProjectSession({
 })
 await session.start()
 mountLibrary($('#library'), createLibrary(session))
+
+// ---- Loading: show the modules in place of their silhouettes (see skeleton.ts) ----
+// Wait for the fonts first (at most a moment), so the text does not change font after it shows.
+await Promise.race([
+  document.fonts.ready,
+  new Promise((resolve) => setTimeout(resolve, 1500)),
+])
+$('#patch').dataset.ready = ''
+
+// ---- New versions (see updates.ts and sw.ts) ----
+// The page reloads to show a new version. Not while the music plays or rewinds, and only after
+// the project is saved.
+watchForUpdates({
+  async whenSafe() {
+    while (core.playing || core.rewinding)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    await session.flush()
+    // A save that started before can still run: wait for it.
+    while (session.status === 'saving')
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    if (session.status === 'error') throw new Error('The project is not saved.')
+  },
+})
 
 /**
  * Local first means the data only lives in this browser.

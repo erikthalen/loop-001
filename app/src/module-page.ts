@@ -7,8 +7,12 @@ import { mountPatchbay, type RemoveMode } from '@loop/patchbay'
 import { addLoopFont } from '@loop/ui'
 import { createDemoLibrary } from './demo-library'
 import { availableModules, CABLE_COLORS, newProject } from './modules'
+import { watchForUpdates } from './updates'
 
 addLoopFont()
+
+// A new version: reload at once (this page saves nothing). See updates.ts.
+watchForUpdates()
 
 const element = document.querySelector<HTMLElement>('#module')
 const type = element?.dataset.type

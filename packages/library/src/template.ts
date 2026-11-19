@@ -1,17 +1,19 @@
 import { type HTMLTemplate, html } from '@loop/core'
 import type { Library, Tape } from './library'
 
-const dateFormat = new Intl.DateTimeFormat(undefined, {
+/** When a tape was saved, short: "19 Nov, 23:28". */
+export const dateFormat = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
   month: 'short',
   hour: '2-digit',
   minute: '2-digit',
 })
 
-// HTML: only HTML from @loop/ui (display, field, button, sr-only; it also styles the text input,
-// the radio buttons and the dialogs). From the top:
+// HTML: only HTML from @loop/ui (display, field, button, sr-only; it also styles the text input
+// and the dialogs). From the top:
 //   the tape on the machine: its name (a text input) and whether it is saved (an <output>)
-//   the shelf: one radio button per tape (checked: the one on the machine), and an erase button
+//   the shelf: a row of cassettes, one per tape (cassette.ts draws them), that scrolls sideways
+//     like a cover flow. Under it, the tape in the middle: its name, when it was saved, open, erase
 //   new, import, export
 // Then two dialogs (closed until needed): "erase this tape?", and a problem (a file that is not a tape).
 export const template = (library: Library): HTMLTemplate => html`
@@ -34,10 +36,24 @@ export const template = (library: Library): HTMLTemplate => html`
         data-status="${library.status}"
       ></output>
     </div>
-    <fieldset class="shelf">
-      <legend class="field"><span>projects</span></legend>
-      <ul class="tapes"></ul>
-    </fieldset>
+    <div class="shelf" role="group" aria-labelledby="shelf-title">
+      <span class="sr-only" id="shelf-title">Projects</span>
+      <!-- The cassettes. Scroll, or use the arrow keys: the one in the middle is picked. -->
+      <div class="tapes">
+        <ul class="track" aria-describedby="shelf-help"></ul>
+      </div>
+      <p class="sr-only" id="shelf-help">
+        Left and right arrow keys: pick a tape. Enter: put it on the machine.
+      </p>
+      <!-- The picked tape (in the middle). -->
+      <div class="picked">
+        <span class="picked-name"></span>
+        <time class="picked-time"></time>
+        <span class="on-machine">on</span>
+        <button class="button small" name="open" type="button">open</button>
+        <button class="button ghost erase" name="erase" type="button">×</button>
+      </div>
+    </div>
     <div class="actions">
       <button class="button small" name="new" type="button">new</button>
       <button class="button small" name="import" type="button">import</button>
@@ -69,30 +85,22 @@ export const template = (library: Library): HTMLTemplate => html`
   </dialog>
 `
 
-/** The tapes on the shelf. The script puts them in `.tapes` (they are read from the app, later). */
+/**
+ * The tapes on the shelf, as cassettes. The script puts them in `.track`, draws each cassette
+ * (cassette.ts), and keeps one of them focusable: the picked one (the one in the middle).
+ */
 export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
   html`${list.map(
     (tape) => html`
-      <li>
-        <label class="tape">
-          <input
-            type="radio"
-            name="tape"
-            value="${tape.id}"
-            ${tape.id === current ? html`checked` : ''}
-          />
-          <span class="tape-name">${tape.name}</span>
-          <time datetime="${new Date(tape.updatedAt).toISOString()}"
-            >${dateFormat.format(tape.updatedAt)}</time
-          >
-        </label>
+      <li data-id="${tape.id}">
         <button
-          class="button ghost erase"
+          class="tape"
           type="button"
-          data-erase="${tape.id}"
-          aria-label="Erase ${tape.name}"
+          tabindex="-1"
+          aria-label="${tape.name}, saved ${dateFormat.format(tape.updatedAt)}"
+          aria-current="${tape.id === current}"
         >
-          ×
+          <canvas class="cassette" aria-hidden="true"></canvas>
         </button>
       </li>
     `,
