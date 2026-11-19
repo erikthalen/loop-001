@@ -1,22 +1,29 @@
-import { uiStyles } from '@loop/ui'
-import { Hono } from 'hono'
-import { html, raw } from 'hono/html'
+import { uiStyles } from "@loop/ui";
+import { Hono } from "hono";
+import { html, raw } from "hono/html";
+import { type ModuleDoc, moduleDocOf, moduleDocs } from "./module-docs";
 
 // This Hono app runs INSIDE the service worker (in the browser).
 // It answers page requests, so pages work offline too.
 // Note: a service worker has no Web Audio. All audio code runs in the page,
 // in src/client.ts. Hono only sends the HTML.
-export const app = new Hono()
+export const app = new Hono();
 
 // The path the app lives under: "/", or for example "/loop-001/" on GitHub Pages.
-const base = import.meta.env.BASE_URL
+const base = import.meta.env.BASE_URL;
 
-// Dev: Vite serves the TypeScript source. Build: vite.config.ts outputs a fixed client.js.
-const clientScript = import.meta.env.DEV
-  ? `${base}src/client.ts`
-  : `${base}client.js`
+/** The page scripts: the studio (client), and a module page (module-page). */
+type PageScript = "client" | "module-page";
 
-const layout = (title: string, body: ReturnType<typeof html>) =>
+// Dev: Vite serves the TypeScript source. Build: vite.config.ts outputs a fixed <name>.js.
+const scriptUrl = (name: PageScript) =>
+  import.meta.env.DEV ? `${base}src/${name}.ts` : `${base}${name}.js`;
+
+const layout = (
+  title: string,
+  body: ReturnType<typeof html>,
+  script: PageScript = "client",
+) =>
   html`<!doctype html>
     <html lang="en">
       <head>
@@ -245,22 +252,130 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
 
           /* A module is added or removed (view transition, see rack.ts): the modules, the
              patchbay and the library slide into their new place. */
-          html:active-view-transition-type(add-module, remove-module)::view-transition-group(.module) {
+          html:active-view-transition-type(
+              add-module,
+              remove-module
+            )::view-transition-group(.module) {
             animation-duration: 0.3s;
             animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
           }
           /* The removed module (only in the old picture) shrinks away. */
-          html:active-view-transition-type(remove-module)::view-transition-old(.module):only-child {
+          html:active-view-transition-type(remove-module)::view-transition-old(
+              .module
+            ):only-child {
             animation: module-out 0.15s ease-in both;
           }
           /* The added module (only in the new picture) grows in, once there is room for it. */
-          html:active-view-transition-type(add-module)::view-transition-new(.module):only-child {
+          html:active-view-transition-type(add-module)::view-transition-new(
+              .module
+            ):only-child {
             animation: module-out 0.2s ease-out 0.1s reverse both;
           }
           @keyframes module-out {
             to {
               opacity: 0;
               scale: 0.85;
+            }
+          }
+
+          /* ---- The module guide (/modules and /modules/<type>) ---- */
+          /* The link to the guide, under the library on the studio page. */
+          .page-links {
+            margin: 1.5rem 0 1rem;
+            text-align: center;
+          }
+          .page-links a,
+          .guide a {
+            color: var(--color-neutral-800);
+            text-decoration-color: var(--color-neutral-400);
+            text-underline-offset: 3px;
+          }
+          .page-links a:hover,
+          .guide a:hover {
+            color: var(--color-neutral-1000);
+            text-decoration-color: currentColor;
+          }
+          /* The module, alone, at the top of its page. */
+          #module {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+          }
+          .guide {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1.5rem 0 2rem;
+            line-height: 1.5;
+            /* Text to read: let people select and copy it. */
+            user-select: text;
+
+            h1 {
+              /* font-size: 1.5rem;
+              line-height: 1.2; */
+              margin-bottom: 0.5rem;
+            }
+            h2 {
+              margin-bottom: 0.5rem;
+              /* font-size: 0.75rem; */
+              /* text-transform: uppercase; */
+              /* letter-spacing: 0.08em; */
+              color: var(--color-neutral-700);
+            }
+            section > * + * {
+              margin-top: 0.5rem;
+            }
+            ol,
+            ul {
+              padding-left: 1.25rem;
+            }
+            li + li {
+              margin-top: 0.35rem;
+            }
+          }
+          .summary {
+            /* font-size: 1rem; */
+            color: var(--color-neutral-800);
+          }
+          .jacks-list {
+            list-style: none;
+            padding: 0;
+
+            li {
+              display: grid;
+              grid-template-columns: 5.5rem 1fr;
+              gap: 0.5rem;
+            }
+            b {
+              font-weight: 500;
+            }
+            .text-muted {
+              display: block;
+              font-size: 0.7rem;
+              text-transform: uppercase;
+            }
+          }
+          .note {
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            background: var(--color-neutral-100);
+            color: var(--color-neutral-800);
+          }
+          /* The other modules, at the end of each page. */
+          .module-list {
+            padding: 0;
+
+            li + li {
+              margin-top: 0.25rem;
+            }
+            a[aria-current="page"] {
+              font-weight: 500;
+              color: var(--color-neutral-1000);
+              text-decoration: none;
+            }
+
+            span {
+              display: none;
             }
           }
 
@@ -273,22 +388,20 @@ const layout = (title: string, body: ReturnType<typeof html>) =>
             }
           }
         </style>
-        ${
-          import.meta.env.DEV
-            ? html`<script type="module" src="${base}@vite/client"></script>`
-            : ''
-        }
-        <script type="module" src="${clientScript}"></script>
+        ${import.meta.env.DEV
+          ? html`<script type="module" src="${base}@vite/client"></script>`
+          : ""}
+        <script type="module" src="${scriptUrl(script)}"></script>
       </head>
       <body>
         ${body}
       </body>
-    </html>`
+    </html>`;
 
 app.get(base, (c) =>
   c.html(
     layout(
-      'Loop 001',
+      "Loop 001",
       html`<main>
         <h1 class="sr-only">Loop 001</h1>
 
@@ -301,7 +414,136 @@ app.get(base, (c) =>
                @loop/library). Not in the rack: it cannot be moved, removed or patched. -->
           <div id="library"></div>
         </div>
+
+        <nav class="page-links" aria-label="Pages">
+          <a href="${base}modules">Module guide</a>
+        </nav>
       </main>`,
     ),
   ),
-)
+);
+
+// ---- The module guide: a list of the modules, and one page per module ----
+// Each module page shows the module (module-page.ts mounts it into #module), then its docs
+// (module-docs.ts). The same <main> width as the studio.
+
+const KIND_NAMES = {
+  audio: "Sound",
+  channels: "6 channels",
+  trigger: "Triggers",
+} as const;
+
+/** Links to all the modules. The one on this page is marked. */
+const moduleList = (current?: string) =>
+  html`<ul class="module-list">
+    ${moduleDocs.map(
+      (doc) =>
+        html`<li>
+          <a
+            href="${base}modules/${doc.type}"
+            ${doc.type === current ? raw('aria-current="page"') : ""}
+            >${doc.name}</a
+          >
+          ${doc.type === current
+            ? ""
+            : html`<span class="text-muted"> – ${doc.summary}</span>`}
+        </li>`,
+    )}
+  </ul>`;
+
+const modulePage = (doc: ModuleDoc) =>
+  html`<main>
+    <div id="module" data-type="${doc.type}"></div>
+
+    <article class="guide">
+      <header>
+        <h1>${doc.name}</h1>
+        <p class="summary">${doc.summary}</p>
+      </header>
+
+      <section>
+        <h2>What it does</h2>
+        ${doc.about.map((text) => html`<p>${text}</p>`)}
+      </section>
+
+      <section>
+        <h2>How to use it</h2>
+        <ol>
+          ${doc.howTo.map((text) => html`<li>${text}</li>`)}
+        </ol>
+      </section>
+
+      ${doc.jacks?.length
+        ? html`<section>
+            <h2>Jacks</h2>
+            <ul class="jacks-list">
+              ${doc.jacks.map(
+                (jack) =>
+                  html`<li>
+                    <span>
+                      <b>${jack.name}</b>
+                      <span class="text-muted"
+                        >${jack.direction} · ${KIND_NAMES[jack.kind]}</span
+                      >
+                    </span>
+                    <span>${jack.text}</span>
+                  </li>`,
+              )}
+            </ul>
+            <p class="text-muted">
+              A jack is a socket for a cable. You connect the jacks in the
+              patchbay, in the studio.
+            </p>
+          </section>`
+        : ""}
+      ${doc.tips?.length
+        ? html`<section>
+            <h2>Good to know</h2>
+            <ul>
+              ${doc.tips.map((text) => html`<li>${text}</li>`)}
+            </ul>
+          </section>`
+        : ""}
+
+      <p class="note">
+        ${doc.note ??
+        "On this page, the module has no cables, so it makes no sound. This page does not save your settings."}
+        To use it in a project, <a href="${base}">open the studio</a>.
+      </p>
+
+      <nav aria-label="Modules">
+        <h2>All modules</h2>
+        ${moduleList(doc.type)}
+      </nav>
+    </article>
+  </main>`;
+
+app.get(`${base}modules`, (c) =>
+  c.html(
+    layout(
+      "Modules – Loop 001",
+      html`<main>
+        <article class="guide">
+          <header>
+            <h1>Module guide</h1>
+            <p class="summary">
+              Read what each module is, what it does and how to use it.
+            </p>
+          </header>
+          <nav aria-label="Modules">${moduleList()}</nav>
+          <p><a href="${base}">← Go to the studio</a></p>
+        </article>
+      </main>`,
+      "module-page",
+    ),
+  ),
+);
+
+app.get(`${base}modules/:type`, (c) => {
+  const doc = moduleDocOf(c.req.param("type"));
+  // An unknown module: go to the list. (A 404 would go to the network, see sw.ts.)
+  if (!doc) return c.redirect(`${base}modules`);
+  return c.html(
+    layout(`${doc.name} – Loop 001`, modulePage(doc), "module-page"),
+  );
+});

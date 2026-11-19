@@ -19,7 +19,7 @@ export const template = (library: Library): HTMLTemplate => html`
     <h2 class="sr-only">Library</h2>
     <div class="machine">
       <label class="field name">
-        <span>tape</span>
+        <span>Name</span>
         <input
           name="name"
           type="text"
@@ -35,7 +35,7 @@ export const template = (library: Library): HTMLTemplate => html`
       ></output>
     </div>
     <fieldset class="shelf">
-      <legend class="field"><span>shelf</span></legend>
+      <legend class="field"><span>projects</span></legend>
       <ul class="tapes"></ul>
     </fieldset>
     <div class="actions">

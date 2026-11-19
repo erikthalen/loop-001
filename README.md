@@ -54,6 +54,11 @@ Here, the Hono app runs **inside the service worker**:
 
 So: add pages as Hono routes in `app/src/app.ts`.
 
+- `/` – the studio (page script `app/src/client.ts`).
+- `/modules` and `/modules/<type>` – the module guide: each module alone, with its docs (text in `app/src/module-docs.ts`, page script `app/src/module-page.ts`).
+- A new page script needs a fixed file name: add it to `PAGE_SCRIPTS` and `input` in `app/vite.config.ts`.
+- The build copies `index.html` to `404.html`. So on GitHub Pages, a first visit to a deep link (for example `/modules/delay`) starts the service worker too.
+
 ## Good to know
 
 - Dev tools: Chrome DevTools → **Application** tab → _Manifest_ and _Service workers_.

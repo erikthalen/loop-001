@@ -1,4 +1,4 @@
-import { css } from '@loop/core'
+import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the text input, the radio buttons and the buttons too. The rules
@@ -37,10 +37,19 @@ export const styles = css`
   /* Saved: quiet. Not saved: red, so you notice. */
   .status {
     color: var(--muted);
-    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
     white-space: nowrap;
+    text-align: end;
+    width: 6ch;
+
+    &[data-status="saved"] {
+      color: var(--green);
+    }
+
+    &[data-status="saving"] {
+      color: var(--orange);
+    }
 
     &[data-status="error"] {
       color: var(--red);
@@ -68,7 +77,7 @@ export const styles = css`
     li {
       display: flex;
       align-items: center;
-      border-bottom: 1px solid var(--dim);
+      gap: 4px;
     }
   }
 
@@ -78,7 +87,7 @@ export const styles = css`
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 3px;
     padding: 5px 0;
     color: var(--muted);
     cursor: pointer;
@@ -104,10 +113,14 @@ export const styles = css`
   }
 
   .erase {
-    padding: 0 4px;
-    color: var(--muted);
+    padding: 0 2.8px;
+    color: var(--red);
     font-size: 14px;
     line-height: 1;
+
+    &:hover {
+      background-color: color-mix(var(--red) 20%, transparent);
+    }
   }
 
   .actions {
@@ -119,4 +132,4 @@ export const styles = css`
   .ask-erase [value="erase"] {
     --loop-primary: var(--red);
   }
-`
+`;

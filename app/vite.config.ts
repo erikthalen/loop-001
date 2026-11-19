@@ -19,6 +19,9 @@ function watchWorkspacePackages(): Plugin {
 // Node's `process` (no @types/node in this project, so say what we use).
 declare const process: { env: Record<string, string | undefined> }
 
+/** Page scripts with a fixed file name (see app.ts, scriptUrl). */
+const PAGE_SCRIPTS = ['client', 'module-page']
+
 export default defineConfig({
   // The URL path the app lives under. "/" by default. GitHub Pages sets it, for example "/loop-001/".
   base: process.env.BASE_PATH || '/',
@@ -31,13 +34,16 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         index: 'index.html',
-        // The page script for Hono's pages. Hono (in the service worker) cannot know
-        // hashed file names, so this one gets a fixed name: client.js
+        // The page scripts for Hono's pages. Hono (in the service worker) cannot know
+        // hashed file names, so these get fixed names: client.js and module-page.js
         client: 'src/client.ts',
+        'module-page': 'src/module-page.ts',
       },
       output: {
         entryFileNames: (chunk) =>
-          chunk.name === 'client' ? 'client.js' : 'assets/[name]-[hash].js',
+          PAGE_SCRIPTS.includes(chunk.name)
+            ? '[name].js'
+            : 'assets/[name]-[hash].js',
       },
     },
   },
