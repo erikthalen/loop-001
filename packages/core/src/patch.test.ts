@@ -1,45 +1,42 @@
 import { describe, expect, it } from 'vitest'
-import {
-  autoPatch,
-  checkCable,
-  type PatchModule,
-  type Port,
-  routeTrigger,
-} from './patch'
+import { autoPatch, checkCable, type PatchModule, type Port } from './patch'
 
 const port = (
   id: string,
-  kind: Port['kind'],
   direction: Port['direction'],
-): Port => ({ id, label: id, kind, direction })
-const audioIn = port('in', 'audio', 'in')
-const audioOut = port('out', 'audio', 'out')
+  group?: string,
+): Port => ({ id, label: id, direction, group })
+const audioIn = port('in', 'in')
+const audioOut = port('out', 'out')
+/** One jack per channel, in a group (like the core makes them): out-1, out-2, ... */
+const channels = (direction: Port['direction'], count: number) =>
+  Array.from({ length: count }, (_, k) =>
+    port(`${direction}-${k + 1}`, direction, `1–${count}`),
+  )
 
 // Modules like the app's (only their jacks).
 // Master plays straight into the speakers: only an input, and it is the end.
 const master: PatchModule = { id: 'master', ports: [audioIn], end: true }
-const sequencer: PatchModule = {
-  id: 'seq',
-  ports: [port('trigger-out', 'trigger', 'out')],
-}
 const sampler: PatchModule = {
   id: 'sampler',
-  ports: [
-    port('trigger-in', 'trigger', 'in'),
-    port('channels-out', 'channels', 'out'),
-  ],
+  ports: channels('out', 3),
 }
 const mixer: PatchModule = {
   id: 'mixer',
   ports: [
-    port('channels-in', 'channels', 'in'),
-    port('return-a', 'audio', 'in'),
+    ...channels('in', 3),
+    port('return-a', 'in'),
     audioOut,
-    port('send-a', 'audio', 'out'),
+    port('send-a', 'out'),
   ],
   routes: [
-    ['channels-in', 'out'],
-    ['channels-in', 'send-a'],
+    ...[1, 2, 3].flatMap(
+      (k) =>
+        [
+          [`in-${k}`, 'out'],
+          [`in-${k}`, 'send-a'],
+        ] as const,
+    ),
     ['return-a', 'out'],
   ],
 }
@@ -48,7 +45,7 @@ const filter: PatchModule = { id: 'filter', ports: [audioIn, audioOut] }
 const meter: PatchModule = { id: 'meter', ports: [audioIn] }
 const metronome: PatchModule = { id: 'metronome', ports: [audioOut] }
 
-const all = [master, sequencer, sampler, mixer, delay, filter, meter, metronome]
+const all = [master, sampler, mixer, delay, filter, meter, metronome]
 const cable = (from: string, to: string) => {
   const [fm, fp] = from.split('.') as [string, string]
   const [tm, tp] = to.split('.') as [string, string]
@@ -79,7 +76,7 @@ describe('checkCable', () => {
     })
   })
 
-  it('only joins an output to an input, of the same kind', () => {
+  it('only joins an output to an input', () => {
     expect(
       checkCable(
         all,
@@ -88,22 +85,25 @@ describe('checkCable', () => {
         { module: 'filter', port: 'in' },
       ).ok,
     ).toBe(false)
+  })
+
+  it('joins one channel to any input, and any output to one channel', () => {
     expect(
       checkCable(
         all,
         [],
-        { module: 'seq', port: 'trigger-out' },
+        { module: 'sampler', port: 'out-2' },
         { module: 'filter', port: 'in' },
       ).ok,
-    ).toBe(false)
+    ).toBe(true)
     expect(
       checkCable(
         all,
         [],
-        { module: 'sampler', port: 'channels-out' },
-        { module: 'filter', port: 'in' },
+        { module: 'metronome', port: 'out' },
+        { module: 'mixer', port: 'in-3' },
       ).ok,
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('does not plug in the same cable twice', () => {
@@ -152,7 +152,7 @@ describe('checkCable', () => {
 })
 
 describe('autoPatch', () => {
-  const order = [master, sequencer, sampler, mixer, filter, meter]
+  const order = [master, sampler, mixer, filter, meter]
   /** Add the modules one by one, like restoring an old project. */
   const build = (modules: PatchModule[]) => {
     let cables: ReturnType<typeof cable>[] = []
@@ -174,8 +174,9 @@ describe('autoPatch', () => {
         'filter.out>master.in',
         'filter.out>meter.in',
         'mixer.out>filter.in',
-        'sampler.channels-out>mixer.channels-in',
-        'seq.trigger-out>sampler.trigger-in',
+        'sampler.out-1>mixer.in-1',
+        'sampler.out-2>mixer.in-2',
+        'sampler.out-3>mixer.in-3',
       ].sort(),
     )
   })
@@ -211,32 +212,5 @@ describe('autoPatch', () => {
     expect(names(autoPatch([filter, master], [], 'master').add)).toEqual([
       'filter.out>master.in',
     ])
-  })
-})
-
-describe('routeTrigger', () => {
-  it('sends a trigger only to the modules plugged into the trigger out', () => {
-    const heard: string[] = []
-    const cables = [
-      cable('seq.trigger-out', 'a.trigger-in'),
-      cable('other.trigger-out', 'b.trigger-in'),
-    ]
-    routeTrigger(cables, 'seq', 1, (id) => ({
-      listeners: [(t: number) => heard.push(`${id}:${t}`)],
-    }))
-    expect(heard).toEqual(['a:1'])
-  })
-
-  it('goes on through a module that passes it, changed', () => {
-    const heard: string[] = []
-    const cables = [
-      cable('seq.trigger-out', 'box.trigger-in'),
-      cable('box.trigger-out', 'sampler.trigger-in'),
-    ]
-    routeTrigger(cables, 'seq', 1, (id) => ({
-      listeners: [(t: number) => heard.push(`${id}:${t}`)],
-      pass: id === 'box' ? (t: number) => t * 10 : undefined,
-    }))
-    expect(heard).toEqual(['box:1', 'sampler:10'])
   })
 })

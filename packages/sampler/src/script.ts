@@ -1,5 +1,5 @@
-import { defineModuleScript } from '@loop/core'
-import { CHANNEL_COLORS, createOdometer } from '@loop/ui'
+import { CHANNEL_COLORS, createOdometer, defineModuleScript } from '@loop/ui'
+import { connectSequencer } from './sequencer/script'
 import { CHANNELS, MAX_SECONDS, type setup } from './setup'
 import {
   COLUMNS,
@@ -20,13 +20,15 @@ const placeOnTape = (channel: number) => FIRST_PLACE + channel * CHANNEL_SPACE
 const STRIP = 0.08
 /** Rewind and fast forward speed: part of the whole tape per second. */
 const WIND_SPEED = 0.6
+/** When the tape winds to another channel: the time to speed up to WIND_SPEED (and to slow down), in seconds. */
+const WIND_RAMP = 0.18
 /** The tape's length in px, to turn the reels the right amount. */
 const TAPE_LENGTH = 600
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.
 export const script = defineModuleScript<typeof setup>(
-  ({ root, module, signal }) => {
-    const display = root.querySelector<HTMLElement>('.display')!
+  ({ root, module, core, on, signal }) => {
+    const display = root.querySelector<HTMLElement>('.display.sampler')!
     const status = root.querySelector<HTMLElement>('.status')!
     const channelNumber = root.querySelector<HTMLElement>('.channel-number')!
     const wave = root.querySelector<HTMLElement>('.wave')!
@@ -229,6 +231,8 @@ export const script = defineModuleScript<typeof setup>(
     // Playing or recording moves a short strip further (`strip`); after the sound it winds back.
     // `tape` is how much tape is on the right reel (0 to 1).
     let wind = module.active
+    // How fast the tape winds to the channel, in channels per second (below 0: back).
+    let windSpeed = 0
     let strip = 0
     let tape = placeOnTape(wind)
     const turns: [number, number] = [0, 0]
@@ -265,7 +269,31 @@ export const script = defineModuleScript<typeof setup>(
       const limit = reducedMotion.matches ? Infinity : WIND_SPEED * seconds
       const toward = (from: number, to: number, max: number) =>
         from + Math.max(-max, Math.min(max, to - from))
-      wind = toward(wind, module.active, limit / CHANNEL_SPACE)
+      // Switching channels: the tape speeds up, winds, and slows down to stop on the channel.
+      // (The strip while a sound plays or records has no ramps: it follows the sound exactly.)
+      if (reducedMotion.matches) {
+        wind = module.active
+        windSpeed = 0
+      } else {
+        const top = WIND_SPEED / CHANNEL_SPACE
+        const ramp = top / WIND_RAMP
+        const left = module.active - wind
+        // The fastest speed that can still stop on the channel, in the direction of the channel.
+        const want =
+          Math.sign(left) * Math.min(top, Math.sqrt(2 * ramp * Math.abs(left)))
+        windSpeed = toward(windSpeed, want, ramp * seconds)
+        const step = windSpeed * seconds
+        // Arrived (the step goes past the channel): stop on it.
+        if (
+          Math.abs(left) < 1e-4 ||
+          (step * left > 0 && Math.abs(step) >= Math.abs(left))
+        ) {
+          wind = module.active
+          windSpeed = 0
+        } else {
+          wind += step
+        }
+      }
       // The channel number turns with the tape: it settles when the tape does.
       channelNumber.style.setProperty('--at', wind.toFixed(4))
       // The markers ride on the tape with their channel (the canvas draws the other channels' markers).
@@ -325,5 +353,14 @@ export const script = defineModuleScript<typeof setup>(
     }
     frame = requestAnimationFrame(draw)
     signal.addEventListener('abort', () => cancelAnimationFrame(frame))
+
+    // ——— The sequencer, on its own screen under the sampler (sequencer/script.ts) ———
+    connectSequencer({
+      section: root.querySelector<HTMLElement>('.sequencer')!,
+      sequencer: module,
+      core,
+      on,
+      signal,
+    })
   },
 )

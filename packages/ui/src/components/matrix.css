@@ -22,6 +22,10 @@
  * - <small> in a name: a second, quieter part (the jack, after the module).
  * - A disabled box (a pair that cannot connect) is faint. Put the reason in its title.
  * - The row you point at lights up, so you can follow it to the box.
+ * - A group of rows or columns that opens (a disclosure): put a <button aria-expanded> in the
+ *   group's header, and `hidden` on the rows, or on the header and the cells of the columns, that
+ *   it opens. Give those `data-parent`: they are a little in from the edge. The button shows + or −.
+ *   Count only the columns that show in --columns.
  * Two matrices in a row get a gap between them.
  *
  * Layout: the <table> is a CSS grid (one column per input, then a column of names), and <thead>,
@@ -89,6 +93,8 @@
     }
 
     th[scope="col"] {
+      /* A block, not a table cell: Safari does not turn the text of a table cell. */
+      display: block;
       writing-mode: vertical-rl;
       rotate: 180deg;
       text-align: left;
@@ -118,6 +124,34 @@
       line-height: 0;
     }
 
+    /* Rows and columns of a closed group. As strong as th[scope="col"] above, and after it: else
+       display: grid (a <tr>) or display: block (a column's name) would win, and they would show. */
+    :is(tr, th, td)[hidden] {
+      display: none;
+    }
+
+    /* The button that opens a group: it looks like the other names, with a + (open: −) after it. */
+    .fold {
+      all: unset;
+      cursor: pointer;
+      white-space: nowrap;
+
+      &::after {
+        content: " +" / "";
+        color: var(--muted);
+      }
+
+      &[aria-expanded="true"]::after {
+        content: " −" / "";
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--loop-primary);
+        outline-offset: 1px;
+        border-radius: 2px;
+      }
+    }
+
     /* The row name and the empty corner above it go in the last column. A row and a column
        both set, so they are placed before the checkboxes, which then fill the columns before. */
     th[scope="row"],
@@ -136,6 +170,15 @@
 
     input[type="checkbox"]:disabled {
       opacity: 0.2;
+    }
+
+    /* The jacks of an open group: a little in from the edge, under (or next to) the group. */
+    tr[data-parent]:not([data-parent=""]) th[scope="row"] {
+      padding-left: 8px;
+    }
+
+    th[scope="col"][data-parent]:not([data-parent=""]) {
+      padding-top: 8px;
     }
   }
 }

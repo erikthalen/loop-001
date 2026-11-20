@@ -1,4 +1,4 @@
-import { css } from "@loop/core";
+import { css } from '@loop/ui'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the buttons, the menu and the matrix too. The rules here are outside
@@ -16,6 +16,7 @@ export const styles = css`
   .controls {
     display: flex;
     gap: 6px;
+    justify-content: space-between;
   }
 
   .matrices {
@@ -33,4 +34,4 @@ export const styles = css`
     background-color: var(--red);
     color: var(--color-neutral-0);
   }
-`;
+`

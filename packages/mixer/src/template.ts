@@ -1,5 +1,4 @@
-import { defineModuleTemplate, html } from '@loop/core'
-import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNEL_COLORS, defineModuleTemplate, html } from '@loop/ui'
 import { BUS_NAMES, CHANNELS, type setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Only HTML from @loop/ui (display, vertical, sr-only;

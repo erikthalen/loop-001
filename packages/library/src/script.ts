@@ -1,5 +1,4 @@
-import { render } from '@loop/core'
-import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNEL_COLORS, render } from '@loop/ui'
 import {
   CASSETTE_FONTS,
   type CassetteColors,
@@ -184,7 +183,7 @@ export function script(
     const hadFocus = shelf.contains(root.activeElement)
     list = next
     render(tapes(list, current), track)
-    render(captions(list, current), captionTrack)
+    render(captions(list), captionTrack)
     drawAll()
     // Another tape on the machine (opened, new, imported): go to it. Else stay on the picked one.
     const target = current !== lastCurrent || !tapeOf(picked) ? current : picked

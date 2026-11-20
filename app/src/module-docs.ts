@@ -13,11 +13,11 @@
 
 /** A jack on the module (the cables are in the patchbay). */
 export interface JackDoc {
-  /** The name the patchbay shows, for example 'In' or 'Ch 1–6'. */
+  /** The name the patchbay shows, for example 'In' or '1–6' (a group of 6 jacks, one per channel). */
   readonly name: string
   readonly direction: 'in' | 'out'
-  /** What goes through it: sound, 6 channels of sound, or triggers. */
-  readonly kind: 'audio' | 'channels' | 'trigger'
+  /** What goes through it: sound, or 6 channels of sound (6 jacks). */
+  readonly kind: 'audio' | 'channels'
   readonly text: string
 }
 
@@ -68,49 +68,25 @@ const metronome = defineModuleDoc({
   jacks: [{ name: 'Out', direction: 'out', kind: 'audio', text: 'The ticks.' }],
 })
 
-const sequencer = defineModuleDoc({
-  type: 'sequencer',
-  name: 'Sequencer',
-  summary:
-    'The sequencer sends triggers on 6 channels, in a pattern of 16 steps. It makes no sound.',
-  howTo: [
-    'Connect Trig to the Trig jack of a sampler.',
-    'Click a box to add or remove a step.',
-    'Each row triggers the same channel on the sampler.',
-  ],
-  jacks: [
-    {
-      name: 'Trig',
-      direction: 'out',
-      kind: 'trigger',
-      text: 'One trigger for each step that is on.',
-    },
-  ],
-})
-
 const sampler = defineModuleDoc({
   type: 'sampler',
   name: 'Sampler',
   summary:
-    'The sampler records up to 5 seconds from the microphone on each of its 6 channels. The sequencer can trigger each channel to play its sound.',
+    'The sampler records up to 5 seconds from the microphone on each of its 6 channels. Its sequencer plays the channels in a pattern of 16 steps.',
   howTo: [
     'Click a channel number (1 to 6).',
     'Click rec to record. Click rec again to stop.',
     'Drag the markers to cut the sound.',
     'Click play to hear the cut sound.',
+    'Click a box in the sequencer to add or remove a step.',
+    'Each row of the sequencer plays the channel with the same number.',
   ],
   jacks: [
     {
-      name: 'Trig',
-      direction: 'in',
-      kind: 'trigger',
-      text: 'Plays the sound on the channel of the trigger.',
-    },
-    {
-      name: 'Ch 1–6',
+      name: '1–6',
       direction: 'out',
       kind: 'channels',
-      text: 'The 6 channels, for a mixer.',
+      text: 'One jack for each channel. Connect all 6 to a mixer, or connect one channel to any input.',
     },
   ],
   tips: ['The arrow keys also move a marker.'],
@@ -122,7 +98,7 @@ const mixer = defineModuleDoc({
   summary:
     'The mixer mixes 6 channels into one output. Each channel has a volume and two sends, A and B, for effects.',
   howTo: [
-    'Connect Ch 1–6 of a sampler to Ch 1–6.',
+    'Connect 1–6 of a sampler to 1–6.',
     'Drag the slider of a channel to set its volume.',
     'Click MSR to remove a channel from the output. Its sends continue.',
     'Click →A or →B to send a channel to that bus.',
@@ -131,10 +107,10 @@ const mixer = defineModuleDoc({
   ],
   jacks: [
     {
-      name: 'Ch 1–6',
+      name: '1–6',
       direction: 'in',
       kind: 'channels',
-      text: 'The channels to mix.',
+      text: 'One jack for each channel. Connect a sampler, or connect any sound to one channel.',
     },
     {
       name: 'Rtn A, Rtn B',
@@ -237,6 +213,8 @@ const patchbay = defineModuleDoc({
     'Click add and select a module. The module gets the usual cables.',
     'In the grid, each row is an output and each column is an input.',
     'Click a box to connect a cable. Click it again to disconnect it.',
+    'A row or column with + is a group of channels. Its box connects all of them. Click + to see each channel on its own.',
+    'A half-checked box: some of the channels are connected.',
     'A grey box cannot connect. Point to it to see why.',
     'Click remove. Click a module to remove it. Click done or press Esc to stop.',
   ],
@@ -267,7 +245,6 @@ const library = defineModuleDoc({
 export const moduleDocs: readonly ModuleDoc[] = [
   master,
   metronome,
-  sequencer,
   sampler,
   mixer,
   delay,

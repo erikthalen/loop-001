@@ -1,4 +1,4 @@
-import { defineModuleScript } from '@loop/core'
+import { defineModuleScript } from '@loop/ui'
 import type { setup } from './setup'
 
 // JS: connect the HTML to the module. Everything is removed for us on unmount.

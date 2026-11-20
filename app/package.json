@@ -21,7 +21,6 @@
     "@loop/mixer": "workspace:*",
     "@loop/patchbay": "workspace:*",
     "@loop/sampler": "workspace:*",
-    "@loop/sequencer": "workspace:*",
     "@loop/ui": "workspace:*",
     "@loop/vu-meter": "workspace:*",
     "hono": "^4.13.18"

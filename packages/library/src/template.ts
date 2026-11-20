@@ -1,4 +1,4 @@
-import { type HTMLTemplate, html } from '@loop/core'
+import { type HTMLTemplate, html } from '@loop/ui'
 import type { Library, Tape } from './library'
 
 /** When a tape was saved, short: "19 Nov, 23:28". */
@@ -99,9 +99,11 @@ export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
           aria-current="${tape.id === current}"
         >
           <canvas class="cassette" aria-hidden="true"></canvas>
-          ${tape.id === current
-            ? html`<span class="on-machine" aria-hidden="true">on</span>`
-            : ''}
+          ${
+            tape.id === current
+              ? html`<span class="on-machine" aria-hidden="true">on</span>`
+              : ''
+          }
         </button>
       </li>
     `,
@@ -113,10 +115,7 @@ export const tapes = (list: readonly Tape[], current: string): HTMLTemplate =>
  * puts them in `.caption-track`; the CSS slides the row along with the tapes, so the picked
  * tape's caption is in the middle.
  */
-export const captions = (
-  list: readonly Tape[],
-  current: string,
-): HTMLTemplate =>
+export const captions = (list: readonly Tape[]): HTMLTemplate =>
   html`${list.map(
     (tape) => html`
       <div class="caption" data-id="${tape.id}">

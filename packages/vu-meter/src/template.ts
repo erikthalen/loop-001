@@ -1,4 +1,4 @@
-import { defineModuleTemplate, html } from '@loop/core'
+import { defineModuleTemplate, html } from '@loop/ui'
 import { BAR_MAX, positionOf } from './meter'
 import type { setup } from './setup'
 

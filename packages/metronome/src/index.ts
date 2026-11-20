@@ -1,5 +1,4 @@
-import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -8,7 +7,7 @@ import { template } from './template'
 export type { MetronomeOptions } from './setup'
 
 /** Plays a short tick on every beat of the core clock. */
-export const metronome = defineAudioModule({
+export const metronome = defineModule({
   type: 'metronome',
   name: 'Metronome',
   label: 'MN',

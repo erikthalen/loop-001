@@ -1,4 +1,4 @@
-import { defineModuleScript } from '@loop/core'
+import { defineModuleScript } from '@loop/ui'
 import { createMeter, type MeterColors } from './meter'
 import type { setup } from './setup'
 

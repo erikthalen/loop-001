@@ -161,8 +161,12 @@ export function drawReels(
   })
   g.stroke()
 
-  /** A roller: an open circle with a tick that turns with the tape. */
-  const roller = (x: number, y: number, r: number) => {
+  /**
+   * A roller: an open circle with a tick that turns with the tape. The tape goes left to right
+   * while it plays. Under a roller (or on its outer side), that turns it counterclockwise (-1).
+   * Over a roller (the pinch roller), it turns clockwise (1).
+   */
+  const roller = (x: number, y: number, r: number, spin: 1 | -1) => {
     g.fillStyle = c.screen
     g.strokeStyle = c.ink
     g.lineWidth = 1.1
@@ -170,15 +174,15 @@ export function drawReels(
     g.fill()
     g.stroke()
     g.lineWidth = 0.8
-    const [tx, ty] = at(x, y, state.travel / r, r - 1.6)
+    const [tx, ty] = at(x, y, (spin * state.travel) / r, r - 1.6)
     line(x, y, tx, ty)
     g.fillStyle = c.ink
     circle(x, y, 0.9)
     g.fill()
   }
-  for (const [x, y] of outer) roller(x, y, 4.5)
-  for (const [x, y] of guides) roller(x, y, 4)
-  roller(pinch[0], pinch[1], 5)
+  for (const [x, y] of outer) roller(x, y, 4.5, -1)
+  for (const [x, y] of guides) roller(x, y, 4, -1)
+  roller(pinch[0], pinch[1], 5, 1)
   // The capstan: a small steel pin above the tape.
   g.fillStyle = c.ink
   circle(capstan[0], capstan[1], 2)

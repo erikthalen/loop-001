@@ -1,6 +1,6 @@
 import { defineModuleSetup } from '@loop/core'
 
-/** The number of channels (the same as the sequencer and the sampler). */
+/** The number of channels (the same as the sampler). */
 export const CHANNELS = 6
 /** The number of send buses (A and B). */
 export const BUSES = 2
@@ -129,13 +129,16 @@ export const setup = defineModuleSetup((ctx, options: MixerOptions = {}) => {
      * output. So send A ─▶ delay ─▶ return A is not a loop (see routes in @loop/core).
      */
     routes: [
-      ['channels-in', 'out'],
       ...BUS_NAMES.map(
         (bus) => [`return-${bus.toLowerCase()}`, 'out'] as const,
       ),
-      ...BUS_NAMES.map(
-        (bus) => ['channels-in', `send-${bus.toLowerCase()}`] as const,
-      ),
+      // Each channel's jack (in-1, in-2, ...: see channelInputs in @loop/core).
+      ...channelInputs.flatMap((_, i) => [
+        [`in-${i + 1}`, 'out'] as const,
+        ...BUS_NAMES.map(
+          (bus) => [`in-${i + 1}`, `send-${bus.toLowerCase()}`] as const,
+        ),
+      ]),
     ],
 
     /** The volume of each channel, 0 to 1. */

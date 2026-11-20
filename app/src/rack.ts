@@ -5,7 +5,8 @@ import {
 } from '@dnd-kit/abstract'
 import { DragDropManager } from '@dnd-kit/dom'
 import { isSortable, Sortable } from '@dnd-kit/dom/sortable'
-import { type AudioModule, type Core, html, render } from '@loop/core'
+import type { AudioModule, Core } from '@loop/core'
+import { html, mountModule, render } from '@loop/ui'
 
 export interface Rack {
   /** True while the rack is in remove mode. */
@@ -214,7 +215,7 @@ export function createRack(core: Core, element: HTMLElement): Rack {
 
     slots.set(module.id, slot)
     element.append(slot)
-    module.mount(slot)
+    mountModule(core, module, slot)
     // The handle goes to the right of the module (after it, so Tab reaches it after the module too).
     slot.append(slot.querySelector('.drag-handle')!)
     if (removing) slot.querySelector('section')!.inert = true

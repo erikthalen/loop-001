@@ -1,5 +1,4 @@
-import { mountView } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { mountView, uiStyles } from '@loop/ui'
 import type { Library } from './library'
 import { script } from './script'
 import { styles } from './styles'

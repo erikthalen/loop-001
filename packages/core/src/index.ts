@@ -27,21 +27,12 @@ export {
   type AudioModule,
   type AudioModuleDefinition,
   defineAudioModule,
-  defineModuleScript,
   defineModuleSetup,
-  defineModuleTemplate,
   type ModuleContext,
-  type ModuleScript,
   type ModuleSetup,
   type ModuleSetupResult,
-  type ModuleStyles,
-  type ModuleTemplate,
-  type ModuleUI,
-  type ModuleUIContext,
-  type ModuleUIScriptContext,
   type ScopedOn,
   type SetupResultOf,
-  type Trigger,
 } from './module'
 export {
   autoPatch,
@@ -52,10 +43,8 @@ export {
   type PatchModule,
   type Plug,
   type Port,
-  type PortKind,
   portOf,
   reaches,
-  routeTrigger,
   samePlug,
 } from './patch'
 export {
@@ -67,14 +56,3 @@ export {
   restoreProject,
   serializeProject,
 } from './project'
-export {
-  type CSSTemplate,
-  css,
-  type HTMLTemplate,
-  html,
-  type MountViewOptions,
-  mountView,
-  render,
-  toStyleSheet,
-  type View,
-} from './ui'

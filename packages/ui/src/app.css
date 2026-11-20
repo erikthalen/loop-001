@@ -165,22 +165,22 @@
 
   /* The modules, the patchbay and the library slide into their new place. */
   html:active-view-transition-type(
-      add-module,
-      remove-module
-    )::view-transition-group(.module) {
+    add-module,
+    remove-module
+  )::view-transition-group(.module) {
     animation-duration: 0.3s;
     animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
   /* The removed module (only in the old picture) shrinks away. */
   html:active-view-transition-type(remove-module)::view-transition-old(
-      .module
-    ):only-child {
+    .module
+  ):only-child {
     animation: module-out 0.15s ease-in both;
   }
   /* The added module (only in the new picture) grows in, once there is room for it. */
   html:active-view-transition-type(add-module)::view-transition-new(
-      .module
-    ):only-child {
+    .module
+  ):only-child {
     animation: module-out 0.2s ease-out 0.1s reverse both;
   }
   @keyframes module-out {

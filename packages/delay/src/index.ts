@@ -1,5 +1,4 @@
-import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -8,7 +7,7 @@ import { template } from './template'
 export type { DelayOptions, RateName } from './setup'
 
 /** Echoes on the beat. Plug it into a mixer's send and return, or between two modules. */
-export const delay = defineAudioModule({
+export const delay = defineModule({
   type: 'delay',
   name: 'Delay',
   label: 'DL',

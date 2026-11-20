@@ -1,5 +1,5 @@
-import { type Core, mountView } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import type { Core } from '@loop/core'
+import { mountView, uiStyles } from '@loop/ui'
 import type { PatchbayOptions } from './patchbay'
 import { script } from './script'
 import { styles } from './styles'

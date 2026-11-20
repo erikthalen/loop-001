@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@loop/core": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^7.0.2",
     "vite": "^8.3.8",

@@ -86,7 +86,6 @@ app.get(base, (c) =>
 const KIND_NAMES = {
   audio: 'Sound',
   channels: '6 channels',
-  trigger: 'Triggers',
 } as const
 
 /** Links to all the modules. The one on this page is marked. */

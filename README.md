@@ -3,18 +3,17 @@
 pnpm monorepo.
 
 - `app/` – the PWA (Hono running inside a service worker, built with Vite)
-- `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
+- `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system. Only the sound and the state: no DOM code
 - `packages/master` – `@loop/master`: play / stop / rewind and the master volume; the end of the sound (only one at a time), it plays straight into the speakers; it records the sound and plays it backwards while it rewinds
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture shows the sound before and after the filter, from low to high, with the filter's curve
-- `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules plugged into it
 - `packages/mixer` – `@loop/mixer`: mixes 6 channels (for example a sampler's): a volume, a main switch and two sends (A, B) per channel, and two send buses (send and return) for effects
 - `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); usually on a send and return of the mixer
-- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound
+- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound. Under it, its own step sequencer (6 channels, 16 steps) plays the channels. The sequencer is in its own folder (`src/sequencer/`) and knows nothing about the sampler, so it can become a package if another module needs one
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
-- `packages/patchbay` – `@loop/patchbay`: where the studio is wired: add a module (a list in a popover), remove mode, and the cables as a matrix (a grid of checkboxes, an output per row, an input per column, one table per kind of cable; a box that cannot be checked is disabled and says why). It works on the core directly, but it is not in the core either (it would be saved in every project, and gone when one opens): the app shows it under the last module, above the library
+- `packages/patchbay` – `@loop/patchbay`: where the studio is wired: add a module (a list in a popover), remove mode, and the cables as a matrix (a grid of checkboxes, an output per row, an input per column; a module's channels are one row or column that opens with a native disclosure button, and a half-checked box means some of them are connected; a box that cannot be checked is disabled and says why). It works on the core directly, but it is not in the core either (it would be saved in every project, and gone when one opens): the app shows it under the last module, above the library
 - `packages/library` – `@loop/library`: the projects, as tapes on a shelf: name the tape on the machine (the open project), put another one on, new, erase, import and export. It looks like a module, but it is not in the core: a project is the modules in the core, so the library that holds the projects cannot be inside one. The app shows it last, under the patchbay (not in the rack: it cannot be moved, removed or patched) and does the work behind it (the `Library` interface, `app/src/library.ts`)
-- `packages/ui` – `@loop/ui`: the shared component library, in plain CSS files
+- `packages/ui` – `@loop/ui`: how modules look and get on the page: the shared component library (plain CSS files), and the module UI (`defineModule`, `mountModule`, `html`, `css`)
 
 ## Commands (run from the repo root)
 
@@ -79,29 +78,29 @@ Each build has a version (`app/precache-plugin.ts`). A new deploy makes a new `s
 
 Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components/`). Each file says how to use it at the top.
 
-| File                      | Classes / content                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokens.css`              | The shared variables: `--loop-primary` (main color), `--loop-font`, and the display colors for the modules' screens (`--screen`, `--ink`, `--blue`, `--orange`, ...).                                                                                                                                                                                                                                                             |
-| `base.css`                | Page font and colors, heading weight, focus ring, `.text-muted`, `.text-small`                                                                                                                                                                                                                                                                                                                                                    |
-| `layout.css`              | `.row`, `.stack` (other gap: `style="gap: 0.5rem"`)                                                                                                                                                                                                                                                                                                                                                                               |
-| `components/button.css`   | `.button` + modifier classes `.primary`, `.ghost`, `.small` (for example `class="button small"`); `aria-pressed`                                                                                                                                                                                                                                                                                                                  |
-| `components/input.css`    | `.input`                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `components/range.css`    | `input[type="range"]` (no class needed): a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.vertical`: lowest value at the bottom, length with `height`                                                                                                                                                                                              |
-| `font.ts`                 | Fonts (files in `src/fonts/`). `addLoopFont()` + `LOOP_FONT`: Italian Plate No1 Mono, the app's font (`--loop-font`), weights 100 to 900, upright and italic; the app calls it once at start (`app/src/client.ts`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
-| `components/display.css`  | `.display`: a module's screen (275px wide, rounded). Its colors (`--screen`, `--ink`, `--muted`, `--line`, `--dim`, `--blue`, `--orange`, `--red`, `--green`, `--purple`) are in `tokens.css`                                                                                                                                                                                                                                     |
-| `components/field.css`    | `.field`: a label with an input in it (small uppercase text next to the input)                                                                                                                                                                                                                                                                                                                                                    |
-| `display.ts`              | `CHANNEL_COLORS`: the 6 channel colors, as CSS colors (for CSS, or for a canvas)                                                                                                                                                                                                                                                                                                                                                  |
-| `components/checkbox.css` | `input[type="checkbox"]` (no class needed): the native checkbox, drawn as a primary-color box with a white check                                                                                                                                                                                                                                                                                                                  |
-| `components/radio.css`    | `input[type="radio"]` (no class needed): the native radio button, drawn as a primary-color circle with a white dot                                                                                                                                                                                                                                                                                                                |
-| `components/progress.css` | `progress` (no class needed): a progress bar drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the bar); light and dark mode; length with `width`                                                                                                                                                                                                                                                |
-| `components/meter.css`    | `meter` (no class needed): a meter drawn fully in CSS that looks like Chrome's; green, yellow or red from `low`, `high` and `optimum`; light and dark mode; length with `width`                                                                                                                                                                                                                                                   |
-| `components/panel.css`    | `.panel`, `.panel-title`                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `components/menu.css`     | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`                                                                                                                                                                                                                                                                                                                                                               |
-| `components/drag-handle.css` | `.drag-handle`: a narrow button to drag something by (an `<svg>` icon in it takes its color). The hover color only with a mouse or a trackpad |
-| `components/note.css`     | `.note`: a quiet box for a remark next to the main text |
-| `components/prose.css`    | `.prose`: text to read (docs, help pages): headings, paragraphs, lists and links with room and quiet colors; the text can be selected |
-| `components/skeleton.css` | `.skeleton`: the gray silhouette of something that is still loading (an `<svg>` drawn with `currentColor`), with a slow pulse |
-| `app.css`                 | The app's own pages (not components): the page layout, the studio's column of modules (`#patch`, `#rack`, `.slot`, remove mode, the view transitions when a module comes or goes, the loading screen), the module guide, and the start page. Last in `uiStyles`, so it wins over the components |
+| File                         | Classes / content                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens.css`                 | The shared variables: `--loop-primary` (main color), `--loop-font`, and the display colors for the modules' screens (`--screen`, `--ink`, `--blue`, `--orange`, ...).                                                                                                                                                                                                                                                             |
+| `base.css`                   | Page font and colors, heading weight, focus ring, `.text-muted`, `.text-small`                                                                                                                                                                                                                                                                                                                                                    |
+| `layout.css`                 | `.row`, `.stack` (other gap: `style="gap: 0.5rem"`)                                                                                                                                                                                                                                                                                                                                                                               |
+| `components/button.css`      | `.button` + modifier classes `.primary`, `.ghost`, `.small` (for example `class="button small"`); `aria-pressed`                                                                                                                                                                                                                                                                                                                  |
+| `components/input.css`       | `.input`                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `components/range.css`       | `input[type="range"]` (no class needed): a slider drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the slider); light and dark mode. `.vertical`: lowest value at the bottom, length with `height`                                                                                                                                                                                              |
+| `font.ts`                    | Fonts (files in `src/fonts/`). `addLoopFont()` + `LOOP_FONT`: Italian Plate No1 Mono, the app's font (`--loop-font`), weights 100 to 900, upright and italic; the app calls it once at start (`app/src/client.ts`). `addMatrixFont()` + `MATRIX_FONT`: MatrixType Display, LED pixels, weights 400 and 700 (metronome). `addVideoFont()` + `VIDEO_FONT`: Home Video, pixel, weights 400 and 700 (700 is reversed text) (low pass) |
+| `components/display.css`     | `.display`: a module's screen (275px wide, rounded). Its colors (`--screen`, `--ink`, `--muted`, `--line`, `--dim`, `--blue`, `--orange`, `--red`, `--green`, `--purple`) are in `tokens.css`                                                                                                                                                                                                                                     |
+| `components/field.css`       | `.field`: a label with an input in it (small uppercase text next to the input)                                                                                                                                                                                                                                                                                                                                                    |
+| `display.ts`                 | `CHANNEL_COLORS`: the 6 channel colors, as CSS colors (for CSS, or for a canvas)                                                                                                                                                                                                                                                                                                                                                  |
+| `components/checkbox.css`    | `input[type="checkbox"]` (no class needed): the native checkbox, drawn as a primary-color box with a white check                                                                                                                                                                                                                                                                                                                  |
+| `components/radio.css`       | `input[type="radio"]` (no class needed): the native radio button, drawn as a primary-color circle with a white dot                                                                                                                                                                                                                                                                                                                |
+| `components/progress.css`    | `progress` (no class needed): a progress bar drawn fully in CSS that looks like Chrome's; primary color (or `--loop-primary` on the bar); light and dark mode; length with `width`                                                                                                                                                                                                                                                |
+| `components/meter.css`       | `meter` (no class needed): a meter drawn fully in CSS that looks like Chrome's; green, yellow or red from `low`, `high` and `optimum`; light and dark mode; length with `width`                                                                                                                                                                                                                                                   |
+| `components/panel.css`       | `.panel`, `.panel-title`                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `components/menu.css`        | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`                                                                                                                                                                                                                                                                                                                                                               |
+| `components/drag-handle.css` | `.drag-handle`: a narrow button to drag something by (an `<svg>` icon in it takes its color). The hover color only with a mouse or a trackpad                                                                                                                                                                                                                                                                                     |
+| `components/note.css`        | `.note`: a quiet box for a remark next to the main text                                                                                                                                                                                                                                                                                                                                                                           |
+| `components/prose.css`       | `.prose`: text to read (docs, help pages): headings, paragraphs, lists and links with room and quiet colors; the text can be selected                                                                                                                                                                                                                                                                                             |
+| `components/skeleton.css`    | `.skeleton`: the gray silhouette of something that is still loading (an `<svg>` drawn with `currentColor`), with a slow pulse                                                                                                                                                                                                                                                                                                     |
+| `app.css`                    | The app's own pages (not components): the page layout, the studio's column of modules (`#patch`, `#rack`, `.slot`, remove mode, the view transitions when a module comes or goes, the loading screen), the module guide, and the start page. Last in `uiStyles`, so it wins over the components                                                                                                                                   |
 
 - **Layer:** every rule is in `@layer ui`. Rules outside a layer always win, so the app and modules can override anything.
 - **The app** puts the library in a `<style>` tag of the page (`app/src/app.ts`). It shows on first paint and works offline.
@@ -124,25 +123,23 @@ cables gets no sound and sends none. The speakers have no jack: Master plays str
 (`speakerOutput` in what `setup` returns), and only one Master can be in the core (`unique` in its definition, `core.canAdd`).
 
 ```
-sequencer ─trig─▶ sampler ═ch 1–6═▶ mixer ─out─▶ low pass ─out─▶ master ▶ speakers
-                                     │snd a      ▲rtn a
-                                     └─▶ delay ──┘
+sampler ═ch 1–6═▶ mixer ─out─▶ low pass ─out─▶ master ▶ speakers
+(6 cables)         │snd a      ▲rtn a
+                   └─▶ delay ──┘
 ```
 
 The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 
-| Setup returns                                | Jack(s)                         | Kind     |
-| -------------------------------------------- | ------------------------------- | -------- |
-| `input` / `output`                           | In / Out                        | audio    |
-| `channelInputs` / `channelOutputs`           | Ch 1–6 (one jack, all channels) | channels |
-| `sendOutputs` / `returnInputs`               | Snd A, Snd B / Rtn A, Rtn B     | audio    |
-| `ctx.onTrigger(...)` / `triggerOutput: true` | Trig in / Trig out              | trigger  |
+| Setup returns                      | Jack(s)                                                        |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `input` / `output`                 | In (`in`) / Out (`out`)                                        |
+| `channelInputs` / `channelOutputs` | Ch 1, Ch 2, ... (`in-1`, ... / `out-1`, ...), in the group 1–6 |
+| `sendOutputs` / `returnInputs`     | Snd A, Snd B / Rtn A, Rtn B                                    |
 
 - `core.connect(a, b)`, `core.disconnect(cable)`, `core.cables`, and the `cablechange` event.
-- A cable only joins an output to an input of the same kind. An output can feed many inputs; an input can take many outputs (they add up).
+- A cable joins an output to an input, and carries one sound. An output can feed many inputs; an input can take many outputs (they add up).
 - **No loops** (`core.canConnect` says why not): Web Audio makes a loop silent. A module says which inputs reach which outputs (`routes`; default: all of them). The mixer's returns only reach its output, so send → delay → return is fine.
-- **Triggers** ("play channel X at time T", like MIDI or CV) go along trigger cables: `ctx.send({ channel, time })` reaches every module plugged into the sender's trigger out, with `ctx.onTrigger(listener)`. A module on the way can change them with `ctx.passTrigger(change)` (return null to stop one).
-- **Channels**: a channels cable carries channel 1 to channel 1, and so on (sampler → mixer).
+- **Channels**: each channel is its own jack, so one channel can go anywhere, and any sound can go into one channel. The jacks of a module's channels have the same `group` (see `Port`), so the patchbay can show them as one. `autoPatch` connects channel k to channel k (sampler → mixer).
 - `core.autoPatch(module)` gives a new module the usual cables, from the modules above it in the rack: an effect goes in after the module above it, a meter listens to it, a sound source plays into Master. The app calls it when you add a module.
 - `core.move(module, index)` only changes the rack order. The cables stay.
 
@@ -152,11 +149,11 @@ The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 
 ### The app: adding and removing modules
 
-| File                    | Job                                                                                                                                                                                                                                                                                                                               |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/src/modules.ts`    | The list of modules a user can add. **Add new modules here.**                                                                                                                                                                                                                                                                     |
-| `app/src/rack.ts`       | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it.                                                                                                                                                                      |
-| `app/src/client.ts`     | Connects the buttons, the core, the picker and the rack.                                                                                                                                                                                                                                                                          |
+| File                 | Job                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/src/modules.ts` | The list of modules a user can add. **Add new modules here.**                                                                                                |
+| `app/src/rack.ts`    | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it. |
+| `app/src/client.ts`  | Connects the buttons, the core, the picker and the rack.                                                                                                     |
 
 The core owns the modules and the cables. The page only shows them:
 Add (in the patchbay) → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patchbay's matrix shows the cables.
@@ -181,7 +178,7 @@ Saved data (`ProjectData`): `{ version: 2, bpm, modules: [{ type, state }], cabl
 
 **A module saves its own settings:**
 
-- `type: 'my-module'` in `defineAudioModule`: a stable key. Never change it, or old projects lose the module.
+- `type: 'my-module'` in `defineModule` (or `defineAudioModule`): a stable key. Never change it, or old projects lose the module.
 - `save()` in the setup result: returns plain JSON data. When the project loads, this data comes back as `options`.
 - `ctx.changed()`: call it when that data changes. The app then saves.
 - Saved data can come from a file, so check its types in `setup` (see `packages/metronome/src/setup.ts`).
@@ -221,6 +218,8 @@ no rewind sound.
 
 The repo uses typed functions, not classes: `createCore`, `createClock`, `createEmitter`, `defineAudioModule`.
 
+The sound part is in `@loop/core`. A module with no UI uses `defineAudioModule`:
+
 ```ts
 import { defineAudioModule } from '@loop/core'
 
@@ -251,7 +250,8 @@ mine.remove()
 
 ### Module UI: HTML, CSS and JS
 
-A module can have a `ui`. It uses only native browser features:
+The UI part is in `@loop/ui`. A module with a UI uses `defineModule` from `@loop/ui`: the same as
+`defineAudioModule`, plus a `ui`. The core never looks at the `ui`. It uses only native browser features:
 
 | Part | Field      | How                                                                                  |
 | ---- | ---------- | ------------------------------------------------------------------------------------ |
@@ -260,9 +260,9 @@ A module can have a `ui`. It uses only native browser features:
 | JS   | `script`   | Runs after the HTML is in place. Connect inputs to the module here.                  |
 
 ```ts
-import { css, defineAudioModule, html } from '@loop/core'
+import { css, defineModule, html, mountModule } from '@loop/ui'
 
-export const myModule = defineAudioModule({
+export const myModule = defineModule({
   type: 'my-module',
   name: 'My module',
   setup(ctx) {
@@ -287,7 +287,7 @@ export const myModule = defineAudioModule({
 })
 
 // In the app:
-core.add(myModule).mount(document.querySelector('#rack')!)
+mountModule(core, core.add(myModule), document.querySelector('#rack')!)
 ```
 
 #### One file per part
@@ -296,17 +296,17 @@ For a real module, put each part in its own file (see `packages/metronome/src/`)
 
 ```
 src/
-  setup.ts     export const setup    = defineModuleSetup((ctx, options: MyOptions = {}) => { ... })
-  styles.ts    export const styles   = css`...`
-  template.ts  export const template = defineModuleTemplate<typeof setup>(({ module }) => html`...`)
-  script.ts    export const script   = defineModuleScript<typeof setup>(({ root, module }) => { ... })
-  index.ts     export const myModule = defineAudioModule({ type, name, setup, ui: { styles, template, script } })
+  setup.ts     export const setup    = defineModuleSetup((ctx, options: MyOptions = {}) => { ... })        @loop/core
+  styles.ts    export const styles   = css`...`                                                          @loop/ui
+  template.ts  export const template = defineModuleTemplate<typeof setup>(({ module }) => html`...`)     @loop/ui
+  script.ts    export const script   = defineModuleScript<typeof setup>(({ root, module }) => { ... })    @loop/ui
+  index.ts     export const myModule = defineModule({ type, name, setup, ui: { styles, template, script } })  @loop/ui
 ```
 
 `typeof setup` tells the template and the script what the module offers, for example `module.setVolume`.
 Use `import type { setup } from './setup'`: it only imports the type, not the code.
 
-- **Scoped CSS:** each UI lives in its own **Shadow DOM**. Module CSS cannot leak out. App CSS cannot leak in. `mountView(parent, view)` (in `@loop/core`'s UI helpers) does this; `module.mount` uses it, and so does a UI that is not a module (the library).
+- **Scoped CSS:** each UI lives in its own **Shadow DOM**. Module CSS cannot leak out. App CSS cannot leak in. `mountView(parent, view)` (in `@loop/ui`) does this; `mountModule` uses it, and so do the UIs that are not modules (the library, the patchbay).
 - **Theme:** the shared CSS variables are in `packages/ui/src/tokens.css`: `--loop-primary` (main color), `--loop-font`, and the display colors (`--screen`, `--ink`, `--blue`, ...). They pass into the Shadow DOM. The font (Italian Plate No1 Mono, `packages/ui/src/fonts/Italian Plate/`, added with `addLoopFont()`) has weights 100 to 900, upright and italic.
 - **Layout:** the app places modules (`#rack`). The module styles its own box with `:host`. App CSS on the host element (`#rack > section`) wins over `:host`.
 - **Clean-up:** use `signal` for DOM listeners and `on` for core events. Both are removed when the UI unmounts or the module is removed.

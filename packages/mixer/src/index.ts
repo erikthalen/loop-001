@@ -1,5 +1,4 @@
-import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -8,7 +7,7 @@ import { template } from './template'
 export type { MixerOptions } from './setup'
 
 /** Mixes the 6 channels of the modules before it (a sampler): a volume and a send per channel. */
-export const mixer = defineAudioModule({
+export const mixer = defineModule({
   type: 'mixer',
   name: 'Mixer',
   label: 'MX',

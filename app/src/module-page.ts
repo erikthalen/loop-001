@@ -4,7 +4,7 @@
 import { createCore, restoreProject } from '@loop/core'
 import { mountLibrary } from '@loop/library'
 import { mountPatchbay, type RemoveMode } from '@loop/patchbay'
-import { addLoopFont } from '@loop/ui'
+import { addLoopFont, mountModule } from '@loop/ui'
 import { createDemoLibrary } from './demo-library'
 import { availableModules, CABLE_COLORS, newProject } from './modules'
 import { watchForUpdates } from './updates'
@@ -34,7 +34,10 @@ if (element && type === 'library') {
   const definition = availableModules.find(
     (definition) => definition.type === type,
   )
-  if (definition) createCore().add(definition).mount(element)
+  if (definition) {
+    const core = createCore()
+    mountModule(core, core.add(definition), element)
+  }
 }
 
 /**

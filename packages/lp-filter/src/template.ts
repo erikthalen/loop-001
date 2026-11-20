@@ -1,4 +1,4 @@
-import { defineModuleTemplate, html } from '@loop/core'
+import { defineModuleTemplate, html } from '@loop/ui'
 import type { setup } from './setup'
 
 /** Slider steps. The frequency slider is logarithmic: script.ts turns a step into Hz. */

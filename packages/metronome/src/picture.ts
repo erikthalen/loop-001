@@ -209,7 +209,12 @@ export function drawPicture(
   // The marks: dots on the tape, on the part along the bottom (between the guides).
   g.save()
   g.beginPath()
-  g.rect(guides[0], TAPE_Y - BAR_DOT - 1, guides[1] - guides[0], BAR_DOT * 2 + 2)
+  g.rect(
+    guides[0],
+    TAPE_Y - BAR_DOT - 1,
+    guides[1] - guides[0],
+    BAR_DOT * 2 + 2,
+  )
   g.clip()
   const first = Math.floor(state.position - headX / BEAT_LENGTH) - 1
   const last = Math.ceil(state.position + (width - headX) / BEAT_LENGTH) + 1

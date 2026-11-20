@@ -1,9 +1,10 @@
 /**
- * Small, native UI helpers for modules. No UI library.
+ * Small, native UI helpers for modules. No UI framework.
  *
  * - `html`  – tagged template for HTML. Values are escaped (safe for user text).
  * - `css`   – tagged template for CSS. Becomes a native CSSStyleSheet when mounted.
  * - `render` – put an `html` template into an element or shadow root.
+ * - `mountView` – show a piece of UI in its own Shadow DOM (module.ts uses it for modules).
  *
  * Module UIs are mounted in their own Shadow DOM, so module CSS stays inside the module.
  * The app can theme modules with CSS custom properties (for example `--loop-primary`):
@@ -91,7 +92,7 @@ export interface MountViewOptions {
 /**
  * Show a view at the end of `parent`, in its own Shadow DOM: its CSS cannot leak out, and page CSS
  * cannot leak in (CSS variables, like --loop-primary, still pass in). Returns a function that
- * removes it. Every module UI is shown like this (`module.mount`); so can a UI that is not a module.
+ * removes it. Every module UI is shown like this (`mountModule`); so can a UI that is not a module.
  */
 export function mountView(
   parent: Element,

@@ -1,13 +1,15 @@
-import { defineModuleTemplate, html } from '@loop/core'
-import { CHANNEL_COLORS } from '@loop/ui'
+import { CHANNEL_COLORS, defineModuleTemplate, html } from '@loop/ui'
+import { sequencerTemplate } from './sequencer/template'
 import { CHANNELS, type setup } from './setup'
 
-// HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, button,
-// sr-only) and styles.ts; @loop/ui also styles the radio buttons and the checkbox. The script draws the tape and keeps the text up to date.
+// HTML: made once, when the UI is mounted. Two screens: the sampler, and under it its sequencer
+// (sequencer/template.ts). Classes come from @loop/ui (display, field, button, sr-only) and
+// styles.ts; @loop/ui also styles the radio buttons and the checkbox. The script draws the tape
+// and keeps the text up to date.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
-    <section class="display">
-      <h2 class="sr-only">${module.name}</h2>
+    <h2 class="sr-only">${module.name}</h2>
+    <section class="display sampler">
 
       <div class="wave">
         <canvas class="picture" role="img"></canvas>
@@ -78,5 +80,6 @@ export const template = defineModuleTemplate<typeof setup>(
         </label>
       </div>
     </section>
+    ${sequencerTemplate(module.pattern)}
   `,
 )

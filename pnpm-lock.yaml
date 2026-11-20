@@ -217,9 +217,6 @@ importers:
       '@loop/sampler':
         specifier: workspace:*
         version: link:../packages/sampler
-      '@loop/sequencer':
-        specifier: workspace:*
-        version: link:../packages/sequencer
       '@loop/ui':
         specifier: workspace:*
         version: link:../packages/ui
@@ -350,20 +347,11 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  packages/sequencer:
+  packages/ui:
     dependencies:
       '@loop/core':
         specifier: workspace:*
         version: link:../core
-      '@loop/ui':
-        specifier: workspace:*
-        version: link:../ui
-    devDependencies:
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-
-  packages/ui:
     devDependencies:
       typescript:
         specifier: ^7.0.2

@@ -1,5 +1,4 @@
-import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -8,7 +7,7 @@ import { template } from './template'
 export type { LowPassOptions } from './setup'
 
 /** A low pass filter: lets the low sounds through and takes away the high ones. Shows the sound. */
-export const lpFilter = defineAudioModule({
+export const lpFilter = defineModule({
   type: 'lp-filter',
   name: 'Low pass',
   label: 'LP',

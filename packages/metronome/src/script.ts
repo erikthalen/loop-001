@@ -1,5 +1,4 @@
-import { defineModuleScript } from '@loop/core'
-import { createOdometer } from '@loop/ui'
+import { createOdometer, defineModuleScript } from '@loop/ui'
 import {
   BPM_WHEELS,
   drawPicture,

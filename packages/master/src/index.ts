@@ -1,5 +1,4 @@
-import { defineAudioModule } from '@loop/core'
-import { uiStyles } from '@loop/ui'
+import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
 import { setup } from './setup'
 import { styles } from './styles'
@@ -12,7 +11,7 @@ export type { MasterOptions } from './setup'
  * and sets the master volume. Plug the sound into its In: it plays straight into the speakers.
  * Only one at a time.
  */
-export const master = defineAudioModule({
+export const master = defineModule({
   type: 'master',
   name: 'Master',
   label: 'MSTR',

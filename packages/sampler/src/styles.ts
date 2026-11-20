@@ -1,16 +1,29 @@
-import { css } from "@loop/core";
+import { css } from '@loop/ui'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
 // The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display is a tape machine in thin lines, with two markers to cut the sound.
 export const styles = css`
+  /* Two screens, one under the other: the sampler, then its sequencer (sequencer/styles.ts).
+     No gap, and no round corners where they meet: they look like one screen. */
   :host {
-    display: inline-block;
+    display: inline-flex;
+    flex-direction: column;
   }
 
-  .display {
+  .sampler {
     --loop-primary: var(--red);
+
+    padding-bottom: 5px;
+    border-end-end-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  .sequencer {
+    padding-top: 5px;
+    border-start-end-radius: 0;
+    border-start-start-radius: 0;
   }
 
   /* The picture, with the channel number, the status and the two markers on top of it. */
@@ -79,6 +92,10 @@ export const styles = css`
 
   .cut-window.winding {
     clip-path: inset(-4px 10px);
+    /* clip-path only hides: the markers far outside still make the page wider (Safari on a phone
+       then zooms out). overflow-x: clip cuts them off for real. Only sideways, and only while
+       winding: the focus ring may stick out of the window at other times. */
+    overflow-x: clip;
   }
 
   .cuts {
@@ -134,11 +151,11 @@ export const styles = css`
   .channel {
     --loop-primary: var(--c);
     color: var(--c);
-    
+
     input {
       border-color: var(--loop-primary);
     }
-    
+
     &.empty {
       --loop-primary: var(--color-neutral-800);
       color: var(--loop-primary);
@@ -160,4 +177,4 @@ export const styles = css`
     top: 0;
     right: 0;
   }
-`;
+`

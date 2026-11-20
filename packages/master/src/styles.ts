@@ -1,4 +1,4 @@
-import { css } from '@loop/core'
+import { css } from '@loop/ui'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the checkbox and the slider too. The rules here are outside a cascade

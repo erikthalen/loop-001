@@ -1,4 +1,4 @@
-import { defineModuleTemplate, html } from '@loop/core'
+import { defineModuleTemplate, html } from '@loop/ui'
 import { MAX_FEEDBACK, RATES, rateIndex, type setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, sr-only)

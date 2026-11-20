@@ -1,4 +1,5 @@
 import { defineModuleSetup } from '@loop/core'
+import { createSequencer, type SavedPattern } from './sequencer/sequencer'
 import { decodeSound, encodeSound, type SavedSound } from './sound'
 
 /** The number of sample channels. */
@@ -22,6 +23,8 @@ export interface SamplerOptions {
   active?: number
   /** One entry per channel. null: the channel is empty. */
   channels?: ({ sound: SavedSound; start: number; end: number } | null)[]
+  /** The sequencer's steps (see sequencer/sequencer.ts). Default: all off. */
+  pattern?: SavedPattern
 }
 
 const clamp = (value: number, min: number, max: number) =>
@@ -31,12 +34,13 @@ const isNumber = (value: unknown): value is number =>
 
 /**
  * Audio: records the microphone into one of 6 channels, and plays the part between the markers.
+ * Its sequencer plays the channels in a pattern of 16 steps.
  * The microphone is never sent to the output, so it cannot make feedback.
  */
 export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   const { audio } = ctx
-  // One output per channel, all on one jack ("Ch 1–6"): a channels cable takes each channel on its
-  // own into a mixer.
+  // One output per channel, each on its own jack (the group "1–6" in the patchbay), so a channel
+  // can go into a mixer, or anywhere.
   const channelOutputs = Array.from(
     { length: CHANNELS },
     () => new GainNode(audio, { gain: 1 }),
@@ -296,12 +300,12 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     update()
   }
 
-  // Triggers that come into the trigger jack (for example from a sequencer): play that channel
-  // at that time. The play button does not change; the picture shows it (see nowPlaying).
-  // They follow the transport speed (see core.speed).
-  ctx.onTrigger(
-    ({ channel, time, volume }) => void trigger(channel, time, volume, true),
-  )
+  // The sequencer: each step that is on plays its channel at that time. The play button does not
+  // change; the picture shows it (see nowPlaying). They follow the transport speed (see core.speed).
+  const sequencer = createSequencer(ctx, {
+    pattern: options.pattern,
+    onStep: (channel, time) => void trigger(channel, time, undefined, true),
+  })
 
   ctx.onDispose(() => {
     busy = false
@@ -398,13 +402,17 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     },
     play,
     stop,
-    /** Play any channel at an exact audio time (for example from a sequencer). */
+    /** Play any channel at an exact audio time. */
     trigger: (channel: number, time?: number, volume?: number) =>
       void trigger(channel, time, volume),
 
     get message() {
       return message
     },
+    /** The sequencer's steps: `pattern[channel][step]`. Change it with `setStep`. */
+    pattern: sequencer.pattern,
+    setStep: sequencer.setStep,
+
     /** Call `listener` when recording, playing or the message changes. Returns a function that stops it. */
     subscribe(listener: () => void) {
       listeners.add(listener)
@@ -417,6 +425,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       channels: channels.map(({ saved, start, end }) =>
         saved ? { sound: saved, start, end } : null,
       ),
+      pattern: sequencer.save(),
     }),
   }
 })

@@ -15,12 +15,12 @@ const PARTS: readonly { name: string; height: number; above?: number }[] = [
   { name: 'vu-meter', height: 120 },
   // Not measured yet: about 10 + 40 (the picture) + 8 + 22 (the controls) + 10.
   { name: 'metronome', height: 90 },
-  { name: 'sampler', height: 171 },
-  { name: 'sequencer', height: 134 },
+  // The sampler: the tape machine and under it the sequencer, as one screen (no gap between them).
+  { name: 'sampler', height: 287 },
   { name: 'mixer', height: 176 },
   { name: 'delay', height: 146 },
   { name: 'lp-filter', height: 119 },
-  { name: 'patchbay', height: 303 },
+  { name: 'patchbay', height: 221 },
   { name: 'library', height: 187 },
 ]
 /** The space between two modules (the gap of #patch and #rack in app.ts). */

@@ -12,7 +12,6 @@ import type {
   ModuleSetupResult,
   OptionsArg,
   ScopedOn,
-  Trigger,
 } from './module'
 import {
   autoPatch,
@@ -22,10 +21,8 @@ import {
   type PatchModule,
   type Plug,
   type Port,
-  routeTrigger,
   samePlug,
 } from './patch'
-import { html, mountView } from './ui'
 
 /**
  * All events the core sends. Modules listen with `ctx.on(...)` or `core.events.on(...)`.
@@ -213,24 +210,6 @@ export function createCore(options: CoreOptions = {}): Core {
   const nodesOf = (plug: Plug): readonly AudioNode[] =>
     patchModules.get(plug.module)?.nodes.get(plug.port) ?? []
 
-  // Triggers (see Trigger in module.ts) go along the trigger cables, from a module's trigger out to
-  // the trigger in of each module plugged into it. A module on the way can change them.
-  // Each module's trigger listeners and pass-through change, by module id.
-  const triggerListeners = new Map<string, ((trigger: Trigger) => void)[]>()
-  const triggerPasses = new Map<string, (trigger: Trigger) => Trigger | null>()
-  const sendTrigger = (from: string, trigger: Trigger) =>
-    routeTrigger(
-      cables,
-      from,
-      trigger,
-      (id) => ({
-        listeners: triggerListeners.get(id),
-        pass: triggerPasses.get(id),
-      }),
-      // Like the event bus: one broken listener does not stop the others.
-      reportError,
-    )
-
   const connect = (a: Plug, b: Plug): Cable | null => {
     const check = checkCable(allPatchModules(), cables, a, b)
     if (!check.ok) return null
@@ -239,7 +218,7 @@ export function createCore(options: CoreOptions = {}): Core {
       from: check.from,
       to: check.to,
     }
-    // Channels: channel k to channel k. Audio: one node to one node. Triggers: no sound.
+    // One node to one node.
     const from = nodesOf(cable.from)
     const to = nodesOf(cable.to)
     const pairs = from
@@ -274,56 +253,52 @@ export function createCore(options: CoreOptions = {}): Core {
     const port = (
       portId: string,
       label: string,
-      kind: Port['kind'],
       direction: Port['direction'],
-      list: readonly AudioNode[],
+      node: AudioNode,
+      group?: string,
     ) => {
-      ports.push({ id: portId, label, kind, direction })
-      nodes.set(portId, list)
+      ports.push(
+        group
+          ? { id: portId, label, direction, group }
+          : { id: portId, label, direction },
+      )
+      nodes.set(portId, [node])
     }
     const letter = (bus: number) => String.fromCharCode(97 + bus)
-    const channels = (list: readonly AudioNode[]) => `Ch 1–${list.length}`
-    const passes = triggerPasses.has(id)
-    if (triggerListeners.has(id) || passes)
-      port('trigger-in', 'Trig', 'trigger', 'in', [])
-    if (result.channelInputs?.length)
-      port(
-        'channels-in',
-        channels(result.channelInputs),
-        'channels',
-        'in',
-        result.channelInputs,
-      )
-    if (result.input) port('in', 'In', 'audio', 'in', [result.input])
+    /** One jack per channel, in a group ("1–6"): in-1, in-2, ... (or out-1, ...), "Ch 1", "Ch 2", ... */
+    const channels = (
+      direction: Port['direction'],
+      list: readonly AudioNode[] = [],
+    ) =>
+      list.forEach((node, k) => {
+        port(
+          `${direction}-${k + 1}`,
+          `Ch ${k + 1}`,
+          direction,
+          node,
+          `1–${list.length}`,
+        )
+      })
+    channels('in', result.channelInputs)
+    if (result.input) port('in', 'In', 'in', result.input)
     result.returnInputs?.forEach((node, bus) => {
       port(
         `return-${letter(bus)}`,
         `Rtn ${letter(bus).toUpperCase()}`,
-        'audio',
         'in',
-        [node],
+        node,
       )
     })
-    if (result.output) port('out', 'Out', 'audio', 'out', [result.output])
+    if (result.output) port('out', 'Out', 'out', result.output)
     result.sendOutputs?.forEach((node, bus) => {
       port(
         `send-${letter(bus)}`,
         `Snd ${letter(bus).toUpperCase()}`,
-        'audio',
         'out',
-        [node],
+        node,
       )
     })
-    if (result.channelOutputs?.length)
-      port(
-        'channels-out',
-        channels(result.channelOutputs),
-        'channels',
-        'out',
-        result.channelOutputs,
-      )
-    if (result.triggerOutput || passes)
-      port('trigger-out', 'Trig', 'trigger', 'out', [])
+    channels('out', result.channelOutputs)
     return {
       id,
       ports,
@@ -397,27 +372,18 @@ export function createCore(options: CoreOptions = {}): Core {
       const id = crypto.randomUUID()
       const controller = new AbortController()
       const disposers: (() => void)[] = []
-      const scopedOn =
-        (signal: AbortSignal): ScopedOn =>
-        (type, listener, listenOptions) =>
-          events.on(type, listener, { ...listenOptions, signal })
+      const on: ScopedOn = (type, listener, listenOptions) =>
+        events.on(type, listener, {
+          ...listenOptions,
+          signal: controller.signal,
+        })
 
       const ctx: ModuleContext = {
         core,
         audio: context,
         signal: controller.signal,
-        on: scopedOn(controller.signal),
+        on,
         onDispose: (fn) => disposers.push(fn),
-        send: (trigger) => sendTrigger(id, trigger),
-        onTrigger: (listener) => {
-          if (controller.signal.aborted) return
-          const listeners = triggerListeners.get(id) ?? []
-          listeners.push(listener)
-          triggerListeners.set(id, listeners)
-        },
-        passTrigger: (change) => {
-          if (!controller.signal.aborted) triggerPasses.set(id, change)
-        },
         changed: () => {
           // Only after setup is done and while the module is still in the core.
           if (modules.get(id) === module)
@@ -427,32 +393,16 @@ export function createCore(options: CoreOptions = {}): Core {
 
       const result = definition.setup(ctx, moduleOptions as never)
 
-      // Add id, name, mount and remove to the object that setup returned.
+      // Add id, name, definition, signal and remove to the object that setup returned.
       // (Object.assign keeps any getters that setup defined, for example `get volume()`.)
       const module: AudioModule<typeof result> = Object.assign(result, {
         id,
         type: definition.type,
         name: definition.name,
         label: definition.label,
+        definition,
+        signal: controller.signal,
         remove: () => remove(module),
-        mount(parent: Element) {
-          // In its own Shadow DOM (see mountView in ui.ts). Unmounted when the module is removed too.
-          const ui = definition.ui
-          const script = ui?.script
-          return mountView(
-            parent,
-            {
-              label: definition.name,
-              styles: ui?.styles,
-              template: ui ? ui.template({ module, core }) : html``,
-              script:
-                script &&
-                ((root, signal) =>
-                  script({ module, core, root, signal, on: scopedOn(signal) })),
-            },
-            { signal: controller.signal, attributes: { 'data-module': id } },
-          )
-        },
       })
 
       patchModules.set(id, patchModuleOf(id, result))
@@ -460,8 +410,6 @@ export function createCore(options: CoreOptions = {}): Core {
       modules.set(id, module)
       cleanups.set(id, () => {
         controller.abort()
-        triggerListeners.delete(id)
-        triggerPasses.delete(id)
         for (const fn of disposers.reverse()) fn()
       })
       events.emit('moduleadd', { module })

@@ -1,23 +1,23 @@
-import { css } from "@loop/core";
-import { CASSETTE_HEIGHT, CASSETTE_WIDTH } from "./cassette";
+import { css } from '@loop/ui'
+import { CASSETTE_HEIGHT, CASSETTE_WIDTH } from './cassette'
 
 /** The size of a cassette on the shelf, in CSS px (cassette.ts draws it at this size). */
-export const SHELF_TAPE_WIDTH = 110;
+export const SHELF_TAPE_WIDTH = 110
 /** The same shape as a real cassette. */
 export const SHELF_TAPE_HEIGHT = Math.round(
   (SHELF_TAPE_WIDTH * CASSETTE_HEIGHT) / CASSETTE_WIDTH,
-);
+)
 /**
  * One step of the stack, in px: from one tape to the next. A little less than the tape, so the
  * tapes next to the middle one sit close to it. Not less than 90% of the tape: at 80% size (see
  * tape-size) the neighbors would overlap the middle tape (half a tape + half of 80% of a tape).
  */
-const SHELF_STEP = Math.round(SHELF_TAPE_WIDTH * 0.95);
+const SHELF_STEP = Math.round(SHELF_TAPE_WIDTH * 0.95)
 
 /** On hover: how much the cassette grows. */
-const HOVER_SCALE = 1.06;
+const HOVER_SCALE = 1.06
 /** Room above and below the cassettes, so a hovered one is not cut off (the row hides overflow). */
-const HOVER_ROOM = Math.ceil((SHELF_TAPE_HEIGHT * (HOVER_SCALE - 1)) / 2) + 1;
+const HOVER_ROOM = Math.ceil((SHELF_TAPE_HEIGHT * (HOVER_SCALE - 1)) / 2) + 1
 
 /**
  * CSS's ease-in-out, cubic-bezier(0.42, 0, 0.58, 1): how far along the curve is at `x` (0 to 1).
@@ -25,16 +25,16 @@ const HOVER_ROOM = Math.ceil((SHELF_TAPE_HEIGHT * (HOVER_SCALE - 1)) / 2) + 1;
  */
 const easeInOut = (x: number) => {
   const curve = (t: number, p1: number, p2: number) =>
-    3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3;
-  let low = 0;
-  let high = 1;
+    3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3
+  let low = 0
+  let high = 1
   for (let i = 0; i < 30; i++) {
-    const mid = (low + high) / 2;
-    if (curve(mid, 0.42, 0.58) < x) low = mid;
-    else high = mid;
+    const mid = (low + high) / 2
+    if (curve(mid, 0.42, 0.58) < x) low = mid
+    else high = mid
   }
-  return curve((low + high) / 2, 0, 1);
-};
+  return curve((low + high) / 2, 0, 1)
+}
 
 /**
  * Gradient stops for an eased fade, from `from`% to `to`% (see larsenwork.com/easing-gradients):
@@ -42,12 +42,12 @@ const easeInOut = (x: number) => {
  */
 const easedFade = (from: number, to: number, fadeIn: boolean) =>
   Array.from({ length: 13 }, (_, i) => {
-    const x = i / 12;
+    const x = i / 12
     return {
       offset: from + (to - from) * x,
       alpha: fadeIn ? easeInOut(x) : 1 - easeInOut(x),
-    };
-  });
+    }
+  })
 
 /**
  * How grainy the fade is.
@@ -56,7 +56,7 @@ const easedFade = (from: number, to: number, fadeIn: boolean) =>
  *   grain, like film or TV static; 1 gives soft blotches).
  * - `softness`: how hard each grain is (lower: softer, more like a blur; higher: sharp dots).
  */
-const GRAIN = { amount: 0.35, grain: 6, softness: 8 };
+const GRAIN = { amount: 0.35, grain: 6, softness: 8 }
 
 /**
  * The shelf's mask: the tapes fade out over the first and the last 10% of the row, a smooth fade
@@ -74,10 +74,10 @@ const EDGE_FADE = (() => {
       ({ offset, alpha }) =>
         `<stop offset="${offset.toFixed(2)}%" stop-color="#fff" stop-opacity="${alpha.toFixed(3)}"/>`,
     )
-    .join("");
+    .join('')
   // Alpha out = softness × (fade + noise) / 2, centered on 0.5: under it hidden, over it visible.
-  const slope = GRAIN.softness;
-  const intercept = 0.5 - slope / 2;
+  const slope = GRAIN.softness
+  const intercept = 0.5 - slope / 2
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
       <linearGradient id="fade">${stops}</linearGradient>
@@ -92,9 +92,9 @@ const EDGE_FADE = (() => {
       </filter>
     </defs>
     <rect width="100%" height="100%" fill="url(#fade)" filter="url(#grain)"/>
-  </svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-})();
+  </svg>`
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+})()
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the text input, the radio buttons and the buttons too. The rules
@@ -196,6 +196,10 @@ export const styles = css`
     li {
       position: relative;
       flex: 0 0 ${SHELF_STEP}px;
+      /* The same width again. Safari sizes the track (max-content) by each slot's width, not by
+         its flex basis. The tape in it is absolute, so else the slot counts as 0 px wide: the
+         track ends too soon, and the last tapes cannot come to the middle. */
+      width: ${SHELF_STEP}px;
       height: ${SHELF_TAPE_HEIGHT}px;
       scroll-snap-align: center;
       scroll-snap-stop: always;
@@ -347,6 +351,9 @@ export const styles = css`
    */
   .caption {
     flex: 0 0 100cqw;
+    /* The same width again: Safari sizes the row (max-content) by each caption's width, not by
+       its flex basis. Else the row has the wrong width, and the slide stops between captions. */
+    width: 100cqw;
     /* Exactly one row wide, also with a long name (it is cut with "…"). */
     min-width: 0;
     display: grid;
@@ -391,4 +398,4 @@ export const styles = css`
   .ask-erase [value="erase"] {
     --loop-primary: var(--red);
   }
-`;
+`

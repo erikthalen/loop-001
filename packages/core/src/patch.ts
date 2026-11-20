@@ -3,17 +3,15 @@
  * jack (a "port") of one module to an input jack of another. Nothing else connects them: a module
  * with no cables gets no sound and sends none.
  *
- *   sequencer ─trig─▶ sampler ═ch 1–6═▶ mixer ─out─▶ low pass ─out─▶ master ▶ speakers
- *                                        │snd a      ▲rtn a
- *                                        └─▶ delay ──┘
+ *   sampler ═ch 1–6═▶ mixer ─out─▶ low pass ─out─▶ master ▶ speakers
+ *   (6 cables)          │snd a      ▲rtn a
+ *                       └─▶ delay ──┘
  *
  * The speakers have no jack: one module (Master) plays straight into them (`speakerOutput` in
  * module.ts). That module is the end of the sound (`end`).
  *
- * Three kinds of cable, and a cable only joins two jacks of the same kind:
- * - audio: one sound.
- * - channels: one sound per channel, side by side (a sampler's 6 channels into a mixer).
- * - trigger: "play channel X at time T" (a sequencer into a sampler). No sound.
+ * Every cable carries one sound. A module with channels (a sampler's outputs, a mixer's inputs)
+ * has one jack per channel, in a `group`: the patchbay shows a group as one jack that opens.
  *
  * An output can feed many inputs, and an input can take many outputs (the sounds add up).
  * A loop is not allowed: Web Audio makes a loop silent. To find loops, each module says which of
@@ -22,16 +20,18 @@
  * This file knows nothing about Web Audio, so it is easy to test.
  */
 
-export type PortKind = 'audio' | 'channels' | 'trigger'
-
 /** One jack of a module. */
 export interface Port {
-  /** Unique in its module, for example 'in', 'out', 'send-a', 'channels-in'. Saved in projects. */
+  /** Unique in its module, for example 'in', 'out', 'send-a', 'out-1'. Saved in projects. */
   readonly id: string
-  /** Short name to show, for example 'In', 'Snd A', 'Ch 1–6'. */
+  /** Short name to show, for example 'In', 'Snd A', 'Ch 1'. */
   readonly label: string
-  readonly kind: PortKind
   readonly direction: 'in' | 'out'
+  /**
+   * The jacks of one module with the same group belong together, in order: its channels. The
+   * group is their name together, for example '1–6'. Leave it out: a jack on its own.
+   */
+  readonly group?: string
 }
 
 /** One end of a cable: a module and one of its ports. */
@@ -87,7 +87,7 @@ function outputsOf(module: PatchModule, input: string): string[] {
     .map(([, to]) => to)
 }
 
-/** Does sound (or a trigger) get from `start` to `goal`, through cables and through modules? */
+/** Does sound get from `start` to `goal`, through cables and through modules? */
 export function reaches(
   modules: readonly PatchModule[],
   cables: readonly Pick<Cable, 'from' | 'to'>[],
@@ -141,15 +141,6 @@ export function checkCable(
           : 'Both are outputs. Connect an output to an input.',
     }
   }
-  if (portA.kind !== portB.kind) {
-    const kinds = [portA.kind, portB.kind]
-    return {
-      ok: false,
-      reason: kinds.includes('trigger')
-        ? 'Triggers only go to trigger jacks.'
-        : 'Channels only go to a channels jack.',
-    }
-  }
   const [from, to] = portA.direction === 'out' ? [a, b] : [b, a]
   if (
     cables.some((cable) => samePlug(cable.from, from) && samePlug(cable.to, to))
@@ -171,7 +162,8 @@ export interface PatchChange {
  * Cables for a module that was just added, so it works without patching by hand. `modules` is in
  * rack order (the new one in it, usually last). It only looks at the modules above the new one,
  * and at the end module (`end`: Master):
- * - Trigger in: from the closest module above with a trigger out. The same for channels.
+ * - Channels in (a group of inputs, a mixer): from the closest module above with a group of
+ *   outputs (a sampler), channel k to channel k.
  * - An effect (audio in and out): goes in after the closest module above with an audio out. That
  *   module's cables now come from the effect, and the module plays into the effect.
  *   No module above (or it had no cables): the effect plays into the end module.
@@ -209,10 +201,19 @@ export function autoPatch(
     return true
   }
 
-  for (const port of ['trigger', 'channels'] as const) {
-    if (!has(module, `${port}-in`, 'in')) continue
-    const source = above(`${port}-out`)
-    if (source) tryAdd(plug(source.id, `${port}-out`), plug(id, `${port}-in`))
+  const grouped = (m: PatchModule, direction: 'in' | 'out') =>
+    m.ports.filter((p) => p.group && p.direction === direction)
+  const channelsIn = grouped(module, 'in')
+  if (channelsIn.length) {
+    const source = modules
+      .slice(0, index)
+      .reverse()
+      .find((m) => grouped(m, 'out').length)
+    if (source)
+      grouped(source, 'out').forEach((out, k) => {
+        const input = channelsIn[k]
+        if (input) tryAdd(plug(source.id, out.id), plug(id, input.id))
+      })
   }
 
   const audioIn = has(module, 'in', 'in')
@@ -238,52 +239,4 @@ export function autoPatch(
     intoEnd()
   }
   return { remove, add }
-}
-
-/**
- * The modules a trigger goes to: each module plugged into `from`'s trigger out. `pass` can change
- * the trigger for the modules after one (or stop it: null), and those get it from that module's
- * trigger out. A listener or pass that throws is reported to `onError` and skipped.
- */
-export function routeTrigger<T>(
-  cables: readonly Pick<Cable, 'from' | 'to'>[],
-  from: string,
-  trigger: T,
-  stopOf: (id: string) =>
-    | {
-        readonly listeners?: readonly ((trigger: T) => void)[]
-        readonly pass?: (trigger: T) => T | null
-      }
-    | undefined,
-  onError: (error: unknown) => void = () => {},
-  depth = 0,
-): void {
-  // Loops are not allowed, so this is only a guard.
-  if (depth > 64) return
-  for (const cable of cables) {
-    if (
-      cable.from.module !== from ||
-      cable.from.port !== 'trigger-out' ||
-      cable.to.port !== 'trigger-in'
-    )
-      continue
-    const id = cable.to.module
-    const stop = stopOf(id)
-    for (const listener of stop?.listeners ?? []) {
-      try {
-        listener(trigger)
-      } catch (error) {
-        onError(error)
-      }
-    }
-    if (!stop?.pass) continue
-    let next: T | null = trigger
-    try {
-      next = stop.pass(trigger)
-    } catch (error) {
-      onError(error)
-    }
-    if (next !== null)
-      routeTrigger(cables, id, next, stopOf, onError, depth + 1)
-  }
 }
