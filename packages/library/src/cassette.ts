@@ -27,6 +27,15 @@ export interface CassetteColors {
   muted: string
   line: string
   dim: string
+  /**
+   * The plastic shell, in light and dark mode the same: always light. Its fill, the color laid
+   * over it (silver, grey, clear), its thin lines (screws, the tape through a clear shell), and its
+   * outlines.
+   */
+  plastic: string
+  plasticDim: string
+  plasticLine: string
+  plasticInk: string
   /** The window and the holes: dark in light and dark mode, like a real cassette. */
   hole: string
   /** The hubs: white in light and dark mode. */
@@ -42,7 +51,7 @@ export interface CassetteColors {
 /** The font weights and sizes the tape uses (the family is `CassetteColors.font`). Load them first. */
 export const CASSETTE_FONTS = ['400 4px', '500 5px', '700 7px'] as const
 
-type Shell = 'light' | 'dark' | 'grey' | 'tinted' | 'clear'
+type Shell = 'light' | 'silver' | 'grey' | 'tinted' | 'clear'
 type Layout = 'stripe' | 'band' | 'diagonal' | 'split'
 
 /** What one tape looks like. Made by `designCassette` from a project id. */
@@ -129,8 +138,8 @@ export function designCassette(
   const shell = random.pick<Shell>([
     'light',
     'light',
-    'dark',
-    'dark',
+    'silver',
+    'silver',
     'grey',
     'tinted',
     'tinted',
@@ -162,6 +171,18 @@ const LABEL = { x: 6, y: 5, w: 88, h: 41 }
 const WINDOW = { x: 25, y: 19, w: 50, h: 14 }
 const HUBS = [35.5, 64.5] as const
 const HUB_Y = 26
+/**
+ * The tape along the bottom: like a real cassette, it runs along the bottom edge, through the
+ * openings, so the head and the capstans can reach it. `TAPE_Y`: its middle line.
+ */
+const TAPE_Y = 60
+const TAPE = 0.9
+/** The tape guides (spoked wheels in the bottom corners): the tape runs under them. */
+const GUIDE = 3.2
+const GUIDES = [
+  [11.5, TAPE_Y - GUIDE - TAPE / 2],
+  [88.5, TAPE_Y - GUIDE - TAPE / 2],
+] as const
 const SCREWS = [
   [4.5, 4.5],
   [95.5, 4.5],
@@ -221,28 +242,32 @@ export function drawCassette(
 
   // ——— The shell ———
   const clear = design.shell === 'clear'
-  const shellFill = {
-    light: c.screen,
-    dark: c.muted,
-    grey: c.line,
-    tinted: c.screen,
-    clear: c.screen,
+  // The plastic: always light, with a thin layer of color over it.
+  const overlay = {
+    light: null,
+    silver: { color: c.plasticDim, alpha: 0.45 },
+    grey: { color: c.plasticDim, alpha: 0.8 },
+    tinted: { color: accent(1), alpha: 0.18 },
+    clear: { color: c.plasticDim, alpha: 0.15 },
   }[design.shell]
-  rounded(0.5, 0.5, CASSETTE_WIDTH - 1, CASSETTE_HEIGHT - 1, 3.5)
-  g.fillStyle = shellFill
-  g.fill()
-  if (design.shell === 'tinted' || clear) {
-    g.globalAlpha = clear ? 0.25 : 0.45
-    g.fillStyle = clear ? c.dim : accent(1)
+  /** Fill the current path with the plastic (the body, and the part around the head opening). */
+  const fillShell = () => {
+    g.fillStyle = c.plastic
+    g.fill()
+    if (!overlay) return
+    g.globalAlpha = overlay.alpha
+    g.fillStyle = overlay.color
     g.fill()
     g.globalAlpha = 1
   }
-  g.strokeStyle = c.ink
+  rounded(0.5, 0.5, CASSETTE_WIDTH - 1, CASSETTE_HEIGHT - 1, 3.5)
+  fillShell()
+  g.strokeStyle = c.plasticInk
   g.lineWidth = 0.8
   g.stroke()
   // The raised edge just inside.
   rounded(2.5, 2.5, CASSETTE_WIDTH - 5, CASSETTE_HEIGHT - 5, 2.5)
-  g.strokeStyle = c.dim
+  g.strokeStyle = c.plasticDim
   g.lineWidth = 0.4
   g.stroke()
 
@@ -256,26 +281,77 @@ export function drawCassette(
       g.fill()
       g.globalAlpha = 1
       // The tape wound on the hub: thin rings, like in the window.
-      g.strokeStyle = c.line
+      g.strokeStyle = c.plasticLine
       g.lineWidth = 0.3
       for (let ring = 6; ring < r; ring += 1.6) {
         circle(x, HUB_Y, ring)
         g.stroke()
       }
       circle(x, HUB_Y, r)
-      g.strokeStyle = c.muted
+      g.strokeStyle = c.plasticLine
       g.lineWidth = 0.45
       g.stroke()
     })
-    // The tape from one pack to the other, under the window, past the guides.
-    g.strokeStyle = c.muted
-    g.lineWidth = 0.4
+  }
+
+  /**
+   * A clear shell: the tape and the tape guides inside show through. Drawn on top of the bottom
+   * part (it is clear plastic), so the tape runs across the openings.
+   */
+  function drawClearTape() {
+    // The tape, like in a real cassette: from the outside of the left pack down to the tape guide
+    // in the corner, under it, along the bottom edge (through the head opening), under the other
+    // guide, and up to the outside of the right pack.
+    const packs = [6 + 10 * design.tape, 6 + 10 * (1 - design.tape)] as const
+    /** The tape's middle line around a guide. */
+    const around = GUIDE + TAPE / 2
+    const [left, right] = GUIDES.map(([gx, gy], i) =>
+      outerTangent(
+        HUBS[i]!,
+        HUB_Y,
+        packs[i]!,
+        gx,
+        gy,
+        around,
+        i === 0 ? -1 : 1,
+      ),
+    ) as [Tangent, Tangent]
     g.beginPath()
-    g.moveTo(HUBS[0] - 6 - 10 * design.tape, HUB_Y + 4)
-    g.lineTo(23, 50.5)
-    g.lineTo(77, 50.5)
-    g.lineTo(HUBS[1] + 6 + 10 * (1 - design.tape), HUB_Y + 4)
+    g.moveTo(...left.from)
+    g.lineTo(...left.to)
+    g.arc(GUIDES[0][0], GUIDES[0][1], around, left.angle, Math.PI / 2, true)
+    g.lineTo(GUIDES[1][0], GUIDES[1][1] + around)
+    g.arc(GUIDES[1][0], GUIDES[1][1], around, Math.PI / 2, right.angle, true)
+    g.lineTo(...right.from)
+    g.strokeStyle = c.pack
+    g.globalAlpha = 0.85
+    g.lineWidth = TAPE
     g.stroke()
+    g.globalAlpha = 1
+
+    // The tape guides: spoked wheels in the bottom corners.
+    GUIDES.forEach(([gx, gy], i) => {
+      circle(gx, gy, GUIDE)
+      g.fillStyle = c.plastic
+      g.fill()
+      g.strokeStyle = c.plasticInk
+      g.lineWidth = 0.5
+      g.stroke()
+      g.strokeStyle = c.plasticLine
+      g.lineWidth = 0.35
+      for (let t = 0; t < 6; t++) {
+        const a = design.turns[i]! + (t * Math.PI) / 3
+        line(
+          gx + Math.cos(a) * 0.9,
+          gy + Math.sin(a) * 0.9,
+          gx + Math.cos(a) * (GUIDE - 0.6),
+          gy + Math.sin(a) * (GUIDE - 0.6),
+        )
+      }
+      circle(gx, gy, 0.8)
+      g.fillStyle = c.plasticInk
+      g.fill()
+    })
   }
 
   // ——— The label ———
@@ -364,7 +440,8 @@ export function drawCassette(
   g.lineWidth = 0.7
   g.stroke()
   // The scale under the window: how much tape is left, in ticks (every fifth a little longer).
-  g.strokeStyle = c.muted
+  // On a clear shell they are on the plastic (no paper there), so in the plastic's colors.
+  g.strokeStyle = clear ? c.plasticLine : c.muted
   g.lineWidth = 0.3
   for (let t = 0; t <= 20; t++) {
     const tx = WINDOW.x + 7 + t * ((WINDOW.w - 14) / 20)
@@ -377,7 +454,7 @@ export function drawCassette(
     )
   }
   // The play direction, right of the window.
-  g.fillStyle = c.ink
+  g.fillStyle = clear ? c.plasticInk : c.ink
   g.beginPath()
   g.moveTo(WINDOW.x + WINDOW.w + 4, HUB_Y - 2)
   g.lineTo(WINDOW.x + WINDOW.w + 7, HUB_Y)
@@ -401,31 +478,42 @@ export function drawCassette(
   g.lineTo(24.5, 49.5)
   g.lineTo(75.5, 49.5)
   g.lineTo(80, CASSETTE_HEIGHT - 0.5)
-  g.fillStyle = shellFill
-  g.fill()
-  g.strokeStyle = c.ink
+  fillShell()
+  g.strokeStyle = c.plasticInk
   g.lineWidth = 0.6
   g.stroke()
-  for (const x of [29, 71]) {
-    circle(x, 58, 1.9)
-    g.fillStyle = c.hole
-    g.fill()
+  /** The openings, along the tape: the capstan holes, two small ones, and the head opening. */
+  const openings = () => {
+    g.beginPath()
+    for (const x of [29, 71]) {
+      g.moveTo(x + 1.9, TAPE_Y)
+      g.arc(x, TAPE_Y, 1.9, 0, Math.PI * 2)
+    }
+    for (const x of [36, 61]) g.roundRect(x, TAPE_Y - 1.5, 3, 3, 0.5)
+    g.roundRect(45, 59, 10, 6, 0.8)
   }
-  for (const x of [36, 61]) {
-    rounded(x, 56.5, 3, 3, 0.5)
-    g.fillStyle = c.hole
-    g.fill()
-  }
-  rounded(45, 59, 10, 6, 0.8)
+  openings()
   g.fillStyle = c.hole
   g.fill()
+
+  // A clear shell: the tape inside shows, from pack to pack (see drawClearTape).
+  if (clear) drawClearTape()
+
+  // The tape through the openings (every shell): lighter, so it shows on the dark.
+  g.save()
+  openings()
+  g.clip()
+  g.strokeStyle = c.packLine
+  g.lineWidth = TAPE + 0.4
+  line(20, TAPE_Y, 80, TAPE_Y)
+  g.restore()
 
   // ——— The screws ———
   SCREWS.forEach(([x, y], i) => {
     circle(x, y, 1.6)
-    g.fillStyle = c.line
+    g.fillStyle = c.plasticLine
     g.fill()
-    g.strokeStyle = c.ink
+    g.strokeStyle = c.plasticInk
     g.lineWidth = 0.4
     g.stroke()
     const a = design.turns[i % 2]! + i
@@ -485,7 +573,8 @@ function drawLabel(
     g.stroke()
     g.fillStyle = accent(0)
     g.fillRect(x + 2.3, y + 9.5, w - 4.6, 1.2)
-    brand(x + w / 2, bottom - 3, c.ink, 'center')
+    // On the plastic, not on paper: the plastic's ink.
+    brand(x + w / 2, bottom - 5, c.plasticInk, 'center')
     return
   }
 
@@ -561,4 +650,43 @@ function fit(g: CanvasRenderingContext2D, value: string, maxWidth?: number) {
   while (end > 0 && g.measureText(`${value.slice(0, end)}…`).width > maxWidth)
     end--
   return `${value.slice(0, end)}…`
+}
+
+/** A straight piece of tape between two circles, and where it touches the second one. */
+interface Tangent {
+  /** Where it leaves the first circle, and where it reaches the second. */
+  from: [number, number]
+  to: [number, number]
+  /** The direction from the second circle's middle to `to`, in radians. */
+  angle: number
+}
+
+/**
+ * The tape between two round things (a pack and a guide), on their outer side: the line that
+ * touches both circles, with both on the same side of it. `side` -1: the tangent on the left,
+ * 1: on the right.
+ */
+function outerTangent(
+  x1: number,
+  y1: number,
+  r1: number,
+  x2: number,
+  y2: number,
+  r2: number,
+  side: -1 | 1,
+): Tangent {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const length = Math.hypot(dx, dy)
+  const direction = Math.atan2(dy, dx)
+  const spread = Math.acos(Math.min(1, Math.max(-1, (r1 - r2) / length)))
+  // Two tangents: take the one whose side points left (or right).
+  const angle = [direction + spread, direction - spread].sort(
+    (a, b) => side * (Math.cos(b) - Math.cos(a)),
+  )[0]!
+  const at = (x: number, y: number, r: number): [number, number] => [
+    x + Math.cos(angle) * r,
+    y + Math.sin(angle) * r,
+  ]
+  return { from: at(x1, y1, r1), to: at(x2, y2, r2), angle }
 }

@@ -4,10 +4,16 @@
  * Use them in CSS, or turn them into rgb() for a canvas (see the modules' scripts).
  */
 export const CHANNEL_COLORS = [
-  'var(--blue)',
-  'var(--orange)',
-  'var(--pink)',
-  'var(--red)',
-  'var(--green)',
-  'var(--purple)',
+  'dodgerblue',
+  'dodgerblue',
+  'dodgerblue',
+  'dodgerblue',
+  'dodgerblue',
+  'dodgerblue',
+  // 'var(--blue)',
+  // 'var(--orange)',
+  // 'var(--pink)',
+  // 'var(--red)',
+  // 'var(--green)',
+  // 'var(--purple)',
 ] as const

@@ -16,7 +16,7 @@
  *     </tbody>
  *   </table>
  *
- * - The column names are written downwards (like the jack labels), so the columns stay narrow.
+ * - The column names are written downwards, so the columns stay narrow.
  * - A row can have its own color: set --loop-primary on the <tr>. Its checkboxes are in that
  *   color, and a dot of it is before the row's name.
  * - <small> in a name: a second, quieter part (the jack, after the module).

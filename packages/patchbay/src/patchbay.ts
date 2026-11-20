@@ -11,8 +11,6 @@ export interface PatchbayOptions {
   readonly colorOf: (module: AudioModule) => string
   /** The rack's remove mode: Remove turns it on and off. */
   readonly rack: RemoveMode
-  /** False: no matrix (the app shows the cables another way). Default: true. */
-  readonly matrix?: boolean
   /** Called after Add put a module in the core (and gave it its usual cables). */
   readonly onAdd?: (module: AudioModule) => void
   /**

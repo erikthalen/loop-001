@@ -3,9 +3,9 @@ import { createOdometer } from '@loop/ui'
 import {
   BPM_WHEELS,
   drawPicture,
+  INCH_WHEELS,
   type PictureColors,
-  REST,
-  TRAIL,
+  tapePerBeat,
 } from './picture'
 import type { setup } from './setup'
 
@@ -33,9 +33,11 @@ export const script = defineModuleScript<typeof setup>(
       colors = {
         screen: resolve('var(--screen)'),
         ink: resolve('var(--ink)'),
+        line: resolve('var(--line)'),
         dim: resolve('var(--dim)'),
         muted: resolve('var(--muted)'),
         primary: resolve('var(--loop-primary)'),
+        orange: resolve('var(--orange)'),
         font: getComputedStyle(display).fontFamily,
       }
     }
@@ -77,13 +79,12 @@ export const script = defineModuleScript<typeof setup>(
     })
     on('bpmchange', showTempo)
 
-    // The dot is in the middle of the ∞ on every beat. Between two beats it goes around one loop
-    // (fast in the middle, slow at the ends); the next beat, the other loop.
+    // The tape (see picture.ts): mark k passes the head exactly on beat k.
     // Beat events arrive early (the clock schedules ahead), so keep them until their time comes.
     const swings: { time: number; beat: number; accent: boolean }[] = []
 
     on('beat', ({ beat, beatInBar, time }) => {
-      // The middle flashes on each beat (blue on the first beat of the bar, when the accent is on).
+      // On each beat, its dot on the tape lights up orange (see picture.ts).
       swings.push({ time, beat, accent: module.accent && beatInBar === 0 })
     })
 
@@ -92,17 +93,15 @@ export const script = defineModuleScript<typeof setup>(
     })
 
     // ——— The picture, about 60 times a second ———
-    // Where the dot is on the ∞ (see picture.ts): one beat is half of the way around.
-    // It keeps its place when the core stops (like a tape machine), and goes back while it rewinds.
-    let phase = REST
-    // Where the trail behind the dot starts. It follows the dot, at most TRAIL behind it (ahead of
-    // it while the transport goes backwards). It stays where it is when the dot stops, so the path stays
-    // drawn; and it grows from the middle the first time.
-    let trail = REST
+    // Where the tape is, in beats. It keeps its place when the core stops (like a tape machine),
+    // and goes back while it rewinds.
+    let position = 0
     let lastTime = core.context.currentTime
     // The tempo on the digit wheels: they roll towards the real tempo, each wheel on its own, so the
     // higher ones roll too (see createOdometer in @loop/ui). Less motion: jump there.
     const tempoWheels = createOdometer(BPM_WHEELS, Math.round(core.bpm))
+    // The tape per beat, the same way (in tenths of an inch).
+    const inchWheels = createOdometer(INCH_WHEELS, tapePerBeat(core.bpm))
     let last = 0
     let frame = 0
     const draw = (now: number) => {
@@ -113,40 +112,43 @@ export const script = defineModuleScript<typeof setup>(
       while (swings.length > 1 && swings[1]!.time <= time) swings.shift()
       const current = swings[0]
       if (core.playing && current && current.time <= time) {
-        // Less motion: the dot only jumps to the end of each loop.
-        // How far into the beat: how far the transport has moved since the beat, in beats. So the dot
-        // follows the transport speed exactly (also while it speeds up or slows down), and never goes back.
+        // How far into the beat: how far the transport has moved since the beat, in beats. So the
+        // tape follows the transport speed exactly (also while it speeds up or slows down).
+        // Less motion: the tape moves one beat at a time.
         const moved = core.clock.travel(current.time, time) / (60 / core.bpm)
         const progress = reducedMotion.matches
-          ? 0.5
+          ? 0
           : Math.min(1, Math.max(0, moved))
-        // Even beats: the left loop; odd beats: the right loop.
-        phase = Math.PI * (current.beat + progress + 1)
+        position = current.beat + progress
       } else if (!reducedMotion.matches) {
-        // Stopped, rewinding, or not at the first beat yet: the dot moves as far as the transport (back
-        // while it rewinds; not at all while it stands still).
-        phase += (Math.PI * core.clock.travel(lastTime, time)) / (60 / core.bpm)
+        // Stopped, rewinding, or not at the first beat yet: the tape moves as far as the transport
+        // (back while it rewinds; not at all while it stands still).
+        position += core.clock.travel(lastTime, time) / (60 / core.bpm)
       }
       lastTime = time
-      if (reducedMotion.matches) trail = phase
-      else if (phase - trail > TRAIL) trail = phase - TRAIL
-      else if (trail - phase > TRAIL) trail = phase + TRAIL
-      // The beat flash: bright on the beat, gone after 0.25 s.
+      // The beat flash: bright on the beat, then an even fade, gone after 0.1 s.
       const flash =
         core.playing && current && current.time <= time
-          ? Math.max(0, 1 - (time - current.time) / 0.25)
+          ? Math.max(0, 1 - (time - current.time) / 0.1)
           : 0
 
-      if (reducedMotion.matches) tempoWheels.jump(Math.round(core.bpm))
-      else tempoWheels.roll(Math.round(core.bpm), seconds)
+      if (reducedMotion.matches) {
+        tempoWheels.jump(Math.round(core.bpm))
+        inchWheels.jump(tapePerBeat(core.bpm))
+      } else {
+        tempoWheels.roll(Math.round(core.bpm), seconds)
+        inchWheels.roll(tapePerBeat(core.bpm), seconds)
+      }
 
       // The canvas is as wide as the module, so read its width.
       drawPicture(
         canvas,
         {
-          phase,
-          trail,
+          position,
+          barLength: module.accent ? core.clock.beatsPerBar : 0,
           bpmWheels: tempoWheels.wheels,
+          inchWheels: inchWheels.wheels,
+          beat: current?.beat ?? 0,
           flash,
           accent: current?.accent ?? false,
         },

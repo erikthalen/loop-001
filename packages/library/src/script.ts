@@ -8,7 +8,7 @@ import {
 } from './cassette'
 import type { Library, Tape } from './library'
 import { SHELF_TAPE_WIDTH } from './styles'
-import { dateFormat, tapes } from './template'
+import { captions, tapes } from './template'
 
 const STATUS_TEXT = {
   saved: 'saved',
@@ -17,9 +17,9 @@ const STATUS_TEXT = {
 } as const
 
 // JS: connect the HTML to the library (the app). Everything is removed for us on unmount.
-// The shelf is a row of cassettes that scrolls sideways (the cover flow is CSS, see styles.ts).
-// The tape in the middle is "picked": its name shows under the row, with open and erase.
-// Scrolling only picks. Opening a tape is a separate step (click the picked tape, Enter, or open),
+// The shelf is a row of cassettes that scrolls sideways (the stack effect is CSS, see styles.ts).
+// The tape in the middle is "picked": its caption (name, date, remove) slides to the middle under it.
+// Scrolling only picks. Opening a tape is a separate step (click the picked tape, or Enter),
 // because it changes the whole studio.
 export function script(
   root: ShadowRoot,
@@ -34,11 +34,8 @@ export function script(
   /** The row that scrolls, and the list of tapes in it. */
   const shelf = $<HTMLElement>('.tapes')
   const track = $<HTMLElement>('.track')
-  const pickedName = $<HTMLElement>('.picked-name')
-  const pickedTime = $<HTMLTimeElement>('.picked-time')
-  const onMachine = $<HTMLElement>('.on-machine')
-  const openButton = $<HTMLButtonElement>('[name=open]')
-  const eraseButton = $<HTMLButtonElement>('[name=erase]')
+  /** The captions, one per tape: they slide along with the tapes (CSS, see styles.ts). */
+  const captionTrack = $<HTMLElement>('.caption-track')
   const file = $<HTMLInputElement>('[name=file]')
   const listen = { signal }
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
@@ -61,6 +58,10 @@ export function script(
       muted: resolve('var(--muted)'),
       line: resolve('var(--line)'),
       dim: resolve('var(--dim)'),
+      plastic: resolve('var(--color-neutral-0-light)'),
+      plasticDim: resolve('var(--color-neutral-300-light)'),
+      plasticLine: resolve('var(--color-neutral-400-light)'),
+      plasticInk: resolve('var(--color-neutral-1000-light)'),
       hole: resolve('var(--color-neutral-1000-light)'),
       hub: resolve('var(--color-neutral-0-light)'),
       pack: resolve('var(--color-neutral-800-light)'),
@@ -130,24 +131,20 @@ export function script(
     return best
   }
 
-  /** Pick a tape: show it under the shelf, and make it the one Tab goes to. */
+  /**
+   * Pick a tape: make it the one Tab goes to. Only its caption can be used: the others are inert
+   * (no clicks, no Tab, not read), because they are off to the side.
+   */
   const pick = (id: string | null) => {
     picked = id
     for (const li of items()) {
       li.querySelector('button')!.tabIndex = li.dataset.id === id ? 0 : -1
     }
-    const tape = tapeOf(id)
-    pickedName.textContent = tape?.name ?? ''
-    pickedTime.textContent = tape ? dateFormat.format(tape.updatedAt) : ''
-    pickedTime.dateTime = tape ? new Date(tape.updatedAt).toISOString() : ''
-    const onIt = !!tape && tape.id === library.current.id
-    onMachine.hidden = !onIt
-    openButton.hidden = onIt || !tape
-    eraseButton.disabled = !tape
-    eraseButton.setAttribute(
-      'aria-label',
-      tape ? `Erase ${tape.name}` : 'Erase',
-    )
+    for (const caption of captionTrack.children as HTMLCollectionOf<HTMLElement>) {
+      const on = caption.dataset.id === id
+      caption.inert = !on
+      caption.toggleAttribute('data-picked', on)
+    }
   }
 
   // Scrolling picks the tape that comes to the middle (once per frame).
@@ -187,6 +184,7 @@ export function script(
     const hadFocus = shelf.contains(root.activeElement)
     list = next
     render(tapes(list, current), track)
+    render(captions(list, current), captionTrack)
     drawAll()
     // Another tape on the machine (opened, new, imported): go to it. Else stay on the picked one.
     const target = current !== lastCurrent || !tapeOf(picked) ? current : picked
@@ -203,8 +201,6 @@ export function script(
     status.value = STATUS_TEXT[library.status]
     status.dataset.status = library.status
     void showShelf()
-    // The "on" sign may have moved to another tape.
-    pick(picked)
   }
 
   library.onChange(update, listen)
@@ -260,14 +256,15 @@ export function script(
     listen,
   )
 
-  openButton.addEventListener('click', () => open(picked), listen)
-
-  // Erase: only after "erase" in the dialog.
+  // The captions: remove (only after "remove" in the dialog).
   const askErase = $<HTMLDialogElement>('.ask-erase')
-  eraseButton.addEventListener(
+  captionTrack.addEventListener(
     'click',
-    async () => {
-      const tape = tapeOf(picked)
+    async (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>(
+        '[data-erase]',
+      )
+      const tape = tapeOf(button?.dataset.erase ?? null)
       if (!tape) return
       $('.erase-name').textContent = tape.name
       if ((await answer(askErase)) === 'erase') await library.erase(tape.id)

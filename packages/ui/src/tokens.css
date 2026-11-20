@@ -22,7 +22,8 @@
     --line: var(--color-neutral-400);
     --dim: var(--color-neutral-300);
 
-    --blue: #4d7cff;
+    /* --blue: #4d7cff; */
+    --blue: var(--loop-primary);
     --pink: #f296de;
     --orange: #f2a541;
     --red: #ff4b33;

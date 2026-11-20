@@ -1,4 +1,4 @@
-import { css } from '@loop/core'
+import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the checkboxes too. Here the grid's checkboxes only get their row's color (--c),
@@ -21,13 +21,26 @@ export const styles = css`
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(16, auto);
-    justify-content: start;
-    gap: 2px 2px;
+    grid-template-columns: repeat(17, auto);
+    align-items: center;
+    justify-content: end;
+    gap: 2px;
   }
 
-  .grid input[type="checkbox"]:nth-child(4n + 1):not(:nth-child(16n + 1)) {
+  /* A wider gap before steps 5, 9 and 13: the start of each beat. By step number, not by place
+     in the grid: each row also has its label, so counting children would be off. */
+  .grid
+    input[type="checkbox"]:is(
+      [data-step="4"],
+      [data-step="8"],
+      [data-step="12"]
+    ) {
     margin-left: 3px;
+  }
+
+  span {
+    color: var(--loop-primary);
+    text-box: trim-both cap alphabetic;
   }
 
   /*
@@ -40,7 +53,7 @@ export const styles = css`
   }
 
   .grid input[type="checkbox"]:not(:checked) {
-    border-color: var(--c);
+    // border-color: var(--c);
   }
 
   /* The playing step: a frame in the ink color. */
@@ -51,4 +64,4 @@ export const styles = css`
   /* .grid input[type="checkbox"].now:checked {
     box-shadow: 0 0 0 1.5px var(--ink);
   } */
-`
+`;

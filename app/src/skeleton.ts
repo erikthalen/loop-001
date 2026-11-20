@@ -2,6 +2,8 @@
 // modules.ts), then the patchbay and the library. The studio shows it in place of the modules until
 // they are ready (app.ts, client.ts). The start page shows it too (index.html, register-sw.ts).
 // Plain strings only: app.ts runs in the service worker.
+// Its styles are in @loop/ui: components/skeleton.css (the look) and app.css (its place, and when
+// it shows). The page sets --skeleton-height on #patch from SKELETON_HEIGHT.
 
 /**
  * Each part, top to bottom, in the order of newProject (modules.ts): the height of its screen, in
@@ -11,13 +13,15 @@
 const PARTS: readonly { name: string; height: number; above?: number }[] = [
   { name: 'master', height: 139, above: 40 },
   { name: 'vu-meter', height: 120 },
-  { name: 'sequencer', height: 134 },
+  // Not measured yet: about 10 + 40 (the picture) + 8 + 22 (the controls) + 10.
+  { name: 'metronome', height: 90 },
   { name: 'sampler', height: 171 },
+  { name: 'sequencer', height: 134 },
   { name: 'mixer', height: 176 },
   { name: 'delay', height: 146 },
   { name: 'lp-filter', height: 119 },
   { name: 'patchbay', height: 303 },
-  { name: 'library', height: 243 },
+  { name: 'library', height: 187 },
 ]
 /** The space between two modules (the gap of #patch and #rack in app.ts). */
 const GAP = 5
@@ -54,30 +58,3 @@ export const skeletonSvg = (): string => {
   )
   return `<svg width="${WIDTH}" height="${SKELETON_HEIGHT}" viewBox="0 0 ${WIDTH} ${SKELETON_HEIGHT}" fill="currentColor" aria-hidden="true">${[...reels, ...screens].join('')}</svg>`
 }
-
-/**
- * The CSS for `.skeleton`: the color, and a slow pulse (none with reduced motion).
- * The page places it.
- */
-export const skeletonCss = `
-  .skeleton {
-    color: var(--color-neutral-100);
-    pointer-events: none;
-  }
-  .skeleton svg {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    animation: skeleton-pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes skeleton-pulse {
-    50% {
-      opacity: 0.55;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .skeleton svg {
-      animation: none;
-    }
-  }
-`

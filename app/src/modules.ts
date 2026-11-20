@@ -24,7 +24,7 @@ export const availableModules: readonly AnyAudioModuleDefinition[] = [
   vuMeter,
 ]
 
-/** The color of the cables that come out of each kind of module (see patch-lane.ts). */
+/** The color of the cables that come out of each kind of module (the rows of the patchbay's matrix). */
 export const CABLE_COLORS: Readonly<Record<string, string>> = {
   [master.type]: 'var(--red)',
   [metronome.type]: 'var(--pink)',
@@ -49,26 +49,34 @@ const cable = (
 
 /**
  * A new project: Master (play / stop and the volume) plays into the speakers, and the VU meter
- * under it shows that sound. The sequencer sends triggers to the sampler, the mixer mixes the
- * sampler's channels (a volume and a send each), the delay echoes on the mixer's send A, and the
- * sound goes through the low pass filter into Master and the VU meter.
+ * under it shows that sound. Then the metronome (not plugged in: plug its Out in to hear it).
+ * The sequencer (under the sampler) sends triggers to the sampler, the mixer mixes the sampler's
+ * channels (a volume and a send each), the delay echoes on the mixer's send A, and the sound goes
+ * through the low pass filter into Master and the VU meter.
  * The order here is the rack order. Change it: change the cables' numbers too, and the order in
  * skeleton.ts (the loading screen).
  */
 export const newProject: ProjectData = {
   version: 2,
   bpm: 120,
-  modules: [master, vuMeter, sequencer, sampler, mixer, delay, lpFilter].map(
-    ({ type }) => ({ type }),
-  ),
+  modules: [
+    master,
+    vuMeter,
+    metronome,
+    sampler,
+    sequencer,
+    mixer,
+    delay,
+    lpFilter,
+  ].map(({ type }) => ({ type })),
   cables: [
-    cable(2, 'trigger-out', 3, 'trigger-in'),
-    cable(3, 'channels-out', 4, 'channels-in'),
-    cable(4, 'send-a', 5, 'in'),
-    cable(5, 'out', 4, 'return-a'),
-    cable(4, 'out', 6, 'in'),
-    cable(6, 'out', 0, 'in'),
-    cable(6, 'out', 1, 'in'),
+    cable(4, 'trigger-out', 3, 'trigger-in'),
+    cable(3, 'channels-out', 5, 'channels-in'),
+    cable(5, 'send-a', 6, 'in'),
+    cable(6, 'out', 5, 'return-a'),
+    cable(5, 'out', 7, 'in'),
+    cable(7, 'out', 0, 'in'),
+    cable(7, 'out', 1, 'in'),
   ],
 }
 

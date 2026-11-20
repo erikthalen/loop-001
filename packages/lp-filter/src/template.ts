@@ -8,8 +8,8 @@ export const RESONANCE_STEPS = 200
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, vertical,
 // sr-only) and styles.ts; @loop/ui also styles the sliders, the checkbox and the radio buttons.
-// The script draws the picture (scene.ts): "music from next door", a wall between a speaker and
-// an ear that only lets the low sounds through.
+// The script draws the picture (picture.ts): the sound before and after the filter, from low to
+// high, with the filter's curve, the cutoff and the resonance.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`
     <section class="display">

@@ -7,18 +7,25 @@
 //   for one page load, so the server sends this start page instead of the app.
 
 import { addLoopFont, uiStyles } from '@loop/ui'
-import { skeletonCss, skeletonSvg } from './skeleton'
+import { SKELETON_HEIGHT, skeletonSvg } from './skeleton'
 
-// Look like the studio while it loads: its colors and font, and the silhouettes of the modules.
+// Look like the studio while it loads: its styles (@loop/ui, with app.css), its font, and the
+// silhouettes of the modules (components/skeleton.css), in the same place.
 const style = document.createElement('style')
-style.textContent = uiStyles.cssText + skeletonCss
+style.textContent = uiStyles.cssText
 document.head.append(style)
 addLoopFont()
+document
+  .querySelector<HTMLElement>('#patch')
+  ?.style.setProperty('--skeleton-height', `${SKELETON_HEIGHT}px`)
 document
   .querySelector('.skeleton')
   ?.insertAdjacentHTML('afterbegin', skeletonSvg())
 
+// The status, for screen readers (on screen only when there is a problem, see showError). Its
+// text comes now, after the styles: before them, it would show on screen for a moment.
 const status = document.querySelector<HTMLElement>('#status')
+if (status) status.textContent = 'Starting…'
 
 function showError(message: string) {
   if (!status) return

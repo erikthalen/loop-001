@@ -1,0 +1,37 @@
+/*
+ * Drag handle: a narrow button to drag something by (for example a module, to change the order).
+ *   <button type="button" class="drag-handle" aria-label="Move Delay"><svg>…</svg></button>
+ * The icon is an <svg>; it takes the handle's color.
+ */
+@layer ui {
+  .drag-handle {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1rem;
+    padding: 0;
+    color: var(--color-neutral-500);
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    cursor: grab;
+    /* Touch: dragging the handle moves the thing, not the page. */
+    touch-action: none;
+  }
+
+  /* Only with a mouse or a trackpad: on a touch screen, a hover color stays after a tap. */
+  @media (hover: hover) and (pointer: fine) {
+    .drag-handle:hover {
+      color: var(--color-neutral-800);
+      background: var(--color-neutral-200);
+    }
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .drag-handle svg {
+    fill: currentColor;
+  }
+}

@@ -6,7 +6,7 @@
     width: 13px;
     height: 13px;
     margin: 0;
-    background: var(--color-neutral-100) no-repeat center / 100%;
+    background: var(--color-neutral-50) no-repeat center / 100%;
     border: 1px solid var(--color-neutral-500);
     border-radius: 3px;
     cursor: pointer;

@@ -82,6 +82,5 @@ export function script(
   showRemoving()
 
   // ——— The cables ———
-  const matrices = root.querySelector<HTMLElement>('.matrices')
-  if (matrices) showMatrix(core, { root: matrices, colorOf, signal })
+  showMatrix(core, { root: $<HTMLElement>('.matrices'), colorOf, signal })
 }

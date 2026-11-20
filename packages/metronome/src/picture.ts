@@ -1,23 +1,29 @@
 /**
- * The MT-01 picture, drawn on a 2D canvas (24px high, as wide as the module), in the same
- * thin-line style as the sampler and the VU meter. One flat row: the ∞ on the left, the tempo on
- * the right. Both are exactly as high as the digits.
+ * The metronome's picture, drawn on a 2D canvas (40px high, as wide as the module), in the same
+ * thin-line style as the Master's reels and the library's cassettes: the tape path at the bottom
+ * of a cassette, without the case. A thin line of tape comes down from the reels (out of view),
+ * past a small pin and around a tape guide on each side, along the bottom, past the head, and back
+ * up. It is quiet on purpose: only the marks on the tape and the head's light are strong.
  *
- *    ┊ ·  ·  ·  ·  ·   ·  ·  ·  ·  · ┊
- *    ┊·             ╲ ╱             ·┊      1 2 0  B P M
- *    ┊ ·  ·  ·  ·  ·  ✕  ·  ●~~ ·  · ┊
+ *  │                                                                  │
+ *  o╲                                                               ╱o     ← pins
+ *    (·)        o               ▭               o              (·)       ← tape guides, capstans, pad
+ *     ╰───•───────•───────●───────•──┬──•───────●───────•──────╯         ← the tape: a dot per beat,
+ *                                ╭──┴──╮                                    a bigger one per bar
+ *                                ╰─────╯                                 ← the head (it lights up)
+ *  7.5 IN / BEAT AT 15 IPS                                 120 BPM       ← tape per beat, the tempo
  *
- * The ∞ (a lemniscate of Gerono): the dot goes once around it every two beats. It passes the
- * crossing in the middle exactly on each beat, then goes around one loop (fast in the middle,
- * slow at the end), and back to the middle on the next beat, then around the other loop.
- * - The path has fine ticks, and small marks at both ends. A blue cross marks the middle.
- * - The dot (blue) draws a trail behind it, about half a beat long: thick and bright at the dot,
- *   thin and faint at its end, with a soft glow.
- * - On each beat the middle flashes (blue on the first beat of the bar).
- *
- * The tempo: digit wheels and "BPM" in the same size, on one base line. A jump in tempo rolls the
- * wheels to it, like an analog counter (the script rolls them, see createOdometer in @loop/ui).
- * A leading zero (for example the 0 in "090") is dim.
+ * Not an exact drawing of a cassette: simpler, like the other pictures.
+ * - One beat is always the same length of tape (BEAT_LENGTH). So the faster the tempo, the faster
+ *   the tape runs, and a mark passes the head exactly on each beat.
+ * - The marks on the tape: a small dot on each beat, and a bigger dot in the main color on the
+ *   first beat of each bar (when the accent is on). On its beat, a dot lights up orange as it
+ *   passes the head, and fades back over 0.1 s.
+ * - The tape follows the transport: it slows down when it stops, stands still, and runs back
+ *   while it rewinds. The tape guides turn with it.
+ * - The small print: how much tape one beat is at 15 inches per second, the studio tape speed.
+ *   Engineers cut tape loops to this length. Then the tempo. Both on digit wheels that roll to a
+ *   new value (the script rolls them, see createOdometer in @loop/ui).
  */
 
 import type { OdometerWheel } from '@loop/ui'
@@ -27,47 +33,78 @@ export const BPM_WHEELS: readonly OdometerWheel[] = [100, 10, 1].map(
   (unit) => ({ unit }),
 )
 
+/** The studio tape speed, in inches per second (for the tape per beat). */
+const TAPE_SPEED = 15
+
+/**
+ * The tape per beat's 3 digit wheels, in tenths of an inch: 75 shows "07.5" (with a dim 0).
+ * From 3.0 in (300 bpm) to 45.0 in (20 bpm).
+ */
+export const INCH_WHEELS: readonly OdometerWheel[] = BPM_WHEELS
+
+/** How much tape one beat is at a tempo, in tenths of an inch (the value for INCH_WHEELS). */
+export const tapePerBeat = (bpm: number) =>
+  Math.round((TAPE_SPEED * 60 * 10) / Math.max(1, bpm))
+
 export interface PictureColors {
   screen: string
   ink: string
+  line: string
   dim: string
   muted: string
-  /** The module's main color (--loop-primary, the app's dodgerblue): the dot, the cross, the accent. */
+  /** The module's main color (--loop-primary): the bar dots, and the head's gap on a bar. */
   primary: string
+  /** A dot's light on its beat. */
+  orange: string
   font: string
 }
 
 export interface PictureState {
-  /**
-   * Where the dot is on the ∞, in radians: 0, π, 2π... is the middle; π/2 the right end, 3π/2 the
-   * left end (then it goes on: 2π + π/2 is the right end again).
-   */
-  phase: number
-  /** Where the dot's trail starts (behind the dot, along the path). The same as phase: no trail. */
-  trail: number
+  /** Where the tape is, in beats: mark k is at the head at position k. */
+  position: number
+  /** Every this many beats a bar dot (the first beat of a bar). 0: no bar dots (accent off). */
+  barLength: number
+  /** The tape per beat's digit wheels (INCH_WHEELS): each one 0 to 10. */
+  inchWheels: readonly number[]
   /** The tempo's digit wheels (BPM_WHEELS): each one 0 to 10. 2.5 is halfway from 2 to 3. */
   bpmWheels: readonly number[]
+  /** The last beat: its dot (mark k for beat k) is the one that lights up. */
+  beat: number
   /** The beat flash: 1 just on a beat, down to 0. */
   flash: number
-  /** True if the last beat was the first one of the bar (a blue flash). */
+  /** True if the last beat was the first one of a bar (the head's gap lights in the main color). */
   accent: boolean
 }
 
-export const HEIGHT = 24
-/** Where the dot rests when the metronome is stopped: in the middle, where the first beat starts. */
-export const REST = Math.PI
-/** How long the trail behind the dot is, along the path (in radians: π is one beat). */
-export const TRAIL = 1.6
-/** Canvas pixels per screen pixel, in each direction (like the sampler: sharp thin lines). */
+export const HEIGHT = 40
+/** Canvas pixels per screen pixel, in each direction (like the Master: sharp thin lines). */
 const SUPERSAMPLE = 4
-/** The tempo text's size, and where it stands (its base line). */
-const TEXT_SIZE = 22
-const BASE_Y = 21
-/** The space between the ∞ and the tempo. */
-const GAP = 12
-/** Ticks along the ∞ (and a longer one every MAJOR). */
-const TICKS = 48
-const MAJOR = 6
+/** How long one beat of tape is on the screen, in px. */
+const BEAT_LENGTH = 38
+
+// The parts, in px from the top (and from the sides).
+/** The tape: a line, where it runs along the bottom. */
+const TAPE_Y = 19.5
+/** The marks on the tape: the radius of a beat dot, and of a bar dot. */
+const BEAT_DOT = 1.3
+const BAR_DOT = 2.2
+/** The tape guides: their size, and how far in from the sides. The tape runs under them. */
+const GUIDE = 4.5
+const GUIDE_X = 16
+/** The pins: small rollers above the tape guides, nearer the sides. The tape runs outside them. */
+const PIN = 2.4
+const PIN_X = 6
+const PIN_Y = 6
+/** The capstan holes: how far from the middle, as a part of the width. */
+const CAPSTAN = 0.27
+/** The head, under the tape in the middle. */
+const HEAD_WIDTH = 16
+const HEAD_HEIGHT = 5.5
+/** The small print, on one base line at the bottom. */
+const TEXT_Y = 37.5
+const TEXT_SIZE = 7
+/** The tempo (digits and "BPM"): one size, one color. */
+const DIGIT_SIZE = 11
 
 /** `width`: the canvas's width in CSS px (the module's width). */
 export function drawPicture(
@@ -97,137 +134,208 @@ export function drawPicture(
     g.lineTo(x2, y2)
     g.stroke()
   }
-
-  // ——— The tempo, on the right: its size sets the height of everything ———
-  g.font = `200 ${TEXT_SIZE}px ${c.font}`
-  g.textBaseline = 'alphabetic'
-  const charWidth = g.measureText('0').width
-  const capHeight = g.measureText('0').actualBoundingBoxAscent
-  const top = BASE_Y - capHeight
-  const textWidth = charWidth * 6.4
-  const textLeft = width - textWidth
-
-  // ——— The ∞, on the left, from the top of the digits to their base line ———
-  // x = sin θ, y = sin θ · cos θ: the loops are as wide as the space, and as high as the digits
-  // (minus the dot's size, so that the dot stays inside too).
-  const infinityWidth = textLeft - GAP
-  const cx = infinityWidth / 2
-  const cy = top + capHeight / 2
-  const rx = cx - 3
-  const ry = capHeight - 4
-  const at = (theta: number): [number, number] => [
-    cx + rx * Math.sin(theta),
-    cy + ry * Math.sin(theta) * Math.cos(theta),
-  ]
-  /** The direction of the path at θ (for ticks across it). */
-  const across = (theta: number): [number, number] => {
-    const dx = rx * Math.cos(theta)
-    const dy = ry * Math.cos(2 * theta)
-    const length = Math.hypot(dx, dy) || 1
-    return [-dy / length, dx / length]
-  }
-  const path = (from: number, to: number) => {
+  const circle = (x: number, y: number, r: number) => {
     g.beginPath()
-    const steps = Math.max(2, Math.ceil(Math.abs(to - from) * 40))
-    for (let i = 0; i <= steps; i++) {
-      const [x, y] = at(from + ((to - from) * i) / steps)
-      if (i) g.lineTo(x, y)
-      else g.moveTo(x, y)
-    }
+    g.arc(x, y, r, 0, Math.PI * 2)
   }
 
-  // The path, thin.
-  g.strokeStyle = c.muted
-  g.lineWidth = 0.6
-  path(0, Math.PI * 2)
-  g.stroke()
+  const headX = width / 2
+  /** How far the tape has moved, in px (the tape guides turn with it). */
+  const travel = state.position * BEAT_LENGTH
+  const guides = [GUIDE_X, width - GUIDE_X] as const
+  const capstans = [headX - width * CAPSTAN, headX + width * CAPSTAN] as const
+  /** The radius of the tape around a guide: just outside its rim. */
+  const around = GUIDE + 0.8
+  const guideY = TAPE_Y - around
+  const pins = [PIN_X, width - PIN_X] as const
+  /** The radius of the tape around a pin: just outside its rim. */
+  const pinAround = PIN + 0.8
+  /**
+   * Where the tape goes from the left pin to the left guide: a line that touches both, on their
+   * outer side. The angle (from each center) of the points where it touches.
+   */
+  const dx = guides[0] - pins[0]
+  const dy = guideY - PIN_Y
+  const leave =
+    Math.atan2(dy, dx) + Math.acos((pinAround - around) / Math.hypot(dx, dy))
 
-  // Ticks across the path, longer every MAJOR. Not right at the middle (the cross is there).
-  g.lineCap = 'butt'
-  for (let k = 0; k < TICKS; k++) {
-    if (k % (TICKS / 2) === 0) continue
-    const theta = (k / TICKS) * Math.PI * 2
-    const [x, y] = at(theta)
-    const [nx, ny] = across(theta)
-    const length = k % MAJOR === 0 ? 1.8 : 1
-    g.lineWidth = k % MAJOR === 0 ? 0.7 : 0.45
-    line(x - nx * length, y - ny * length, x + nx * length, y + ny * length)
-  }
-  g.lineCap = 'round'
-
-  // Marks at both ends of the ∞.
-  g.strokeStyle = c.ink
+  // ——— The capstan holes, just inside the tape: small rings ———
+  g.strokeStyle = c.line
   g.lineWidth = 0.8
-  for (const side of [-1, 1]) {
-    const x = cx + side * (rx + 2.5)
-    line(x, cy - 2.5, x, cy + 2.5)
+  for (const x of capstans) {
+    circle(x, TAPE_Y - 4, 1.8)
+    g.stroke()
   }
 
-  // The middle: a blue cross. On each beat it flashes, and a ring grows from it.
-  g.strokeStyle = c.primary
-  g.lineWidth = 0.8
-  line(cx - 1.8, cy - 1.8, cx + 1.8, cy + 1.8)
-  line(cx - 1.8, cy + 1.8, cx + 1.8, cy - 1.8)
-  if (state.flash > 0) {
-    g.globalAlpha = state.flash
-    g.strokeStyle = state.accent ? c.primary : c.ink
-    g.beginPath()
-    g.arc(cx, cy, 2.5 + (1 - state.flash) * 4, 0, Math.PI * 2)
-    g.stroke()
-    g.globalAlpha = 1
-  }
-
-  // ——— The dot, with its trail: from faint and thin (its end) to bright and thick (at the dot) ———
-  const trailSteps = 24
-  g.strokeStyle = c.primary
-  for (let i = 0; i < trailSteps; i++) {
-    const from = state.trail + ((state.phase - state.trail) * i) / trailSteps
-    const to =
-      state.trail + ((state.phase - state.trail) * (i + 1)) / trailSteps
-    const near = (i + 1) / trailSteps
-    path(from, to)
-    // A soft glow under the line, then the line.
-    g.globalAlpha = near * 0.25
-    g.lineWidth = 1 + near * 3
-    g.stroke()
-    g.globalAlpha = 0.15 + near * 0.85
-    g.lineWidth = 0.6 + near * 1.4
-    g.stroke()
-  }
-  g.globalAlpha = 1
-  const [dx, dy] = at(state.phase)
-  g.fillStyle = c.primary
+  // ——— The pressure pad: felt, pressing the tape against the head ———
+  g.fillStyle = c.dim
   g.beginPath()
-  g.arc(dx, dy, 2.2, 0, Math.PI * 2)
+  g.roundRect(headX - 5, TAPE_Y - 2.6, 10, 2, 0.6)
   g.fill()
-  g.strokeStyle = c.screen
-  g.lineWidth = 0.6
+
+  // ——— The head, under the tape ———
+  g.beginPath()
+  g.roundRect(
+    headX - HEAD_WIDTH / 2,
+    TAPE_Y + 1,
+    HEAD_WIDTH,
+    HEAD_HEIGHT,
+    [3.5, 3.5, 1.5, 1.5],
+  )
+  g.fillStyle = c.screen
+  g.fill()
+  g.strokeStyle = c.muted
+  g.lineWidth = 0.8
+  g.stroke()
+  // The gap, where it reads the tape.
+  g.strokeStyle = state.flash > 0.5 && state.accent ? c.primary : c.muted
+  g.lineWidth = 0.8
+  line(headX, TAPE_Y + 1.6, headX, TAPE_Y + 3.4)
+
+  // ——— The tape: one line, down from the reels, past the pins and around the guides, along the
+  // bottom, and up again (the right side is the left side mirrored) ———
+  g.beginPath()
+  g.moveTo(pins[0] - pinAround, -1)
+  g.arc(pins[0], PIN_Y, pinAround, Math.PI, leave, true)
+  g.arc(guides[0], guideY, around, leave, Math.PI / 2, true)
+  g.lineTo(guides[1], TAPE_Y)
+  g.arc(guides[1], guideY, around, Math.PI / 2, Math.PI - leave, true)
+  g.arc(pins[1], PIN_Y, pinAround, Math.PI - leave, 0, true)
+  g.lineTo(pins[1] + pinAround, -1)
+  g.strokeStyle = c.muted
+  g.lineWidth = 1.1
   g.stroke()
 
-  // ——— The tempo: 3 digit wheels, then "BPM" in the same size ———
-  // Each wheel's place comes from the script. The window: from the top of the digits to just under
-  // the line.
-  g.textAlign = 'center'
-  const row = TEXT_SIZE * 1.05
-  const wheels = state.bpmWheels
+  // The marks: dots on the tape, on the part along the bottom (between the guides).
   g.save()
   g.beginPath()
-  g.rect(textLeft - 1, top - 2, charWidth * 3 + 2, capHeight + 4)
+  g.rect(guides[0], TAPE_Y - BAR_DOT - 1, guides[1] - guides[0], BAR_DOT * 2 + 2)
   g.clip()
-  wheels.forEach((wheel, i) => {
-    const x = textLeft + charWidth * (i + 0.5)
-    const digit = Math.floor(wheel) % 10
-    const turn = wheel % 1
-    // A leading zero is dim, like an unlit display (this wheel and all before it show 0).
-    const leading =
-      i < wheels.length - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
-    g.fillStyle = leading ? c.dim : c.ink
-    g.fillText(String(digit), x, BASE_Y - turn * row)
-    if (turn > 0)
-      g.fillText(String((digit + 1) % 10), x, BASE_Y + (1 - turn) * row)
-  })
+  const first = Math.floor(state.position - headX / BEAT_LENGTH) - 1
+  const last = Math.ceil(state.position + (width - headX) / BEAT_LENGTH) + 1
+  for (let k = first; k <= last; k++) {
+    const x = headX + (k - state.position) * BEAT_LENGTH
+    const bar =
+      state.barLength > 0 &&
+      ((k % state.barLength) + state.barLength) % state.barLength === 0
+    g.fillStyle = bar ? c.primary : c.ink
+    circle(x, TAPE_Y, bar ? BAR_DOT : BEAT_DOT)
+    g.fill()
+    // On its beat: orange on top, fading out evenly (see the beat flash in script.ts).
+    if (k === state.beat && state.flash > 0) {
+      g.globalAlpha = state.flash
+      g.fillStyle = c.orange
+      g.fill()
+      g.globalAlpha = 1
+    }
+  }
   g.restore()
-  g.textAlign = 'left'
+
+  // ——— The tape guides, in the corners: rollers with a tick that turns with the tape ———
+  for (const x of guides) {
+    circle(x, guideY, GUIDE)
+    g.fillStyle = c.screen
+    g.fill()
+    g.strokeStyle = c.muted
+    g.lineWidth = 0.8
+    g.stroke()
+    // The tape runs left under the guide, so the guide turns clockwise.
+    const turn = travel / GUIDE
+    line(
+      x,
+      guideY,
+      x + Math.cos(turn) * (GUIDE - 1.4),
+      guideY + Math.sin(turn) * (GUIDE - 1.4),
+    )
+    circle(x, guideY, 0.8)
+    g.fillStyle = c.muted
+    g.fill()
+  }
+
+  // The tape comes from the reels, out of view: it fades in at the top. Erase it gradually (so
+  // the screen behind shows): a fade to a color through "transparent" would pass through gray.
+  g.globalCompositeOperation = 'destination-out'
+  const fade = g.createLinearGradient(0, 0, 0, 7)
+  fade.addColorStop(0, 'rgb(0 0 0 / 1)')
+  fade.addColorStop(1, 'rgb(0 0 0 / 0)')
+  g.fillStyle = fade
+  g.fillRect(pins[0] - pinAround - 2, 0, 4, 7)
+  g.fillRect(pins[1] + pinAround - 2, 0, 4, 7)
+  g.globalCompositeOperation = 'source-over'
+
+  // ——— The pins: small rollers. After the fade, so they are not faded too ———
+  for (const x of pins) {
+    circle(x, PIN_Y, PIN)
+    g.fillStyle = c.screen
+    g.fill()
+    g.strokeStyle = c.muted
+    g.lineWidth = 0.8
+    g.stroke()
+    circle(x, PIN_Y, 0.7)
+    g.fillStyle = c.muted
+    g.fill()
+  }
+
+  // ——— The small print: tape per beat, left; the tempo, right ———
+  g.textBaseline = 'alphabetic'
+
+  /**
+   * Digit wheels in a window, from `left`, in the font set now: each digit rolls up to the next.
+   * `decimals`: how many of the last wheels are after a decimal point. A leading zero is dim, like
+   * an unlit display. Gives the width.
+   */
+  const drawWheels = (
+    wheels: readonly number[],
+    left: number,
+    size: number,
+    color: string,
+    decimals = 0,
+  ) => {
+    const charWidth = g.measureText('0').width
+    const capHeight = g.measureText('0').actualBoundingBoxAscent
+    const pointWidth = decimals ? g.measureText('.').width : 0
+    const point = wheels.length - decimals
+    const row = size * 1.1
+    const total = charWidth * wheels.length + pointWidth
+    g.save()
+    g.beginPath()
+    g.rect(left - 1, TEXT_Y - capHeight - 1.5, total + 2, capHeight + 3)
+    g.clip()
+    g.textAlign = 'center'
+    wheels.forEach((wheel, i) => {
+      const x = left + charWidth * (i + 0.5) + (i >= point ? pointWidth : 0)
+      const digit = Math.floor(wheel) % 10
+      const turn = wheel % 1
+      // Leading: this wheel and all before it show 0 (not the last one before the point).
+      const leading =
+        i < point - 1 && wheels.slice(0, i + 1).every((w) => w < 0.5)
+      g.fillStyle = leading ? c.dim : color
+      g.fillText(String(digit), x, TEXT_Y - turn * row)
+      if (turn > 0)
+        g.fillText(String((digit + 1) % 10), x, TEXT_Y + (1 - turn) * row)
+    })
+    if (decimals) {
+      g.fillStyle = color
+      g.textAlign = 'left'
+      g.fillText('.', left + charWidth * point, TEXT_Y)
+    }
+    g.restore()
+    return total
+  }
+
+  // The tape per beat: digit wheels, then the rest of the text.
+  g.font = `400 ${TEXT_SIZE}px ${c.font}`
+  const inchesWidth = drawWheels(state.inchWheels, 0, TEXT_SIZE, c.muted, 1)
   g.fillStyle = c.muted
-  g.fillText('BPM', textLeft + charWidth * 3.4, BASE_Y)
+  g.textAlign = 'left'
+  g.fillText(` IN / BEAT AT ${TAPE_SPEED} IPS`, inchesWidth, TEXT_Y)
+
+  // The tempo: digit wheels, then "BPM", in the same size and color.
+  g.font = `500 ${DIGIT_SIZE}px ${c.font}`
+  g.fillStyle = c.ink
+  g.textAlign = 'right'
+  const bpmWidth = g.measureText(' BPM').width
+  g.fillText(' BPM', width, TEXT_Y)
+  const digitsWidth = g.measureText('0').width * state.bpmWheels.length
+  drawWheels(state.bpmWheels, width - bpmWidth - digitsWidth, DIGIT_SIZE, c.ink)
 }

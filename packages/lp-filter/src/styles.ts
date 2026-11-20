@@ -3,7 +3,7 @@ import { css } from '@loop/core'
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
 // The rules here are outside a cascade layer, so they win over @loop/ui.
-// The display: "music from next door" (scene.ts), in thin lines like the sampler.
+// The display: the sound before and after the filter (picture.ts), in thin lines like the others.
 export const styles = css`
   :host {
     display: inline-block;

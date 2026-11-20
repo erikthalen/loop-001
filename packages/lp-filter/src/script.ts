@@ -1,5 +1,15 @@
 import { defineModuleScript } from '@loop/core'
-import { BANDS, drawScene, type SceneColors } from './scene'
+import { createOdometer } from '@loop/ui'
+import {
+  COLUMN_EDGES,
+  COLUMNS,
+  CURVE_FREQUENCIES,
+  drawPicture,
+  HZ_WHEELS,
+  type PictureColors,
+  RESONANCE_WHEELS,
+  TEXT_FONTS,
+} from './picture'
 import { MAX_FREQUENCY, MIN_FREQUENCY, type setup } from './setup'
 import { FREQUENCY_STEPS } from './template'
 
@@ -33,7 +43,7 @@ export const script = defineModuleScript<typeof setup>(
       const hz = formatHz(module.frequency)
       canvas.setAttribute(
         'aria-label',
-        `Music from next door: a wall between a speaker and an ear lets the low sounds through. Cutoff ${hz.value} ${hz.unit}, resonance ${module.resonance.toFixed(1)} dB, ` +
+        `The sound before and after the filter, from low to high, and the filter's curve. Cutoff ${hz.value} ${hz.unit}, resonance ${module.resonance.toFixed(1)} dB, ` +
           `${module.slope} dB per octave` +
           (module.on ? '.' : '. The filter is off.'),
       )
@@ -109,16 +119,15 @@ export const script = defineModuleScript<typeof setup>(
       probe.style.color = color
       return getComputedStyle(probe).color
     }
-    let colors: SceneColors
+    let colors: PictureColors
     const readColors = () => {
       colors = {
         screen: resolve('var(--screen)'),
         ink: resolve('var(--ink)'),
+        line: resolve('var(--line)'),
         dim: resolve('var(--dim)'),
         muted: resolve('var(--muted)'),
-        blue: resolve('var(--blue)'),
-        orange: resolve('var(--orange)'),
-        red: resolve('var(--red)'),
+        primary: resolve('var(--loop-primary)'),
         font: getComputedStyle(display).fontFamily,
       }
     }
@@ -129,40 +138,62 @@ export const script = defineModuleScript<typeof setup>(
       { signal },
     )
 
-    // How much of each wave comes through the wall: the filter's curve at the waves' frequencies.
-    const bandFrequencies = Float32Array.from(BANDS, (band) => band.hz)
-    const bandGains = new Float32Array(BANDS.length)
+    // The filter's curve, at the picture's points.
+    const response = new Float32Array(CURVE_FREQUENCIES.length)
 
-    // How loud the sound is (0 to 1): the loudest band before the filter.
+    // The sound, before and after the filter: one level (0 to 1) per column of the picture. Each
+    // column is a part of the range (COLUMN_EDGES): its loudest bin.
     const bins = new Float32Array(module.inputAnalyser.frequencyBinCount)
-    const level = () => {
-      module.inputAnalyser.getFloatFrequencyData(bins)
-      let loudest = -200
-      for (let k = 2; k < 600; k++) loudest = Math.max(loudest, bins[k]!)
-      return Math.max(0, Math.min(1, (loudest + 80) / 60))
+    const binHz =
+      module.inputAnalyser.context.sampleRate / module.inputAnalyser.fftSize
+    const levels = (analyser: AnalyserNode, into: Float32Array) => {
+      analyser.getFloatFrequencyData(bins)
+      for (let i = 0; i < COLUMNS; i++) {
+        const from = Math.floor(COLUMN_EDGES[i]! / binHz)
+        const to = Math.max(from, Math.floor(COLUMN_EDGES[i + 1]! / binHz))
+        let loudest = -200
+        for (let k = from; k <= to && k < bins.length; k++)
+          loudest = Math.max(loudest, bins[k]!)
+        // -90 dB: no cells, -20 dB: all of them.
+        into[i] = Math.max(0, Math.min(1, (loudest + 90) / 70))
+      }
     }
+    const before = new Float32Array(COLUMNS)
+    const after = new Float32Array(COLUMNS)
 
+    // The numbers roll to a new value (see createOdometer in @loop/ui). Less motion: jump there.
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+    const hzValue = () => Math.round(module.frequency)
+    const resonanceValue = () => Math.round(module.resonance * 10)
+    const hzWheels = createOdometer(HZ_WHEELS, hzValue())
+    const resonanceWheels = createOdometer(RESONANCE_WHEELS, resonanceValue())
 
     // Draw about 60 times a second, while the UI is mounted.
-    let loudness = 0
     let last = 0
     let frame = 0
     const draw = (now: number) => {
       const seconds = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60
       last = now
-      if (module.on) module.getResponse(bandFrequencies, bandGains)
-      else bandGains.fill(1)
-      loudness = Math.max(level(), loudness - seconds * 1.5)
-      drawScene(
+      module.getResponse(CURVE_FREQUENCIES, response)
+      levels(module.inputAnalyser, before)
+      levels(module.outputAnalyser, after)
+      if (reducedMotion.matches) {
+        hzWheels.jump(hzValue())
+        resonanceWheels.jump(resonanceValue())
+      } else {
+        hzWheels.roll(hzValue(), seconds)
+        resonanceWheels.roll(resonanceValue(), seconds)
+      }
+      drawPicture(
         canvas,
         {
-          resonance: module.resonance,
-          position: frequency.valueAsNumber / FREQUENCY_STEPS,
+          cutoff: module.frequency,
+          hzWheels: hzWheels.wheels,
+          resonanceWheels: resonanceWheels.wheels,
           bypass: !module.on,
-          gains: [...bandGains],
-          level: loudness,
-          time: reducedMotion.matches ? 0 : now / 1000,
+          response,
+          before,
+          after,
         },
         colors,
       )
@@ -170,5 +201,13 @@ export const script = defineModuleScript<typeof setup>(
     }
     frame = requestAnimationFrame(draw)
     signal.addEventListener('abort', () => cancelAnimationFrame(frame))
+
+    // A canvas does not wait for a font, and the browser downloads a weight only when something
+    // uses it. Load the weights the picture uses (it draws again on the next frame anyway).
+    Promise.all(
+      Object.values(TEXT_FONTS).map((font) =>
+        document.fonts.load(`${font} ${colors.font}`),
+      ),
+    ).catch((error) => console.error('The filter font did not load:', error))
   },
 )

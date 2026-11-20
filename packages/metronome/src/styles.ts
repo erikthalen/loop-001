@@ -2,7 +2,8 @@ import { css } from '@loop/core'
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The rules here are outside a cascade layer, so they win.
-// Two rows. Top: the picture (thin lines, like the sampler) with the tempo. Bottom: the controls.
+// Two rows. Top: the picture (a tape past a head, thin lines like the Master), with the tempo.
+// Bottom: the controls.
 // Both rows go from the left edge to the right edge, so their ends line up.
 export const styles = css`
   :host {
@@ -20,11 +21,11 @@ export const styles = css`
     padding: 10px 14px;
   }
 
-  /* Top: the picture, over the whole width (picture.ts draws to its width). */
+  /* Top: the picture, over the whole width (picture.ts draws to its width; HEIGHT there). */
   .picture {
     display: block;
     width: 100%;
-    height: 24px;
+    height: 40px;
   }
 
   /* Bottom: tempo (grows and shrinks) and mute (its own size). */

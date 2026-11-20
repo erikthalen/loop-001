@@ -19,7 +19,7 @@ export const template = defineModuleTemplate<typeof setup>(
         <!-- <div class="strip"></div>
         <div class="strip"></div> -->
         <div class="strip">
-          <span class="master-name">MSR</span>
+          <span class="master-name">MIX</span>
           <span>→A</span>
           <span>→B</span>
         </div>

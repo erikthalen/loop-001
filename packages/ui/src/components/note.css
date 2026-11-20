@@ -1,0 +1,12 @@
+/*
+ * Note: a quiet box for a remark next to the main text.
+ *   <p class="note">Here the module has no cables. <a href="/">Open the studio</a>.</p>
+ */
+@layer ui {
+  .note {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-800);
+  }
+}

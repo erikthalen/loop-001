@@ -23,6 +23,6 @@ export const template = (options: PatchbayOptions): HTMLTemplate => html`
         )}
       </menu>
     </div>
-    ${options.matrix === false ? '' : html`<div class="matrices"></div>`}
+    <div class="matrices"></div>
   </section>
 `

@@ -1,4 +1,4 @@
-import { css } from '@loop/core'
+import { css } from "@loop/core";
 
 // CSS: only applies inside this module. The screen and the colors come from @loop/ui
 // (components/display.css); the inputs too. The module only sets their colors (--loop-primary).
@@ -134,15 +134,20 @@ export const styles = css`
   .channel {
     --loop-primary: var(--c);
     color: var(--c);
-
+    
     input {
       border-color: var(--loop-primary);
+    }
+    
+    &.empty {
+      --loop-primary: var(--color-neutral-800);
+      color: var(--loop-primary);
     }
   }
 
   /* An empty channel: a darker color (but the active one is always bright). */
   .channel.empty:not(:has(:checked)) {
-    color: color-mix(in srgb, var(--c) 45%, var(--screen));
+    /* color: color-mix(in srgb, var(--loop-primary) 45%, var(--screen)); */
   }
 
   .rec {
@@ -155,4 +160,4 @@ export const styles = css`
     top: 0;
     right: 0;
   }
-`
+`;

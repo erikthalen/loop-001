@@ -3,7 +3,8 @@ import type { setup } from './setup'
 
 // HTML: made once, when the UI is mounted. Classes come from @loop/ui (display, field, sr-only)
 // and styles.ts; @loop/ui also styles the slider and the checkbox.
-// Two rows. Top, what it shows: the picture (picture.ts), with the tempo. Bottom, what you change:
+// Two rows. Top, what it shows: the picture (picture.ts: a tape past a head), with the tempo.
+// Bottom, what you change:
 // the tempo slider and mute.
 export const template = defineModuleTemplate<typeof setup>(
   ({ module }) => html`

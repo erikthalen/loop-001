@@ -6,7 +6,7 @@ pnpm monorepo.
 - `packages/core` – `@loop/core`: AudioContext, clock, event bus, module system
 - `packages/master` – `@loop/master`: play / stop / rewind and the master volume; the end of the sound (only one at a time), it plays straight into the speakers; it records the sound and plays it backwards while it rewinds
 - `packages/metronome` – `@loop/metronome`: test module, ticks on every beat
-- `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture is "music from next door": a wall between a speaker and an ear lets only the low sounds through
+- `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture shows the sound before and after the filter, from low to high, with the filter's curve
 - `packages/sequencer` – `@loop/sequencer`: a step sequencer (6 channels, 16 steps); it makes no sound, it only sends triggers to the modules plugged into it
 - `packages/mixer` – `@loop/mixer`: mixes 6 channels (for example a sampler's): a volume, a main switch and two sends (A, B) per channel, and two send buses (send and return) for effects
 - `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); usually on a send and return of the mixer
@@ -97,6 +97,11 @@ Plain CSS files in `packages/ui/src/` (components in `packages/ui/src/components
 | `components/meter.css`    | `meter` (no class needed): a meter drawn fully in CSS that looks like Chrome's; green, yellow or red from `low`, `high` and `optimum`; light and dark mode; length with `width`                                                                                                                                                                                                                                                   |
 | `components/panel.css`    | `.panel`, `.panel-title`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `components/menu.css`     | `.menu`, `.menu-title`, `.menu-list`, `.menu-item`, `.menu-divider`                                                                                                                                                                                                                                                                                                                                                               |
+| `components/drag-handle.css` | `.drag-handle`: a narrow button to drag something by (an `<svg>` icon in it takes its color). The hover color only with a mouse or a trackpad |
+| `components/note.css`     | `.note`: a quiet box for a remark next to the main text |
+| `components/prose.css`    | `.prose`: text to read (docs, help pages): headings, paragraphs, lists and links with room and quiet colors; the text can be selected |
+| `components/skeleton.css` | `.skeleton`: the gray silhouette of something that is still loading (an `<svg>` drawn with `currentColor`), with a slow pulse |
+| `app.css`                 | The app's own pages (not components): the page layout, the studio's column of modules (`#patch`, `#rack`, `.slot`, remove mode, the view transitions when a module comes or goes, the loading screen), the module guide, and the start page. Last in `uiStyles`, so it wins over the components |
 
 - **Layer:** every rule is in `@layer ui`. Rules outside a layer always win, so the app and modules can override anything.
 - **The app** puts the library in a `<style>` tag of the page (`app/src/app.ts`). It shows on first paint and works offline.
@@ -151,11 +156,10 @@ The core makes the jacks (`core.ports(id)`) from what `setup` returns:
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `app/src/modules.ts`    | The list of modules a user can add. **Add new modules here.**                                                                                                                                                                                                                                                                     |
 | `app/src/rack.ts`       | Shows the core's modules in rack order. Follows `moduleadd` / `moduleremove` / `modulemove`. Drag a module by its handle (or Space + arrow keys) to move it.                                                                                                                                                                      |
-| `app/src/patch-lane.ts` | The other way to see the cables, with `?lane` in the URL (then the patchbay has no matrix): the jacks left of each module, and the cables in a lane left of them. Drag from a jack to plug in a cable; drag an input's cable off to unplug it; click a cable, then Delete, to take it out. Hover a module to see only its cables. |
 | `app/src/client.ts`     | Connects the buttons, the core, the picker and the rack.                                                                                                                                                                                                                                                                          |
 
 The core owns the modules and the cables. The page only shows them:
-Add (in the patchbay) → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patchbay's matrix (or the lane, with `?lane`) shows the cables.
+Add (in the patchbay) → `core.add(definition)`, then `core.autoPatch(module)` → core sends `moduleadd` and `cablechange` → the rack mounts the UI, the patchbay's matrix shows the cables.
 Remove → `module.remove()` → core sends `moduleremove` → the rack takes the UI away.
 
 Remove mode: modules jiggle and show a "−" badge. A full-size button lies over each module, so a click removes it.

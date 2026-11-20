@@ -21,11 +21,6 @@ export interface Rack {
   transition(type: string, update: () => void): void
 }
 
-export interface RackOptions {
-  /** Called once for each new slot, with the module in it: add things to the slot (the jacks). */
-  onSlot?: (slot: HTMLElement, module: AudioModule) => void
-}
-
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
 /** Six dots in two columns: the usual "you can drag this" sign. */
@@ -77,16 +72,12 @@ const passTheMiddle: CollisionDetector = ({ dragOperation, droppable }) => {
  * `modulemove` puts it in its new place.
  *
  * Sort: drag a module by its handle (or focus the handle, press Space, then the arrow keys).
- * Dropping it calls `core.move()`. Only the order changes: the cables stay (see patch-lane.ts).
+ * Dropping it calls `core.move()`. Only the order changes: the cables stay.
  * Drag and drop: dnd-kit (`@dnd-kit/dom`, the version without a framework).
  *
  * Remove mode: modules jiggle and a click on a module removes it from the core.
  */
-export function createRack(
-  core: Core,
-  element: HTMLElement,
-  options: RackOptions = {},
-): Rack {
+export function createRack(core: Core, element: HTMLElement): Rack {
   const slots = new Map<string, HTMLElement>()
   const sortables = new Map<string, Sortable>()
   const manager = new DragDropManager()
@@ -227,7 +218,6 @@ export function createRack(
     // The handle goes to the right of the module (after it, so Tab reaches it after the module too).
     slot.append(slot.querySelector('.drag-handle')!)
     if (removing) slot.querySelector('section')!.inert = true
-    options.onSlot?.(slot, module)
 
     // Only the handle starts a drag: the module's own sliders and buttons keep working.
     const sortable = new Sortable(

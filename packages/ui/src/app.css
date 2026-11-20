@@ -1,0 +1,257 @@
+/*
+ * App: the styles of the Loop 001 app's own pages (the studio, the module guide, the start page).
+ * Not components: page layout, and the places of things only this app has. It comes after the
+ * components (index.ts), so its rules win over theirs.
+ *
+ * The app places the modules; each module styles its own inside (its Shadow DOM).
+ */
+@layer ui {
+  body {
+    > main {
+      width: 275px;
+      margin: auto;
+    }
+  }
+
+  /* ---- The studio: the modules, the patchbay and the library, one column ---- */
+  #patch {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 10px;
+  }
+
+  /* ---- Loading (app/src/skeleton.ts, components/skeleton.css) ---- */
+  /* Until the page sets data-ready, the silhouettes of the modules show in their place. The real
+     modules are already there (they need their size), but hidden. */
+  #patch > .skeleton {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition:
+      opacity 0.3s,
+      visibility 0s 0.3s;
+  }
+  #patch > :not(.skeleton) {
+    transition: opacity 0.3s;
+  }
+  /* As tall as the skeleton, so what comes after it (the guide link) stays below it. The page
+     sets --skeleton-height on #patch. */
+  #patch:not([data-ready]) {
+    min-height: var(--skeleton-height, 0);
+  }
+  #patch:not([data-ready]) > :not(.skeleton),
+  #patch[data-ready] > .skeleton {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  /* ---- The rack (app/src/rack.ts) ---- */
+  #rack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    max-width: 32rem;
+  }
+
+  #rack:not(:has(.slot))::before {
+    content: "No modules yet. Click add in the patchbay below.";
+    color: #667085;
+  }
+
+  /* A slot: the module, then its drag handle (components/drag-handle.css) on its right. */
+  .slot {
+    position: relative;
+    display: flex;
+    gap: 0.25rem;
+    /* Each slot has its own view-transition-name (set in rack.ts, from the module id). */
+    view-transition-class: module;
+
+    /* While you drag it, dnd-kit makes the slot a popover (so it floats above the page).
+       Popovers have a frame (components/popover.css): not here. */
+    &[popover] {
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0;
+      background: none;
+    }
+
+    /* With a mouse or a trackpad: the handle shows when you point at the module.
+       Touch screens: always (else the first tap only shows the handle, and only the
+       second tap reaches the module). */
+    @media (hover: hover) and (pointer: fine) {
+      &:not(:hover) {
+        .drag-handle {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+    }
+  }
+
+  #rack[data-removing] .drag-handle {
+    visibility: hidden;
+  }
+
+  /* Remove mode: modules jiggle, a badge shows, a click removes the module. */
+  .slot .remove-target {
+    display: none;
+  }
+  #rack[data-removing] .slot .remove-target {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0.75rem;
+    cursor: pointer;
+  }
+  .remove-target::before {
+    content: "−";
+    position: absolute;
+    top: -0.6rem;
+    left: 0rem;
+    display: grid;
+    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--color-neutral-300);
+    color: var(--color-neutral-1000);
+    font-size: 1rem;
+    line-height: 1;
+  }
+  #rack[data-removing] .slot {
+    animation: jiggle 0.25s ease-in-out infinite alternate;
+  }
+  #rack[data-removing] .slot:nth-child(even) {
+    animation-delay: -0.125s;
+  }
+  @keyframes jiggle {
+    from {
+      rotate: -0.6deg;
+    }
+    to {
+      rotate: 0.6deg;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #rack[data-removing] .slot {
+      animation: none;
+      outline: 2px dashed var(--loop-primary);
+      outline-offset: 4px;
+      border-radius: 0.75rem;
+    }
+  }
+
+  /* ---- Adding and removing modules: a view transition (app/src/rack.ts) ---- */
+  /* The patchbay and the library are under the rack: they move when a module goes,
+     so they take part in the view transition too (the same class as the modules). */
+  #patchbay {
+    view-transition-name: patchbay;
+    view-transition-class: module;
+  }
+  #library {
+    view-transition-name: library;
+    view-transition-class: module;
+  }
+
+  /* The modules, the patchbay and the library slide into their new place. */
+  html:active-view-transition-type(
+      add-module,
+      remove-module
+    )::view-transition-group(.module) {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  /* The removed module (only in the old picture) shrinks away. */
+  html:active-view-transition-type(remove-module)::view-transition-old(
+      .module
+    ):only-child {
+    animation: module-out 0.15s ease-in both;
+  }
+  /* The added module (only in the new picture) grows in, once there is room for it. */
+  html:active-view-transition-type(add-module)::view-transition-new(
+      .module
+    ):only-child {
+    animation: module-out 0.2s ease-out 0.1s reverse both;
+  }
+  @keyframes module-out {
+    to {
+      opacity: 0;
+      scale: 0.85;
+    }
+  }
+
+  /* ---- The module guide (/modules and /modules/<type>) ---- */
+  /* The link to the guide, under the library on the studio page. */
+  .page-links {
+    margin: 1.5rem 0 1rem;
+    text-align: center;
+  }
+  .page-links a {
+    color: var(--color-neutral-800);
+    text-decoration-color: var(--color-neutral-400);
+    text-underline-offset: 3px;
+  }
+  .page-links a:hover {
+    color: var(--color-neutral-1000);
+    text-decoration-color: currentColor;
+  }
+  /* The module, alone, at the top of its page. */
+  #module {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  /* The guide's text: one column of blocks. The text itself is prose (components/prose.css). */
+  .guide {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem 0 2rem;
+  }
+  .summary {
+    /* font-size: 1rem; */
+    color: var(--color-neutral-800);
+  }
+  /* The other modules, at the end of each page. */
+  .module-list {
+    padding: 0;
+
+    li + li {
+      margin-top: 0.25rem;
+    }
+    a[aria-current="page"] {
+      font-weight: 500;
+      color: var(--color-neutral-1000);
+      text-decoration: none;
+    }
+
+    span {
+      display: none;
+    }
+  }
+
+  /* ---- The start page (app/index.html, app/src/register-sw.ts) ---- */
+  /* Its status: hidden on screen while all goes well (screen readers still read it). */
+  #status {
+    margin: 10px 0;
+    text-align: center;
+  }
+  #status[data-quiet] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

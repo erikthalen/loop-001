@@ -11,7 +11,7 @@ export { CHANNEL_COLORS } from './display'
  * so you can override anything here without fighting selector strength.
  *
  * Order: tokens, base, layout, then every file in components/ (a new file there is included
- * automatically).
+ * automatically), then app.css (the app's own pages: last, so it wins over the components).
  */
 export {
   addLoopFont,
@@ -28,6 +28,7 @@ export {
   wheelCounts,
 } from './odometer'
 
+import app from './app.css?inline'
 import base from './base.css?inline'
 import layout from './layout.css?inline'
 import tokens from './tokens.css?inline'
@@ -47,5 +48,5 @@ const components = import.meta.glob<string>('./components/*.css', {
  * The app puts the same text in a <style> tag of the page.
  */
 export const uiStyles: { readonly cssText: string } = {
-  cssText: [tokens, base, layout, ...Object.values(components)].join('\n'),
+  cssText: [tokens, base, layout, ...Object.values(components), app].join('\n'),
 }

@@ -10,7 +10,6 @@ import {
   newProject,
   upgradeProject,
 } from './modules'
-import { createPatchLane } from './patch-lane'
 import { createProjectSession } from './project-session'
 import { openProjectStore } from './project-store'
 import { createRack } from './rack'
@@ -28,22 +27,14 @@ const $ = <T extends HTMLElement>(selector: string) =>
 const core = createCore()
 
 // ---- Modules: the rack shows what is in the core, the patchbay adds, removes and connects them ----
-// Two ways to see the cables, to try side by side: the matrix in the patchbay (default), or the
-// cable lane left of the rack (?lane in the URL; then the patchbay has no matrix).
+// The cables are in the patchbay's matrix, in the color of the module they come out of.
 const colorOf = (module: { type: string }) =>
   CABLE_COLORS[module.type] ?? 'var(--ink)'
-const useLane = new URLSearchParams(location.search).has('lane')
-const lane = useLane
-  ? createPatchLane(core, { root: $('#patch'), colorOf })
-  : null
-const rack = createRack(core, $('#rack'), {
-  onSlot: (slot, module) => lane && slot.prepend(lane.jackStrip(module)),
-})
+const rack = createRack(core, $('#rack'))
 mountPatchbay($('#patchbay'), core, {
   modules: availableModules,
   colorOf,
   rack,
-  matrix: !useLane,
   onAdd: keepStorage,
   transition: rack.transition,
 })
