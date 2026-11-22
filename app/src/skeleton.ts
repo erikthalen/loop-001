@@ -16,7 +16,7 @@ const PARTS: readonly { name: string; height: number; above?: number }[] = [
   // Not measured yet: about 10 + 40 (the picture) + 8 + 22 (the controls) + 10.
   { name: 'metronome', height: 90 },
   // The sampler: the tape machine and under it the sequencer, as one screen (no gap between them).
-  { name: 'sampler', height: 287 },
+  { name: 'sampler', height: 317 },
   { name: 'mixer', height: 176 },
   { name: 'delay', height: 146 },
   { name: 'lp-filter', height: 119 },

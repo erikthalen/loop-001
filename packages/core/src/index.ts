@@ -47,12 +47,3 @@ export {
   reaches,
   samePlug,
 } from './patch'
-export {
-  type ProjectCable,
-  type ProjectData,
-  type ProjectModuleData,
-  parseProject,
-  type RestoreResult,
-  restoreProject,
-  serializeProject,
-} from './project'

@@ -1,9 +1,10 @@
 // Page script for the module guide (/modules/<type>, see app.ts). It shows one module, alone.
 // Nothing here is saved: this page does not touch the projects.
 // An audio module has no cables here, so it makes no sound. Open the studio to hear it.
-import { createCore, restoreProject } from '@loop/core'
+import { createCore } from '@loop/core'
 import { mountLibrary } from '@loop/library'
 import { mountPatchbay, type RemoveMode } from '@loop/patchbay'
+import { restoreProject } from '@loop/project'
 import { addLoopFont, mountModule } from '@loop/ui'
 import { createDemoLibrary } from './demo-library'
 import { availableModules, CABLE_COLORS, newProject } from './modules'

@@ -1,4 +1,4 @@
-import { type ProjectData, parseProject } from '@loop/core'
+import { type ProjectData, parseProject } from './data'
 
 /** A project as it is kept in the browser. */
 export interface StoredProject {

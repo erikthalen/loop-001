@@ -156,9 +156,9 @@ export function showMatrix(core: Core, options: MatrixOptions): void {
     render(
       html`
         <table class="matrix" style="--columns: ${ins.filter(shown).length}">
-          <caption>
+          <!-- <caption>
             Cables
-          </caption>
+          </caption> -->
           <thead>
             <tr>
               <td></td>

@@ -66,6 +66,15 @@
 
       tr {
         align-items: center;
+
+        th {
+          position: sticky;
+          right: 0;
+          background: var(--color-neutral-0);
+          height: 100%;
+          padding-top: 3.5px;
+          z-index: 1;
+        }
       }
     }
 

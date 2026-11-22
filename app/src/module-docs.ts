@@ -46,6 +46,7 @@ const master = defineModuleDoc({
     'Master sends the sound to the speakers. It controls the playback: start, stop and rewind. It also sets the volume of the output.',
   howTo: [
     'Click play to start. Click play again to stop.',
+    'Or press Space to start and stop.',
     'Click rew to rewind to the start. Click rew again to stop the rewind.',
     'Drag vol to set the volume.',
   ],
@@ -72,7 +73,7 @@ const sampler = defineModuleDoc({
   type: 'sampler',
   name: 'Sampler',
   summary:
-    'The sampler records up to 5 seconds from the microphone on each of its 6 channels. Its sequencer plays the channels in a pattern of 16 steps.',
+    'The sampler records up to 5 seconds from the microphone on each of its 6 channels. Its sequencer plays the channels in a pattern of 16 steps. It keeps 6 patterns.',
   howTo: [
     'Click a channel number (1 to 6).',
     'Click rec to record. Click rec again to stop.',
@@ -80,6 +81,8 @@ const sampler = defineModuleDoc({
     'Click play to hear the cut sound.',
     'Click a box in the sequencer to add or remove a step.',
     'Each row of the sequencer plays the channel with the same number.',
+    'Click a pattern number (1 to 6) under the steps to show that pattern. It plays from the next bar.',
+    'Click the copy button to copy the pattern. Click the paste button to put it into the pattern that shows.',
   ],
   jacks: [
     {
@@ -92,13 +95,41 @@ const sampler = defineModuleDoc({
   tips: ['The arrow keys also move a marker.'],
 })
 
+const drums = defineModuleDoc({
+  type: 'drums',
+  name: 'Drum machine',
+  summary:
+    'The drum machine makes 6 drum sounds with synthesis, not samples: bass drum, snare drum, hand clap, closed hi-hat, open hi-hat and rim shot. Its sequencer plays the drums in a pattern of 16 steps. It keeps 6 patterns.',
+  howTo: [
+    'Click a drum (BD to RS) to show its 4 settings.',
+    'Drag a slider to change the sound of that drum.',
+    'Click hit to hear the drum.',
+    'Click a box in the sequencer to add or remove a step.',
+    'Each row of the sequencer plays the drum with the same name.',
+    'Click a pattern number (1 to 6) under the steps to show that pattern. It plays from the next bar.',
+    'Click the copy button to copy the pattern. Click the paste button to put it into the pattern that shows.',
+  ],
+  jacks: [
+    {
+      name: '1–6',
+      direction: 'out',
+      kind: 'channels',
+      text: 'One jack for each drum. Connect all 6 to a mixer, or connect one drum to any input.',
+    },
+  ],
+  tips: [
+    'A closed hi-hat stops an open hi-hat.',
+    'For a tom, set the rim shot to a low tune, a long decay and a low tone.',
+  ],
+})
+
 const mixer = defineModuleDoc({
   type: 'mixer',
   name: 'Mixer',
   summary:
     'The mixer mixes 6 channels into one output. Each channel has a volume and two sends, A and B, for effects.',
   howTo: [
-    'Connect 1–6 of a sampler to 1–6.',
+    'Connect 1–6 of a sampler or a drum machine to 1–6.',
     'Drag the slider of a channel to set its volume.',
     'Click MSR to remove a channel from the output. Its sends continue.',
     'Click →A or →B to send a channel to that bus.',
@@ -110,7 +141,7 @@ const mixer = defineModuleDoc({
       name: '1–6',
       direction: 'in',
       kind: 'channels',
-      text: 'One jack for each channel. Connect a sampler, or connect any sound to one channel.',
+      text: 'One jack for each channel. Connect a sampler or a drum machine, or connect any sound to one channel.',
     },
     {
       name: 'Rtn A, Rtn B',
@@ -246,6 +277,7 @@ export const moduleDocs: readonly ModuleDoc[] = [
   master,
   metronome,
   sampler,
+  drums,
   mixer,
   delay,
   lpFilter,

@@ -1,6 +1,6 @@
+import { sequencerStyles } from '@loop/sequencer'
 import { defineModule, uiStyles } from '@loop/ui'
 import { script } from './script'
-import { sequencerStyles } from './sequencer/styles'
 import { setup } from './setup'
 import { styles } from './styles'
 import { template } from './template'

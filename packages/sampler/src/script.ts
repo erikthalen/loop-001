@@ -1,5 +1,5 @@
+import { connectSequencer } from '@loop/sequencer'
 import { CHANNEL_COLORS, createOdometer, defineModuleScript } from '@loop/ui'
-import { connectSequencer } from './sequencer/script'
 import { CHANNELS, MAX_SECONDS, type setup } from './setup'
 import {
   COLUMNS,
@@ -354,7 +354,7 @@ export const script = defineModuleScript<typeof setup>(
     frame = requestAnimationFrame(draw)
     signal.addEventListener('abort', () => cancelAnimationFrame(frame))
 
-    // ——— The sequencer, on its own screen under the sampler (sequencer/script.ts) ———
+    // ——— The sequencer, on its own screen under the sampler (@loop/sequencer) ———
     connectSequencer({
       section: root.querySelector<HTMLElement>('.sequencer')!,
       sequencer: module,

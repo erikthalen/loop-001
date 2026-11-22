@@ -1,4 +1,4 @@
-import { type ProjectData, parseProject } from '@loop/core'
+import { type ProjectData, parseProject } from './data'
 
 /** The content of an exported project file. */
 export interface ProjectFile {

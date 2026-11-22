@@ -5,7 +5,7 @@ import { css } from '@loop/ui'
 // The rules here are outside a cascade layer, so they win over @loop/ui.
 // The display is a tape machine in thin lines, with two markers to cut the sound.
 export const styles = css`
-  /* Two screens, one under the other: the sampler, then its sequencer (sequencer/styles.ts).
+  /* Two screens, one under the other: the sampler, then its sequencer (@loop/sequencer).
      No gap, and no round corners where they meet: they look like one screen. */
   :host {
     display: inline-flex;

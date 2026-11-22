@@ -1,5 +1,4 @@
-import type { Core } from './core'
-import type { AnyAudioModuleDefinition, AudioModule } from './module'
+import type { AnyAudioModuleDefinition, AudioModule, Core } from '@loop/core'
 
 /**
  * A saved project: plain JSON data.
@@ -13,7 +12,7 @@ export interface ProjectData {
   /** Modules in rack order. */
   modules: ProjectModuleData[]
   /**
-   * The cables (see patch.ts). Missing: a version 1 project, from before cables. Then
+   * The cables (see patch.ts in @loop/core). Missing: a version 1 project, from before cables. Then
    * restoreProject gives every module the usual cables (autoPatch); an app that knows its modules
    * can make better ones first.
    */

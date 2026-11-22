@@ -1,10 +1,26 @@
 import type { Core, ScopedOn } from '@loop/core'
-import { CHANNELS, type Sequencer, STEPS } from './sequencer'
+import { CHANNELS, type Pattern, type Sequencer, STEPS } from './sequencer'
+
+/**
+ * The copied pattern, for paste. One for the whole page: copy in the sampler, paste in the drum
+ * machine. Not saved. `clipboardChange` tells every sequencer on the page when it changes.
+ */
+let clipboard: Pattern | null = null
+const clipboardChange = new EventTarget()
 
 export interface SequencerScriptContext {
   /** The sequencer's screen (`.sequencer`, see template.ts). */
   readonly section: HTMLElement
-  readonly sequencer: Pick<Sequencer, 'setStep'>
+  readonly sequencer: Pick<
+    Sequencer,
+    | 'pattern'
+    | 'page'
+    | 'playingPage'
+    | 'setPage'
+    | 'setPattern'
+    | 'hasSteps'
+    | 'setStep'
+  >
   readonly core: Core
   /** Listen to a core event, until the UI is unmounted. */
   readonly on: ScopedOn
@@ -12,7 +28,7 @@ export interface SequencerScriptContext {
   readonly signal: AbortSignal
 }
 
-// JS: connect the sequencer's HTML to it. The sampler's script calls this. Everything is removed
+// JS: connect the sequencer's HTML to it. The module's script calls this. Everything is removed
 // for us on unmount.
 export function connectSequencer({
   section,
@@ -26,6 +42,84 @@ export function connectSequencer({
     ...grid.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
   ]
   const boxAt = (row: number, step: number) => boxes[row * STEPS + step]
+  const pages = [
+    ...section.querySelectorAll<HTMLInputElement>('input[name="page"]'),
+  ]
+  const copy = section.querySelector<HTMLButtonElement>('.copy')!
+  const paste = section.querySelector<HTMLButtonElement>('.paste')!
+
+  // The pattern that plays, as far as you can hear: the sequencer switches a little early (the
+  // clock schedules ahead), so this follows at the real start of the bar (see `on('step')`).
+  let heard = sequencer.playingPage
+
+  /**
+   * The pattern buttons: which one is picked, which one plays, and which patterns have no steps.
+   * A picked pattern that waits for the next bar blinks. The one that still plays has its color.
+   */
+  const showPages = () => {
+    pages.forEach((radio, i) => {
+      const empty = !sequencer.hasSteps(i)
+      const label = radio.closest('label')!
+      const waiting = i === sequencer.page && i !== heard
+      radio.checked = i === sequencer.page
+      label.classList.toggle('empty', empty)
+      label.classList.toggle('waiting', waiting)
+      label.classList.toggle('playing', i === heard && i !== sequencer.page)
+      radio.setAttribute(
+        'aria-label',
+        `Pattern ${i + 1}${empty ? ', empty' : ''}${waiting ? ', starts at the next bar' : ''}`,
+      )
+    })
+    copy.setAttribute('aria-label', `Copy pattern ${sequencer.page + 1}`)
+    paste.setAttribute('aria-label', `Paste into pattern ${sequencer.page + 1}`)
+    paste.disabled = !clipboard
+  }
+
+  /** The grid shows the picked pattern. */
+  const showPattern = () => {
+    const { pattern } = sequencer
+    for (let row = 0; row < CHANNELS; row++)
+      for (let step = 0; step < STEPS; step++) {
+        const box = boxAt(row, step)
+        if (box) box.checked = !!pattern[row]?.[step]
+      }
+  }
+  showPages()
+
+  for (const radio of pages)
+    radio.addEventListener(
+      'change',
+      () => {
+        sequencer.setPage(Number(radio.value))
+        // It plays at once (the transport is at the start of a bar): no need to wait for the bar.
+        if (sequencer.playingPage === sequencer.page)
+          heard = sequencer.playingPage
+        showPattern()
+        showPages()
+      },
+      { signal },
+    )
+
+  copy.addEventListener(
+    'click',
+    () => {
+      clipboard = sequencer.pattern.map((row) => [...row])
+      clipboardChange.dispatchEvent(new Event('change'))
+    },
+    { signal },
+  )
+  paste.addEventListener(
+    'click',
+    () => {
+      if (!clipboard) return
+      sequencer.setPattern(clipboard)
+      showPattern()
+      showPages()
+    },
+    { signal },
+  )
+  // A copy in any sequencer on the page: paste works here too.
+  clipboardChange.addEventListener('change', showPages, { signal })
 
   // One listener for all 96 checkboxes.
   grid.addEventListener(
@@ -37,6 +131,7 @@ export function connectSequencer({
         Number(box.dataset.step),
         box.checked,
       )
+      showPages()
     },
     { signal },
   )
@@ -89,7 +184,16 @@ export function connectSequencer({
     const delay = Math.max(0, (time - core.context.currentTime) * 1000)
     setTimeout(() => signal.aborted || show(), delay)
   }
-  on('step', ({ step, time }) => at(time, () => showStep(step % STEPS)))
+  on('step', ({ step, time }) =>
+    at(time, () => {
+      showStep(step % STEPS)
+      // A new bar: the picked pattern plays now.
+      if (step % STEPS === 0 && heard !== sequencer.playingPage) {
+        heard = sequencer.playingPage
+        showPages()
+      }
+    }),
+  )
   // Rewind: the transport goes back past the steps, so the progress bar goes back too. A rewind ends
   // exactly at the first step of the sequence: then the bar is empty, like at the start.
   on('rewindstep', ({ step, time }) =>

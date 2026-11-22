@@ -9,10 +9,13 @@ pnpm monorepo.
 - `packages/lp-filter` – `@loop/lp-filter`: a low pass filter; the picture shows the sound before and after the filter, from low to high, with the filter's curve
 - `packages/mixer` – `@loop/mixer`: mixes 6 channels (for example a sampler's): a volume, a main switch and two sends (A, B) per channel, and two send buses (send and return) for effects
 - `packages/delay` – `@loop/delay`: echoes on the beat (dry/wet, feedback, rate as a note length); usually on a send and return of the mixer
-- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound. Under it, its own step sequencer (6 channels, 16 steps) plays the channels. The sequencer is in its own folder (`src/sequencer/`) and knows nothing about the sampler, so it can become a package if another module needs one
+- `packages/sampler` – `@loop/sampler`: records up to 5 seconds from the microphone into 6 channels, shown as a tape machine with scissors to cut the sound. Under it, a step sequencer (`@loop/sequencer`) plays the channels
+- `packages/drums` – `@loop/drums`: a drum machine. 6 drums made with synthesis, no samples (bass drum, snare, clap, closed and open hi-hat, rim shot; `src/voices.ts`), each on its own channel jack. Pick a drum to see its 4 sliders. Under it, a step sequencer (`@loop/sequencer`) plays the drums
+- `packages/sequencer` – `@loop/sequencer`: the step sequencer (6 channels, 16 steps, 6 patterns picked with radio buttons under the steps; the picked one shows at once and plays from the next bar; copy and paste a pattern, also from one module to another) that the sampler and the drum machine put under their screen: the steps (`createSequencer`), its HTML, CSS and script. It knows nothing about the module it is in: the module decides what a step does
 - `packages/vu-meter` – `@loop/vu-meter`: a stereo VU meter (two dials with needles, and two level bars with peak hold); it only listens
 - `packages/patchbay` – `@loop/patchbay`: where the studio is wired: add a module (a list in a popover), remove mode, and the cables as a matrix (a grid of checkboxes, an output per row, an input per column; a module's channels are one row or column that opens with a native disclosure button, and a half-checked box means some of them are connected; a box that cannot be checked is disabled and says why). It works on the core directly, but it is not in the core either (it would be saved in every project, and gone when one opens): the app shows it under the last module, above the library
 - `packages/library` – `@loop/library`: the projects, as tapes on a shelf: name the tape on the machine (the open project), put another one on, new, erase, import and export. It looks like a module, but it is not in the core: a project is the modules in the core, so the library that holds the projects cannot be inside one. The app shows it last, under the patchbay (not in the rack: it cannot be moved, removed or patched) and does the work behind it (the `Library` interface, `app/src/library.ts`)
+- `packages/project` – `@loop/project`: saving and loading projects: the project data (read it from the core, check it, load it back), the store in the browser (IndexedDB), the session that saves the open project after each change, and the project file (export and import). It knows no modules: the app gives it the module list, a new project and the upgrade of old projects. Tests: `pnpm test`, with a fake core and a store in memory
 - `packages/ui` – `@loop/ui`: how modules look and get on the page: the shared component library (plain CSS files), and the module UI (`defineModule`, `mountModule`, `html`, `css`)
 
 ## Commands (run from the repo root)
@@ -166,13 +169,14 @@ The module's own controls are `inert` (blocked) in this mode. Esc, "Done" or ope
 
 Everything is saved in the browser. There is no server.
 
-| File                           | Job                                                                                                                                       |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/src/project-store.ts`     | Keeps projects in **IndexedDB** (a native browser database). The only file that knows about storage.                                      |
-| `app/src/project-session.ts`   | The open project. Saves it automatically ~0.4 s after each change, and when the page is hidden.                                           |
-| `app/src/project-file.ts`      | Export / import format: a `.loop.json` file.                                                                                              |
-| `app/src/library.ts`           | The work behind the library module (`@loop/library`): its tapes are these projects. The module only shows them and passes on what you do. |
-| `packages/core/src/project.ts` | `serializeProject(core)`, `parseProject(data)`, `restoreProject(core, data, modules)`.                                                    |
+| File                              | Job                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/project/src/store.ts`   | Keeps projects in **IndexedDB** (a native browser database). The only file that knows about storage.                                      |
+| `packages/project/src/session.ts` | The open project. Saves it automatically ~0.4 s after each change, and when the page is hidden.                                           |
+| `packages/project/src/file.ts`    | Export / import format: a `.loop.json` file.                                                                                              |
+| `packages/project/src/data.ts`    | `serializeProject(core)`, `parseProject(data)`, `restoreProject(core, data, modules)`.                                                    |
+| `app/src/modules.ts`              | `newProject` and `upgradeProject`: they know the modules, so they stay in the app and go into the session as options.                     |
+| `app/src/library.ts`              | The work behind the library module (`@loop/library`): its tapes are these projects. The module only shows them and passes on what you do. |
 
 Saved data (`ProjectData`): `{ version: 2, bpm, modules: [{ type, state }], cables: [{ from: { module, port }, to: { module, port } }] }`. A cable's `module` is its place in `modules`. A version 1 project (from before cables) reads without `cables`; the app gives it cables that sound like its old chain (`upgradeProject` in `app/src/modules.ts`). If the format changes, raise `version` and convert old data in `parseProject`.
 

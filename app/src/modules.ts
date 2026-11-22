@@ -1,13 +1,11 @@
-import type {
-  AnyAudioModuleDefinition,
-  ProjectCable,
-  ProjectData,
-} from '@loop/core'
+import type { AnyAudioModuleDefinition } from '@loop/core'
 import { delay } from '@loop/delay'
+import { drums } from '@loop/drums'
 import { lpFilter } from '@loop/lp-filter'
 import { master } from '@loop/master'
 import { metronome } from '@loop/metronome'
 import { mixer } from '@loop/mixer'
+import type { ProjectCable, ProjectData } from '@loop/project'
 import { sampler } from '@loop/sampler'
 import { vuMeter } from '@loop/vu-meter'
 
@@ -16,6 +14,7 @@ export const availableModules: readonly AnyAudioModuleDefinition[] = [
   master,
   metronome,
   sampler,
+  drums,
   mixer,
   delay,
   lpFilter,
@@ -27,6 +26,7 @@ export const CABLE_COLORS: Readonly<Record<string, string>> = {
   [master.type]: 'var(--red)',
   [metronome.type]: 'var(--pink)',
   [sampler.type]: 'var(--pink)',
+  [drums.type]: 'var(--orange)',
   [mixer.type]: 'var(--ink)',
   [delay.type]: 'var(--green)',
   [lpFilter.type]: 'var(--blue)',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseProject } from './project'
+import { parseProject } from './data'
 
 describe('parseProject', () => {
   it('accepts a valid project', () => {

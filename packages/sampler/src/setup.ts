@@ -1,5 +1,9 @@
 import { defineModuleSetup } from '@loop/core'
-import { createSequencer, type SavedPattern } from './sequencer/sequencer'
+import {
+  createSequencer,
+  type SavedPattern,
+  type SavedSequence,
+} from '@loop/sequencer'
 import { decodeSound, encodeSound, type SavedSound } from './sound'
 
 /** The number of sample channels. */
@@ -23,7 +27,11 @@ export interface SamplerOptions {
   active?: number
   /** One entry per channel. null: the channel is empty. */
   channels?: ({ sound: SavedSound; start: number; end: number } | null)[]
-  /** The sequencer's steps (see sequencer/sequencer.ts). Default: all off. */
+  /** The sequencer's patterns (see @loop/sequencer). Default: all off. */
+  patterns?: SavedSequence['patterns']
+  /** The sequencer's picked pattern (0 to 5). Default: 0. */
+  page?: number
+  /** An old project: one pattern, before there were 6. It becomes pattern 1. */
   pattern?: SavedPattern
 }
 
@@ -303,7 +311,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
   // The sequencer: each step that is on plays its channel at that time. The play button does not
   // change; the picture shows it (see nowPlaying). They follow the transport speed (see core.speed).
   const sequencer = createSequencer(ctx, {
-    pattern: options.pattern,
+    saved: options,
     onStep: (channel, time) => void trigger(channel, time, undefined, true),
   })
 
@@ -409,8 +417,21 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
     get message() {
       return message
     },
-    /** The sequencer's steps: `pattern[channel][step]`. Change it with `setStep`. */
-    pattern: sequencer.pattern,
+    /** The picked pattern's steps: `pattern[channel][step]`. Change them with `setStep`. */
+    get pattern() {
+      return sequencer.pattern
+    },
+    /** The picked pattern (0 to 5). Pick another one with `setPage`. */
+    get page() {
+      return sequencer.page
+    },
+    /** The pattern that plays now (0 to 5): the picked one plays from the next bar on. */
+    get playingPage() {
+      return sequencer.playingPage
+    },
+    setPage: sequencer.setPage,
+    setPattern: sequencer.setPattern,
+    hasSteps: sequencer.hasSteps,
     setStep: sequencer.setStep,
 
     /** Call `listener` when recording, playing or the message changes. Returns a function that stops it. */
@@ -425,7 +446,7 @@ export const setup = defineModuleSetup((ctx, options: SamplerOptions = {}) => {
       channels: channels.map(({ saved, start, end }) =>
         saved ? { sound: saved, start, end } : null,
       ),
-      pattern: sequencer.save(),
+      ...sequencer.save(),
     }),
   }
 })

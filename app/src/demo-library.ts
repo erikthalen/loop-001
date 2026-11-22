@@ -1,10 +1,10 @@
 import type { Library, SaveStatus, Tape } from '@loop/library'
-import { newProject } from './modules'
 import {
   createProjectFile,
   PROJECT_FILE_EXTENSION,
   readProjectFile,
-} from './project-file'
+} from '@loop/project'
+import { newProject } from './modules'
 
 /**
  * A library for the module guide (/modules/library): a few made-up tapes, kept only in memory.

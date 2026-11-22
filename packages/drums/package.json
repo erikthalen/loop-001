@@ -1,0 +1,19 @@
+{
+  "name": "@loop/drums",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@loop/core": "workspace:*",
+    "@loop/sequencer": "workspace:*",
+    "@loop/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

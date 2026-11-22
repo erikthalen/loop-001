@@ -2,6 +2,7 @@
 import { createCore } from '@loop/core'
 import { mountLibrary } from '@loop/library'
 import { mountPatchbay } from '@loop/patchbay'
+import { createProjectSession, openProjectStore } from '@loop/project'
 import { addLoopFont } from '@loop/ui'
 import { createLibrary } from './library'
 import {
@@ -10,8 +11,6 @@ import {
   newProject,
   upgradeProject,
 } from './modules'
-import { createProjectSession } from './project-session'
-import { openProjectStore } from './project-store'
 import { createRack } from './rack'
 import { watchForUpdates } from './updates'
 
@@ -40,7 +39,27 @@ mountPatchbay($('#patchbay'), core, {
 })
 
 // ---- Transport ----
-// Play and stop are in the Master module (packages/master).
+// Play and stop are in the Master module (packages/master). Space does the same as its play
+// checkbox, from anywhere on the page.
+// But not when the focus is on a control: there, Space has its own job (it clicks a button,
+// checks a box, picks a radio, types a space, or grabs a module's drag handle).
+const SPACE_CONTROLS =
+  'input, textarea, select, button, a[href], summary, [contenteditable], ' +
+  '[role="button"], [role="checkbox"], [role="radio"], [role="slider"], [role="switch"], ' +
+  '[role="menuitem"], [role="option"], [role="tab"], [role="textbox"], [role="combobox"]'
+document.addEventListener('keydown', (event) => {
+  if (event.key !== ' ' || event.repeat || event.defaultPrevented) return
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+  // The element with the focus, also inside a module's Shadow DOM (event.target is its host).
+  const target = event.composedPath()[0]
+  if (target instanceof Element && target.closest(SPACE_CONTROLS)) return
+  event.preventDefault() // Space would scroll the page.
+  if (core.playing && !core.stopping) core.stop()
+  else
+    core
+      .start()
+      .catch((error) => console.error('Could not start playback:', error))
+})
 
 // ---- Projects: saved in this browser (IndexedDB), local first ----
 // The library module shows them (the tapes on the shelf); the session keeps them (see library.ts).

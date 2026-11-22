@@ -12,12 +12,13 @@ export const template = defineModuleTemplate<typeof setup>(
       <canvas class="reels" role="img" aria-label="Tape reels"></canvas>
       <div class="controls">
         <label class="field play">
-          <span>play</span>
           <input
             name="play"
             type="checkbox"
+            aria-keyshortcuts="Space"
             ${core.playing && !core.stopping ? 'checked' : ''}
           />
+          <span>play</span>
         </label>
         <label class="field volume">
           <span>vol</span>

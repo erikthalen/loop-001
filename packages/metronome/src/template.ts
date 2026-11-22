@@ -28,8 +28,8 @@ export const template = defineModuleTemplate<typeof setup>(
         </label>
 
         <label class="field">
-          <span>mute</span>
           <input name="mute" type="checkbox" ${module.muted ? 'checked' : ''} />
+          <span>mute</span>
         </label>
       </div>
     </section>

@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@loop/core": "workspace:*",
+    "@loop/sequencer": "workspace:*",
     "@loop/ui": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "typescript": "catalog:"
   }
 }

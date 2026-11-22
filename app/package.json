@@ -14,19 +14,21 @@
     "@hono/service-worker": "^1.0.1",
     "@loop/core": "workspace:*",
     "@loop/delay": "workspace:*",
+    "@loop/drums": "workspace:*",
     "@loop/library": "workspace:*",
     "@loop/lp-filter": "workspace:*",
     "@loop/master": "workspace:*",
     "@loop/metronome": "workspace:*",
     "@loop/mixer": "workspace:*",
     "@loop/patchbay": "workspace:*",
+    "@loop/project": "workspace:*",
     "@loop/sampler": "workspace:*",
     "@loop/ui": "workspace:*",
     "@loop/vu-meter": "workspace:*",
     "hono": "^4.13.18"
   },
   "devDependencies": {
-    "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

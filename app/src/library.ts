@@ -2,14 +2,14 @@ import type { Library } from '@loop/library'
 import {
   createProjectFile,
   PROJECT_FILE_EXTENSION,
+  type ProjectSession,
   readProjectFile,
-} from './project-file'
-import type { ProjectSession } from './project-session'
+} from '@loop/project'
 
 /**
  * The work behind the library module (@loop/library): its tapes are this app's projects.
- * The session keeps them saved in the browser (project-session.ts, project-store.ts); a file is a
- * project file (project-file.ts).
+ * The session keeps them saved in the browser, and a file is a
+ * project file (both in @loop/project).
  */
 export function createLibrary(session: ProjectSession): Library {
   return {

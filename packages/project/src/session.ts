@@ -1,11 +1,6 @@
-import {
-  type AnyAudioModuleDefinition,
-  type Core,
-  type ProjectData,
-  restoreProject,
-  serializeProject,
-} from '@loop/core'
-import type { ProjectStore, StoredProject } from './project-store'
+import type { AnyAudioModuleDefinition, Core } from '@loop/core'
+import { type ProjectData, restoreProject, serializeProject } from './data'
+import type { ProjectStore, StoredProject } from './store'
 
 export type SaveStatus = 'saved' | 'saving' | 'error'
 
@@ -131,11 +126,14 @@ export function createProjectSession(
     })
     void saveNow()
   }
-  document.addEventListener(
-    'visibilitychange',
-    () => document.visibilityState === 'hidden' && saveIfWaiting(),
-  )
-  addEventListener('pagehide', saveIfWaiting)
+  // Only in a browser page (not in the tests).
+  if (typeof document !== 'undefined') {
+    document.addEventListener(
+      'visibilitychange',
+      () => document.visibilityState === 'hidden' && saveIfWaiting(),
+    )
+    addEventListener('pagehide', saveIfWaiting)
+  }
 
   const load = (project: StoredProject) => {
     loading = true
