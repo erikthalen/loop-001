@@ -37,6 +37,7 @@
     /* The color of the filled part. The thumb has its own color (it changes on its own hover). */
     color: var(--loop-primary);
     background: transparent;
+    box-shadow: none;
     cursor: pointer;
 
     timeline-scope: --range-thumb;
@@ -87,6 +88,7 @@
     height: 8px;
     border: 1px solid transparent;
     border-radius: 4px;
+    box-shadow: none;
     background-repeat: no-repeat;
     background-origin: padding-box, border-box, padding-box, border-box;
     background-clip: padding-box, border-box, padding-box, border-box;
@@ -140,6 +142,7 @@
     margin-top: -5px;
     border: 0;
     border-radius: 50%;
+    box-shadow: none;
     color: var(--loop-primary);
     background: currentColor;
     view-timeline: --range-thumb inline;
