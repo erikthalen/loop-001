@@ -43,7 +43,8 @@ jobs:
 
       - run: pnpm build
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          BASE_PATH: /
+          # BASE_PATH: ${{ steps.pages.outputs.base_path }}/
 
       - uses: actions/upload-pages-artifact@v4
         with:
